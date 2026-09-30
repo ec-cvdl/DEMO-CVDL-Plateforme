@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script>
+const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
+</script>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi de mes commandes — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<style>
+.ml-liste{ display:grid; gap:8px; margin-top:14px; }
+.ml-ligne{ display:flex; align-items:center; gap:12px; padding:10px 12px; border:var(--trait-doux); border-radius:14px; background:#fff; }
+.ml-ligne .ill{ width:34px; height:34px; }
+.ml-txt{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.ml-txt small{ opacity:.7; font-size:12.5px; }
+.cs-personnes{ display:flex; flex-wrap:wrap; gap:8px; }
+.cs-personne{ display:inline-flex; align-items:center; gap:10px; padding:6px 12px 6px 6px; border:var(--trait-doux); border-radius:14px; background:#fff; }
+.cs-personne .ill{ width:34px; height:34px; }
+.cs-personne-txt{ display:flex; flex-direction:column; align-items:flex-start; gap:3px; font-size:13px; }
+.cs-personne-txt small{ opacity:.7; font-size:12px; }
+button.cs-doc{ cursor:pointer; font-family:inherit; color:inherit; }
+
+/* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
+[hidden]{ display:none!important; }
+.sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; }
+main{ max-width:1040px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
+html.deja-identifie #etape-code{ display:none!important; }
+html.deja-identifie #voile-verification-precoce{ display:flex; }
+#voile-verification-precoce{ display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+.spinner-precoce{ width:34px; height:34px; animation:tourner-spinner-precoce .8s linear infinite; }
+@keyframes tourner-spinner-precoce{ to{ transform:rotate(360deg); } }
+.spinner-inline{ display:inline-block; width:14px; height:14px; animation:tourner-spinner-precoce .7s linear infinite; margin-right:8px; vertical-align:-2px; }
+.liste-commandes-suivi{ display:flex; flex-direction:column; gap:var(--space-6); margin-top:var(--space-4); }
+.carte-commande-suivi{ position:relative; }
+.carte-commande-suivi.masquee-focus{ display:none !important; }
+#etape-liste.mode-focus .field, #etape-liste.mode-focus #nb-commandes-texte{ display:none; }
+.carte-commande-suivi.carte-focus{ z-index:2; }
+.btn-toutes-commandes-suivi{ box-sizing:border-box; cursor:pointer; display:flex; justify-content:center; align-items:center; gap:8px; width:100%; margin-top:var(--space-5); padding:14px; }
+.btn-toutes-commandes-suivi[hidden]{ display:none; }
+.carte-commande-suivi.annulee{ opacity:0.65; }
+.carte-commande-suivi{ position:relative; overflow:hidden; }
+.icone-copie-passeport-cs{ display:inline-flex; cursor:pointer; padding:3px; margin:-3px; }
+.toast-copie-cs{ position:fixed; bottom:24px; left:50%; padding:9px 18px; z-index:600; opacity:0; pointer-events:none; }
+.toast-copie-cs.visible{ opacity:1; }
+.entete-cs{ display:flex; align-items:flex-start; gap:var(--space-3); flex-wrap:wrap; }
+.date-cs{ opacity:0.5; }
+.produits-cs{ opacity:0.6; }
+.responsable-cs{ opacity:0.55; margin-top:2px; }
+.raison-annulation-cs{ margin-top:10px; padding:12px 14px; white-space:pre-line; }
+.tlc-suivi{ display:grid; grid-template-columns:repeat(5,1fr); position:relative; }
+.tlc-suivi-etape{ display:flex; flex-direction:column; align-items:center; gap:8px; position:relative; }
+.tlc-suivi-etape:first-child::before{ display:none; }
+.tlc-suivi-point{ width:11px; height:11px; position:relative; z-index:1; }
+.tlc-suivi-libelle{ text-align:center; opacity:0.45; position:relative; z-index:1; }
+.tlc-suivi-libelle.actuel{ opacity:1; }
+.tlc-suivi-libelle.fait{ opacity:1; }
+.liens-documents-cs{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:var(--space-3); }
+.liens-documents-cs a{ display:inline-flex; align-items:center; gap:5px; }
+.libelle-numeros-serie-cs{ opacity:0.55; display:block; margin-bottom:var(--space-2); }
+.accordeon-beneficiaires-cs summary{ cursor:pointer; list-style:none; opacity:0.55; display:flex; align-items:center; gap:6px; }
+.accordeon-beneficiaires-cs summary::-webkit-details-marker{ display:none; }
+.liste-beneficiaires-cs{ margin:var(--space-2) 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
+.pilule-date-estimee-cs{ padding:6px 12px; display:inline-flex; align-items:center; gap:6px; align-self:flex-start; }
+.pilule-date-livree-cs{ padding:6px 12px; display:inline-flex; align-items:center; gap:6px; align-self:flex-start; }
+.pilule-mode-cs{ padding:4px 10px; display:inline-flex; align-items:center; gap:5px; align-self:flex-start; }
+.pilule-paiement-cs{ padding:4px 10px; display:inline-flex; align-items:center; gap:5px; align-self:flex-start; }
+.fleche-lien-externe{ opacity:0.85; flex:none; }
+.pied-cs{ display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; padding-top:var(--space-3); }
+.lien-cs{ display:inline-flex; align-items:center; gap:4px; }
+.statut-paiement-cs{ padding:4px 10px; }
+.rangee-boutons-paiement-cs{ display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.lien-paiement-cs{ padding:8px 14px; display:inline-flex; align-items:center; gap:6px; }
+.btn-deconnexion-fixe{ position:fixed; top:var(--space-4); right:var(--space-4); z-index:150; display:flex; align-items:center; gap:6px; padding:9px 16px; cursor:pointer; }
+@media (max-width: 640px){
+main{ padding:var(--space-6) var(--space-4); }
+}
+</style>
+<script src="portail-ui.js?v=22" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
+<link rel="stylesheet" href="retours.css?v=1">
+<script src="retours.js?v=1" defer></script>
+</head>
+<body data-famille="commandes">
+<div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
+<button type="button" class="btn-deconnexion-fixe" id="btn-deconnexion-suivi" hidden>
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  Déconnexion
+</button>
+
+<main id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" onclick="location.href='portail-structure.html'">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Portail
+  </button>
+
+  <!-- Étape : identification -->
+  <section id="etape-code" style="max-width:460px;margin:0 auto">
+    <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
+      <span data-ill="cle" class="pk-titre-ill"></span>
+      <h1 style="margin:0">Quel est votre <em>code structure</em> ?</h1>
+      <p style="opacity:0.6;margin:0">Ce code vous a été communiqué par mail — le même que pour commander du matériel ou signaler une panne. Vous voulez plutôt <a href="commande.html">commander du matériel</a> ou <a href="sav.html">signaler une panne</a> ?</p>
+      <div class="field">
+        <label for="code-structure" class="sr-only">Code structure</label>
+        <input type="text" class="input" id="code-structure" autocomplete="off" spellcheck="false" placeholder="Votre code structure">
+      </div>
+      <div id="retour-code" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary btn-block" id="btn-voir-commandes">Continuer</button>
+    </div>
+  </section>
+
+  <!-- Étape : liste des commandes -->
+  <section id="etape-liste" hidden>
+    <span data-ill="commandes" class="pk-titre-ill xl"></span>
+    <h1 style="margin-bottom:var(--space-2)" id="titre-structure"></h1>
+    <p style="opacity:0.6;margin:0 0 var(--space-4)" id="nb-commandes-texte"></p>
+    <div class="cs-barre">
+      <div class="field cs-recherche">
+        <label for="recherche-suivi" class="sr-only">Rechercher une personne, un numéro de série ou un code</label>
+        <input type="text" class="input" id="recherche-suivi" autocomplete="off" spellcheck="false" placeholder="Rechercher par nom, prénom, numéro de série ou code…">
+      </div>
+      <div class="cs-filtres" role="group" aria-label="Filtrer par état">
+        <button type="button" class="cs-filtre actif" data-filtre-suivi="">Toutes</button>
+        <button type="button" class="cs-filtre" data-filtre-suivi="attente"><span class="cs-f" data-forme="losange"></span>À traiter</button>
+        <button type="button" class="cs-filtre" data-filtre-suivi="cours"><span class="cs-f" data-forme="carre"></span>En cours</button>
+        <button type="button" class="cs-filtre" data-filtre-suivi="fini"><span class="cs-f" data-forme="rond"></span>Livrées / annulées</button>
+      </div>
+    </div>
+    <div class="liste-commandes-suivi" id="liste-commandes-suivi"></div>
+  </section>
+</main>
+
+<script>
+try{ if(sessionStorage.getItem('cvdl-code-structure')) document.documentElement.classList.add('deja-identifie'); }catch(e){}
+</script>
+<script>
+const $ = id => document.getElementById(id);
+
+function echapper(s){
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function afficherMsg(id, texte, type){
+  $(id).innerHTML = texte ? `<div class="msg msg-${type}">${echapper(texte)}</div>` : '';
+}
+/** Repérage depuis un lien direct (ex. "Activité récente" du portail structure, ?ref=XXX) :
+ *  fait défiler jusqu'à la carte visée et la fait clignoter doucement en bleu quelques fois. */
+function cibleCarteDepuisUrl(selecteurCarte, classeAnimation){
+  const ref = new URLSearchParams(location.search).get('ref');
+  if(!ref) return;
+  const carte = document.querySelector(`${selecteurCarte}[data-reference="${CSS.escape(ref)}"]`);
+  if(!carte) return;
+  setTimeout(() => {
+    carte.scrollIntoView({ behavior:'smooth', block:'center' });
+    carte.classList.add(classeAnimation);
+    setTimeout(() => carte.classList.remove(classeAnimation), 6000);
+  }, 150);
+}
+function formaterMontant(montant){
+  return new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(montant);
+}
+
+function jsonp(params){
+  return fetch(API + '?' + new URLSearchParams(params)).then(r => r.json());
+}
+
+const ETAPES_TIMELINE = ['Reçue', 'Validée', 'Préparée', 'En cours de livraison', 'Livrée'];
+const SVG_MODE_LIVRAISON = {
+  'Colissimo': '<svg width="13" height="13" viewBox="0 0 18 18" fill="none"><path d="M2.5 5.5 9 2 15.5 5.5 9 9 2.5 5.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M2.5 5.5V12.5L9 16 15.5 12.5V5.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  'Retrait': '<svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8V4.5A1.5 1.5 0 0 1 5.5 3h7A1.5 1.5 0 0 1 14 4.5V8"/><rect x="2.5" y="8" width="13" height="7" rx="1.3"/><path d="M2.5 11.5h13"/></svg>',
+  'Livraison EC': '<svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="6" width="9" height="7" rx="1"/><path d="M10.5 8.5h3l3 2.5v2h-6z"/><circle cx="4.5" cy="14.5" r="1.4"/><circle cx="13" cy="14.5" r="1.4"/></svg>',
+};
+// Icône QR code — remplace partout l'ancienne icône "passeport" (carte d'identité), conforme
+// à la maquette : c'est cette icône qui accompagne systématiquement le numéro de série.
+const SVG_ICONE_QR = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="15" y="15" width="4" height="4" rx="0.8"/></svg>';
+// Flèche "lien externe" — même icône partout où une pilule/lien redirige hors du site.
+const SVG_ICONE_TICKET = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M10 7.5v9" stroke-dasharray="2.2 2.2"/></svg>';
+// Icône "quitte le site" — pour les liens qui sortent réellement du domaine CVDL (Colissimo,
+// bon de livraison, prestataire de paiement), distincte de la flèche simple ci-dessus qui
+// reste réservée à la navigation interne (passeport.html, même site, juste un nouvel onglet).
+const SVG_LIEN_EXTERNE = '<svg class="fleche-lien-externe" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
+
+const LIBELLES_COURTS_TIMELINE = {
+  'Reçue': 'Reçue', 'Validée': 'Validée', 'Préparée': 'Préparée',
+  'En cours de livraison': 'En livraison', 'Livrée': 'Livrée'
+};
+
+// Dégradé magenta → turquoise appliqué progressivement aux segments franchis de la timeline —
+// un segment reçu tôt reste proche du magenta, un segment proche de la livraison vire au
+// turquoise. Couleurs interpolées à l'avance (4 segments entre les 5 étapes).
+// 5e teinte ajoutée, plus profonde que le dernier ton du dégradé — sans elle, l'étape "Livrée"
+// réutilisait exactement la même couleur que "En cours de livraison" (toutes deux plafonnées au
+// même index via Math.min), donc rien ne distinguait visuellement une commande réellement
+// arrivée d'une commande simplement en cours de route.
+const DEGRADE_TIMELINE_SUIVI = ['#B3E3E4', '#66CDCF', '#00ACB0', '#00ACB0', 'var(--color-accent-700)'];
+
+function construireTimelineSuivi(statutActuel){
+  const indexActuel = ETAPES_TIMELINE.indexOf(statutActuel);
+  if(indexActuel === -1) return '';
+  const etapes = ETAPES_TIMELINE.map((etape, i) => {
+    const cls = i < indexActuel ? 'fait' : (i === indexActuel ? 'actuel' : '');
+    const couleurSegment = DEGRADE_TIMELINE_SUIVI[Math.min(i, DEGRADE_TIMELINE_SUIVI.length - 1)];
+    // Le connecteur menant à l'étape i (::before) doit être coloré dès que cette étape est
+    // atteinte (fait OU actuelle) — sinon la ligne s'arrête un cran trop tôt et paraît cassée.
+    const connecteurAtteint = i <= indexActuel;
+    return `<div class="tlc-suivi-etape ${cls}" style="${connecteurAtteint ? `--couleur-segment:${couleurSegment}` : ''}">
+      <div class="tlc-suivi-point ${cls}" style="${cls ? `--couleur-segment:${couleurSegment}` : ''}"></div>
+      <div class="tlc-suivi-libelle ${cls}">${echapper(LIBELLES_COURTS_TIMELINE[etape] || etape)}</div>
+    </div>`;
+  }).join('');
+  return `<div class="tlc-suivi">${etapes}</div>`;
+}
+
+/** Copie en presse-papier au clic sur l'icône (et seulement l'icône) d'une pilule numéro de
+ *  série/code — délégué sur le document car les pilules sont reconstruites à chaque rendu. Le
+ *  preventDefault/stopPropagation empêche l'ouverture du lien passeport quand la pilule est un
+ *  <a> ; cliquer ailleurs dans la pilule continue de l'ouvrir normalement. */
+/** Infos d'une commande, rangées en 3 blocs lisibles (au lieu d'une ligne de pastilles) :
+ *  Livraison (mode + date) · Paiement (montant, moyen, statut, bouton Régler) · Contact. */
+function blocInfosSuivi(c, o){
+  const modeLib = c.modeLivraison === 'Livraison EC' ? 'Livraison Emmaüs Connect' : (c.modeLivraison || '');
+  let dateLiv = '', dateLab = '';
+  if(o.estLivree && c.dateLivraison){ dateLab = 'Livrée le'; dateLiv = c.dateLivraison; }
+  else if(c.dateLivraisonCible && (c.modeLivraison === 'Retrait' || c.modeLivraison === 'Livraison EC')){ dateLab = c.modeLivraison === 'Retrait' ? 'Retrait à partir du' : 'Estimée le'; dateLiv = c.dateLivraisonCible; }
+  else if(c.dateLivraisonSouhaitee === 'ASAP'){ dateLab = 'Souhaitée'; dateLiv = 'dès que possible'; }
+  else if(c.dateLivraisonSouhaitee){ dateLab = 'Souhaitée le'; dateLiv = c.dateLivraisonSouhaitee; }
+  const montant = c.montantEstime != null ? formaterMontant(c.montantFacture != null ? c.montantFacture : c.montantEstime) : '';
+  const statutP = c.statutPaiement ? `<span class="pk-pill ${c.statutPaiement === 'Payé' ? 'pk-ok' : 'pk-att'}">${echapper(c.statutPaiement)}</span>` : '';
+  const bloc = (ic, lab, val, sous) => `<div class="cs-info"><span class="cs-info-lab">${ic}${lab}</span><span class="cs-info-val">${val}</span>${sous ? `<span class="cs-info-sous">${sous}</span>` : ''}</div>`;
+  const blocs = [
+    bloc(SVG_MODE_LIVRAISON[c.modeLivraison] || SVG_MODE_LIVRAISON['Colissimo'] || '', 'Livraison',
+      modeLib ? echapper(modeLib) : '<em>Mode à définir</em>',
+      dateLiv ? `${echapper(dateLab)} <b>${echapper(dateLiv)}</b>` : ''),
+    (montant || o.moyenAffiche || c.statutPaiement) ? bloc(o.moyenAffiche ? iconeMoyenPaiementV1(o.moyenAffiche) : '', 'Paiement',
+      `${montant ? `<b class="cs-montant">${montant}</b>` : ''}${statutP}`,
+      [o.moyenAffiche ? echapper(o.moyenAffiche) : '', o.boutonsPaiement ? `<span class="cs-regler">${o.boutonsPaiement}</span>` : ''].filter(Boolean).join(' ')) : '',
+    c.responsableCommande ? bloc(SVG_V1.personne || '', 'Personne prescriptrice', echapper(c.responsableCommande), '') : '',
+  ].filter(Boolean);
+  return `<div class="cs-infos" style="--n:${blocs.length}">${blocs.join('')}</div>`;
+}
+let toastCopieCsTimeout = null;
+function afficherToastCopieCs(texte){
+  let t = document.getElementById('toast-copie-cs');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toast-copie-cs';
+    t.className = 'toast-copie-cs';
+    document.body.appendChild(t);
+  }
+  t.textContent = texte;
+  requestAnimationFrame(() => t.classList.add('visible'));
+  clearTimeout(toastCopieCsTimeout);
+  toastCopieCsTimeout = setTimeout(() => t.classList.remove('visible'), 1400);
+}
+document.addEventListener('click', e => {
+  const icone = e.target.closest('.icone-copie-passeport-cs');
+  if(!icone) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const valeur = icone.dataset.copier || '';
+  (navigator.clipboard?.writeText(valeur) || Promise.reject()).then(() => {
+    afficherToastCopieCs(icone.dataset.copierLibelle || 'Copié !');
+  }).catch(() => {
+    afficherToastCopieCs('Impossible de copier.');
+  });
+});
+
+// Dernière liste chargée (pour reflitrer sans re-fetcher) + terme de recherche courant.
+let commandesChargeesSuivi = [];
+let termeRechercheSuivi = '';
+
+/** Une commande "correspond" si le terme se retrouve dans sa référence, le nom d'un de ses
+ *  bénéficiaires, ou l'un de ses numéros de série/codes — tout ce par quoi on chercherait
+ *  concrètement une personne ou un appareil précis. */
+function commandeCorrespondRechercheSuivi(c, terme){
+  if(!terme) return true;
+  if((c.reference || '').toLowerCase().includes(terme)) return true;
+  if((c.personnesDetail || []).some(p => (p.nomComplet || '').toLowerCase().includes(terme))) return true;
+  const numeros = String(c.numerosSerie || '').split('\n').map(s => s.trim().toLowerCase());
+  if(numeros.some(n => n.includes(terme))) return true;
+  return false;
+}
+function appliquerRechercheEtRendreSuivi(){
+  const terme = termeRechercheSuivi.trim().toLowerCase();
+  const filtrees = commandesChargeesSuivi.filter(c => commandeCorrespondRechercheSuivi(c, terme) && (!filtreEtatSuivi || etatSuivi(c) === filtreEtatSuivi));
+  rendreCommandesSuivi(filtrees);
+  appliquerFocusSuivi();
+  if(terme && !filtrees.length){
+    $('liste-commandes-suivi').innerHTML = `<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucune commande ne correspond à "${echapper(termeRechercheSuivi.trim())}".</div>`;
+  }
+}
+/** Filtre d'état (maquette « Suivi des commandes ») : losange = à traiter (reçue, paiement
+ *  attendu), carré = en cours, rond = livrée ou annulée. */
+let filtreEtatSuivi = '';
+function etatSuivi(c){
+  if(c.statutCommande === 'Livrée' || c.statutCommande === 'Annulée') return 'fini';
+  const paiementAttendu = !!c.lienPaiement && c.statutPaiement && c.statutPaiement !== 'Payé';
+  return (c.statutCommande === 'Reçue' || paiementAttendu) ? 'attente' : 'cours';
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-filtre-suivi]');
+  if(!f) return;
+  filtreEtatSuivi = f.dataset.filtreSuivi;
+  document.querySelectorAll('[data-filtre-suivi]').forEach(b => b.classList.toggle('actif', b === f));
+  appliquerRechercheEtRendreSuivi();
+});
+$('recherche-suivi').addEventListener('input', () => {
+  termeRechercheSuivi = $('recherche-suivi').value;
+  appliquerRechercheEtRendreSuivi();
+});
+
+/* ── Mode « une seule commande » ─────────────────────────────────────────────────────────
+   Arrivée depuis le portail avec ?ref= : seule la commande visée est affichée (on s'y perd
+   moins), avec un bouton pour charger toutes les autres. Au clic, la commande reste à sa place
+   à l'écran et les autres glissent de derrière elle jusqu'à leur position. */
+let focusSuivi = new URLSearchParams(location.search).get('ref') || '';
+if(focusSuivi) setTimeout(() => detailsOuvertsSuivi.add(focusSuivi), 0);
+function appliquerFocusSuivi(){
+  const liste = $('liste-commandes-suivi');
+  const cartes = [...liste.querySelectorAll('.carte-commande-suivi')];
+  const cible = focusSuivi ? cartes.find(c => c.dataset.reference === focusSuivi) : null;
+  if(focusSuivi && !cible) focusSuivi = '';          // référence inconnue : liste complète
+  $('etape-liste').classList.toggle('mode-focus', !!cible);
+  cartes.forEach(c => { c.classList.toggle('masquee-focus', !!cible && c !== cible); c.classList.toggle('carte-focus', c === cible); });
+  let bouton = $('btn-toutes-commandes-suivi');
+  if(!bouton){
+    bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.id = 'btn-toutes-commandes-suivi';
+    bouton.className = 'btn-toutes-commandes-suivi';
+    bouton.addEventListener('click', afficherToutesCommandesSuivi);
+    liste.after(bouton);
+  }
+  bouton.hidden = !cible || cartes.length < 2;
+  bouton.innerHTML = `Voir toutes mes commandes (${cartes.length}) <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>`;
+}
+function afficherToutesCommandesSuivi(){
+  const liste = $('liste-commandes-suivi');
+  const cible = liste.querySelector('.carte-commande-suivi.carte-focus');
+  if(!cible){ focusSuivi = ''; appliquerFocusSuivi(); return; }
+  const avant = cible.getBoundingClientRect().top;
+  focusSuivi = '';
+  appliquerFocusSuivi();
+  cible.classList.add('carte-focus');                 // reste mise en avant pendant l'animation
+  // La commande garde exactement sa place à l'écran (on compense le décalage de la page)…
+  window.scrollTo({ top: window.scrollY + cible.getBoundingClientRect().top - avant, behavior: 'instant' });
+  const origine = cible.getBoundingClientRect().top;
+  const cartes = [...liste.querySelectorAll('.carte-commande-suivi')];
+  const indexCible = cartes.indexOf(cible);
+  const reduit = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // … et les autres sortent de derrière elle pour rejoindre leur position, en cascade.
+  cartes.forEach((c, i) => {
+    if(c === cible || reduit || !c.animate) return;
+    const decalage = origine - c.getBoundingClientRect().top;
+    c.style.zIndex = '1';
+    c.animate([
+      { transform: `translateY(${decalage}px) scale(.94)`, opacity: 0 },
+      { transform: `translateY(${decalage * 0.15}px) scale(.98)`, opacity: 1, offset: .55 },
+      { transform: 'none', opacity: 1 },
+    ], { duration: 720, delay: Math.min(Math.abs(i - indexCible) - 1, 6) * 70, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' })
+      .finished.then(() => { c.style.zIndex = ''; }).catch(() => {});
+  });
+  if(!reduit && cible.animate) cible.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.015)' }, { transform: 'scale(1)' }], { duration: 500, easing: 'ease-out' });
+  setTimeout(() => cible.classList.remove('carte-focus'), 2600);
+  try{ history.replaceState(null, '', location.pathname); }catch(e){}
+}
+
+const detailsOuvertsSuivi = new Set();
+const SVG_V1 = {
+  x:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  check:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  bolt:'<svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>',
+  carte:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>',
+  horloge:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  chevron:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  personne:'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+};
+/** Icône du moyen de paiement (carte, chèque, espèces, virement, comptoir solidaire). */
+function iconeMoyenPaiementV1(m){
+  const t = String(m || '').toLowerCase();
+  const d = t.includes('chèque') || t.includes('cheque') ? '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 14h6M15 10h3M6 10h5"/>'
+    : t.includes('espèce') || t.includes('espece') ? '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'
+    : t.includes('virement') ? '<path d="M3 10h18M5 10v10M9 10v10M15 10v10M19 10v10M2 20h20M12 3l9 5H3z"/>'
+    : t.includes('comptoir') ? '<path d="M3 21h18M5 21V10M19 21V10M2 10l10-7 10 7"/><circle cx="12" cy="14" r="2.5"/>'
+    : '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>';
+  return `<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-details-suivi]');
+  if(!b) return;
+  const carte = b.closest('.carte-commande-suivi');
+  const ref = b.dataset.detailsSuivi;
+  const ouvert = !carte.classList.contains('ouvert');
+  carte.classList.toggle('ouvert', ouvert);
+  b.setAttribute('aria-expanded', ouvert);
+  if(ouvert) detailsOuvertsSuivi.add(ref); else detailsOuvertsSuivi.delete(ref);
+});
+
+/* Plusieurs liens (paiement par personne, plusieurs colis) → une seule action qui ouvre
+   une modale listant chaque lien avec son bouton, au lieu d'une rangée de boutons. */
+const liensModaleSuivi = {};
+function ouvrirModaleLiensSuivi(cle){
+  const d = liensModaleSuivi[cle];
+  if(!d) return;
+  $('modale-liens-titre').textContent = d.titre;
+  $('modale-liens-intro').textContent = d.intro || '';
+  $('modale-liens-liste').innerHTML = d.liens.map(l => `<div class="ml-ligne"><span data-ill="${d.ill}" class="ill"></span><span class="ml-txt"><b>${echapper(l.titre)}</b>${l.detail ? `<small>${echapper(l.detail)}</small>` : ''}</span><a class="btn btn-primary v1-btn" href="${echapper(urlSure(l.href))}" target="_blank" rel="noopener">${echapper(l.libelle)}${SVG_LIEN_EXTERNE}</a></div>`).join('');
+  $('modale-liens').classList.add('visible');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-liens-modale]');
+  if(b){ e.preventDefault(); ouvrirModaleLiensSuivi(b.dataset.liensModale); return; }
+  if(e.target.id === 'modale-liens' || e.target.id === 'modale-liens-fermer') $('modale-liens').classList.remove('visible');
+});
+
+function rendreCommandesSuivi(commandes){
+  if(!commandes.length){
+    $('liste-commandes-suivi').innerHTML = `<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucune commande enregistrée pour ce code pour le moment.</div>`;
+    return;
+  }
+
+  $('liste-commandes-suivi').innerHTML = commandes.map(c => {
+    const produitsTexte = c.lignes.map(l => `${l.quantite}× ${echapper(l.produit)}`).join(', ');
+    const estAnnulee = c.statutCommande === 'Annulée';
+    const urgente = c.dateLivraisonSouhaitee === 'ASAP' && !estAnnulee;
+
+    const liensColissimo = String(c.colissimo || '').split('\n').map(s => s.trim()).filter(Boolean);
+    const numerosSerie = String(c.numerosSerie || '').split('\n').map(s => s.trim()).filter(Boolean);
+
+    const svgHorloge = '<svg width="13" height="13" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M9 5v4l3 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+    const svgEclairRouge = '<svg viewBox="0 0 24 24" width="12" height="12" fill="#E5484D"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>';
+
+    // Une seule pilule de date en haut à droite : la livraison effective une fois la commande
+    // livrée, sinon la date cible confirmée (plus fiable qu'un simple souhait), sinon la date
+    // initialement souhaitée.
+    let piluleDateEnTete = '';
+    if(!estAnnulee){
+      if(c.statutCommande === 'Livrée' && c.dateLivraison){
+        piluleDateEnTete = `<span class="pilule-date-livree-cs" style="flex:none">${svgHorloge}Livrée le ${echapper(c.dateLivraison)}</span>`;
+      }else if(c.dateLivraisonCible && (c.modeLivraison === 'Retrait' || c.modeLivraison === 'Livraison EC')){
+        piluleDateEnTete = `<span class="pilule-date-estimee-cs" style="flex:none">${svgHorloge}${c.modeLivraison === 'Retrait' ? 'Retrait à partir du' : 'Livraison estimée le'} ${echapper(c.dateLivraisonCible)}</span>`;
+      }else if(c.dateLivraisonSouhaitee && c.dateLivraisonSouhaitee !== 'ASAP'){
+        piluleDateEnTete = `<span class="pilule-date-estimee-cs" style="flex:none">${svgHorloge}Livraison estimée le ${echapper(c.dateLivraisonSouhaitee)}</span>`;
+      }
+    }
+
+    // ── Carte « colonne d'état + tiroir » ──────────────────────────────────────────────
+    // Famille de couleur de la colonne : annulée (gris) · livrée (vert) · urgente (magenta) ·
+    // paiement attendu (ambre) · en cours (turquoise).
+    const estLivree = !estAnnulee && c.statutCommande === 'Livrée';
+    const paiementAttendu = !estAnnulee && !!c.lienPaiement && c.statutPaiement && c.statutPaiement !== 'Payé';
+    const famille = estAnnulee ? 'ko' : estLivree ? 'ok' : urgente ? 'urg' : paiementAttendu ? 'action' : 'cours';
+    const indexEtape = ETAPES_TIMELINE.indexOf(c.statutCommande);
+    const libelleEtat = estAnnulee ? 'Annulée' : (paiementAttendu && indexEtape < 2 ? 'Paiement attendu' : (LIBELLES_COURTS_TIMELINE[c.statutCommande] || c.statutCommande || 'Reçue'));
+    const iconeEtat = estAnnulee ? SVG_V1.x : estLivree ? SVG_V1.check : famille === 'urg' ? SVG_V1.bolt : famille === 'action' ? SVG_V1.carte : SVG_V1.horloge;
+    const dateColonne = estAnnulee ? `Commandée le ${echapper(c.date || '')}` : (piluleDateEnTete ? piluleDateEnTete.replace(/<[^>]+>/g, '') : `Commandée le ${echapper(c.date || '')}`);
+    const barres = estAnnulee ? '' : `<div class="v1-barres">${ETAPES_TIMELINE.map((_, i) => `<i class="${i < indexEtape || estLivree ? 'on' : ''}${i === indexEtape && !estLivree ? ' now' : ''}"></i>`).join('')}</div>`;
+    const moyenAffiche = (!estAnnulee && c.moyenPaiement && c.moyenPaiement !== 'Non applicable (ESN/Interne)') ? c.moyenPaiement : '';
+    const pastilles = estAnnulee ? '' : [
+      // « Urgente » : affichée en tête de carte uniquement
+      c.modeLivraison ? `<span class="pk-pill">${SVG_MODE_LIVRAISON[c.modeLivraison] || ''}${echapper(c.modeLivraison === 'Livraison EC' ? 'Livraison Emmaüs Connect' : c.modeLivraison)}</span>` : '',
+      moyenAffiche ? `<span class="pk-pill">${iconeMoyenPaiementV1(moyenAffiche)}${echapper(moyenAffiche)}</span>` : '',
+    ].join('');
+    const montant = (!estAnnulee && c.montantEstime != null) ? `<span class="v1-montant"><b>${formaterMontant(c.montantFacture != null ? c.montantFacture : c.montantEstime)}</b>${c.statutPaiement ? `<span class="pk-pill ${c.statutPaiement === 'Payé' ? 'pk-ok' : 'pk-att'}">${echapper(c.statutPaiement)}</span>` : ''}</span>` : '';
+    const liensPaiementPersonnes = (paiementAttendu && c.lienPaiement && c.paiementSepare && c.personnesDetail && c.personnesDetail.length)
+      ? c.personnesDetail.map((pp, i) => ({ href: API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference) + '&index=' + i, titre: pp.nomComplet || 'Personne ' + (i + 1), detail: pp.prix != null ? formaterMontant(pp.prix) : '', libelle: 'Régler' }))
+      : [];
+    if(liensPaiementPersonnes.length > 1) liensModaleSuivi[c.reference + '|paiement'] = { titre: 'Liens de paiement', intro: 'Un lien de paiement par personne accompagnée.', ill: 'personne', liens: liensPaiementPersonnes };
+    if(liensColissimo.length > 1) liensModaleSuivi[c.reference + '|colis'] = { titre: 'Suivi des colis', intro: 'Cette commande est envoyée en plusieurs colis.', ill: 'stock', liens: liensColissimo.map((l, i) => ({ href: l, titre: 'Colis ' + (i + 1), detail: '', libelle: 'Suivre' })) };
+    const boutonsPaiement = (paiementAttendu && c.lienPaiement)
+      ? (liensPaiementPersonnes.length > 1
+          ? `<button type="button" class="btn btn-primary v1-btn" data-liens-modale="${echapper(c.reference + '|paiement')}">Régler · ${liensPaiementPersonnes.length} liens</button>`
+          : liensPaiementPersonnes.length === 1
+            ? `<a class="btn btn-primary v1-btn" href="${echapper(urlSure(liensPaiementPersonnes[0].href))}" target="_blank" rel="noopener">Régler${SVG_LIEN_EXTERNE}</a>`
+            : `<a class="btn btn-primary v1-btn" href="${echapper(API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference))}" target="_blank" rel="noopener">Régler${SVG_LIEN_EXTERNE}</a>`)
+      : '';
+    const codeStructure = (() => { try{ const cs = sessionStorage.getItem('cvdl-code-structure'); return cs ? '&code=' + encodeURIComponent(cs) : ''; }catch(e){ return ''; } })();
+    const blocNumeros = numerosSerie.length ? `<div><span class="pk-lab">${c.dematerialisee ? (numerosSerie.length > 1 ? 'Codes' : 'Code') : (numerosSerie.length > 1 ? 'Numéros de série' : 'Numéro de série')}</span><span class="v1-v">${
+      c.dematerialisee
+        ? numerosSerie.map(n => window.piluleSerieCvdl(n, { code: true })).join(' ')
+        : numerosSerie.map(n => window.piluleSerieCvdl(n, { query: codeStructure })).join(' ')
+    }</span></div>` : '';
+    const blocDocuments = (c.bonLivraison || liensColissimo.length) ? `<div><span class="pk-lab">Documents</span><span class="v1-v">${
+      c.bonLivraison ? `<a class="pk-lien" href="${echapper(urlSure(c.bonLivraison))}" target="_blank" rel="noopener">${SVG_V1.doc}Bon de livraison</a>` : ''
+    }${liensColissimo.map((l, i) => `<a class="pk-lien" href="${echapper(urlSure(l))}" target="_blank" rel="noopener">${SVG_MODE_LIVRAISON['Colissimo'] || ''}${liensColissimo.length > 1 ? `Colis ${i + 1}` : 'Suivi Colissimo'}</a>`).join('')}</span></div>` : '';
+    const personnes = (!estAnnulee && c.personnesDetail) ? c.personnesDetail.filter(pp => pp.nomComplet) : [];
+    const blocPersonnes = personnes.length ? `<div><span class="pk-lab">${personnes.length > 1 ? `${personnes.length} personnes accompagnées` : '1 personne accompagnée'}</span><span class="v1-v cs-personnes">${personnes.map(pp => `<span class="cs-personne"><span data-ill="personne" class="ill"></span><span class="cs-personne-txt"><b>${echapper(pp.nomComplet)}</b>${pp.numeroSerie ? window.piluleSerieCvdl(pp.numeroSerie, { query: codeStructure }) : (pp.produit ? `<small>${echapper(pp.produit)}</small>` : '')}</span></span>`).join('')}</span></div>` : '';
+    const detailsVides = !blocNumeros && !blocDocuments && !blocPersonnes;
+    const frise = `<ol class="v1-frise">${ETAPES_TIMELINE.map((e, i) => `<li class="${(i <= indexEtape) ? 'on' : ''}${i === indexEtape && !estLivree ? ' now' : ''}"><i></i><span>${echapper(LIBELLES_COURTS_TIMELINE[e] || e)}</span><small>${i === 0 ? echapper(c.date || '') : (i === ETAPES_TIMELINE.length - 1 && c.dateLivraison ? echapper(c.dateLivraison) : '')}</small></li>`).join('')}</ol>`;
+    const ouvert = detailsOuvertsSuivi.has(c.reference);
+
+    const formeEtat = estAnnulee || estLivree ? 'rond' : (etatSuivi(c) === 'attente' ? 'losange' : 'carre');
+    const etapesFrise = ETAPES_TIMELINE.map((e, i) => {
+      const cls = (estLivree || i < indexEtape) ? 'fait' : (i === indexEtape ? 'cours' : 'avenir');
+      return `<li class="${cls}"><i></i><span>${echapper(LIBELLES_COURTS_TIMELINE[e] || e)}</span></li>`;
+    }).join('');
+    const docs = [
+      c.bonLivraison ? `<a class="cs-doc" href="${echapper(urlSure(c.bonLivraison))}" target="_blank" rel="noopener"><span data-ill="commandes" class="ill"></span>Bon de livraison</a>` : '',
+      liensColissimo.length > 1
+        ? `<button type="button" class="cs-doc" data-liens-modale="${echapper(c.reference + '|colis')}"><span data-ill="stock" class="ill"></span>Suivi des colis (${liensColissimo.length})</button>`
+        : (liensColissimo.length ? `<a class="cs-doc" href="${echapper(urlSure(liensColissimo[0]))}" target="_blank" rel="noopener"><span data-ill="stock" class="ill"></span>Suivi Colissimo</a>` : ''),
+      estLivree ? `<a class="cs-doc" href="rapport-impact.html?ref=${encodeURIComponent(c.reference)}"><span data-ill="stats" class="ill"></span>Rapport d’impact</a>` : ''
+    ].join('');
+    const aDetails = !estAnnulee && (blocNumeros || blocPersonnes);
+
+    return `<article class="card carte-commande-suivi cs-carte${estAnnulee ? ' annulee' : ''}${estLivree ? ' livree' : ''}${urgente && !estLivree ? ' urgente' : ''}${ouvert ? ' ouvert' : ''}" data-reference="${echapper(c.reference)}">
+      <div class="cs-tete">
+        <span data-ill="commandes" class="ill"></span>
+        <div class="cs-tete-txt">
+          <div class="cvdl-surtitre">${echapper(c.reference)} · ${echapper(c.date || '')}</div>
+          <b class="cs-produits">${produitsTexte}</b>
+        </div>
+        <span class="cs-etat">${urgente && !estLivree ? '<span class="cs-urgent">Urgent</span>' : ''}<span class="tag" data-forme="${formeEtat}">${echapper(libelleEtat)}</span></span>
+      </div>
+      ${estAnnulee
+        ? `<div class="cs-motif">${c.commentaire ? 'Motif : ' + echapper(c.commentaire) : 'Commande annulée.'}</div>`
+        : `<ol class="cs-frise">${etapesFrise}</ol>
+      ${blocInfosSuivi(c, { estLivree, moyenAffiche, boutonsPaiement })}`}
+      ${(docs || aDetails) ? `<div class="cs-pied">
+        <div class="cs-docs">${docs}</div>
+        <div class="cs-actions">${aDetails ? `<button type="button" class="cs-details-btn" data-details-suivi="${echapper(c.reference)}" aria-expanded="${ouvert}">Numéros de série et personnes ${SVG_V1.chevron}</button>` : ''}</div>
+      </div>` : ''}
+      ${aDetails ? `<div class="cs-details"><div><div class="cs-details-in">${blocNumeros}${blocPersonnes}</div></div></div>` : ''}
+    </article>`;
+  }).join('');
+}
+
+async function chargerCommandesSuivi(){
+  const code = $('code-structure').value.trim();
+  if(!code){ afficherMsg('retour-code', 'Merci de saisir un code.', 'erreur'); return; }
+
+  $('btn-voir-commandes').disabled = true;
+  $('btn-voir-commandes').innerHTML = '<span class="spinner-inline"></span>Vérification…';
+  afficherMsg('retour-code', '', 'info');
+
+  try{
+    const r = await jsonp({ action: 'commandes-par-code', code: code });
+    if(r.ok){
+      $('titre-structure').textContent = r.nomStructure ? `Commandes de ${r.nomStructure}` : 'Vos commandes';
+      $('nb-commandes-texte').textContent = r.commandes.length > 1
+        ? `${r.commandes.length} commandes enregistrées`
+        : (r.commandes.length === 1 ? '1 commande enregistrée' : '');
+      commandesChargeesSuivi = r.commandes;
+      appliquerRechercheEtRendreSuivi();
+      $('etape-code').hidden = true;
+      $('etape-liste').hidden = false;
+      $('btn-deconnexion-suivi').hidden = false;
+      try{ sessionStorage.setItem('cvdl-code-structure', code); }catch(e){}
+      demarrerRafraichissementAutoSuivi();
+      cibleCarteDepuisUrl('.carte-commande-suivi', 'arrivee-ciblee');
+    }else{
+      afficherMsg('retour-code', r.erreur || 'Code introuvable.', 'erreur');
+    }
+  }catch(e){
+    afficherMsg('retour-code', 'Connexion impossible. Réessayez dans un instant.', 'erreur');
+  }
+  $('btn-voir-commandes').disabled = false;
+  $('btn-voir-commandes').textContent = 'Continuer';
+}
+
+$('btn-voir-commandes').addEventListener('click', chargerCommandesSuivi);
+$('code-structure').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); chargerCommandesSuivi(); } });
+
+$('btn-deconnexion-suivi').addEventListener('click', () => {
+  try{ sessionStorage.removeItem('cvdl-code-structure'); }catch(e){}
+  location.reload();
+});
+
+try{
+  const codeMemorise = sessionStorage.getItem('cvdl-code-structure');
+  if(codeMemorise){
+    $('code-structure').value = codeMemorise;
+    chargerCommandesSuivi().finally(() => {
+      document.documentElement.classList.remove('deja-identifie');
+      const v = $('voile-verification-precoce'); if(v) v.style.display = 'none';
+    });
+  }
+}catch(e){}
+
+/** Rafraîchissement automatique en arrière-plan — sans lui, quelqu'un qui laisse cette page
+ *  ouverte ne verrait jamais un changement fait côté admin pendant ce temps (nouveau statut,
+ *  numéro Colissimo ajouté…) sans recharger la page à la main. En pause quand l'onglet n'est
+ *  pas affiché, pour ne pas multiplier les appels pour rien. */
+let intervalleRafraichissementSuivi = null;
+
+async function rafraichirSuiviSilencieusement(){
+  if(document.hidden) return;
+  const code = $('code-structure').value.trim();
+  if(!code) return;
+  try{
+    const r = await jsonp({ action: 'commandes-par-code', code: code });
+    if(r.ok){
+      commandesChargeesSuivi = r.commandes;
+      appliquerRechercheEtRendreSuivi();
+      $('nb-commandes-texte').textContent = r.commandes.length > 1
+        ? `${r.commandes.length} commandes enregistrées`
+        : (r.commandes.length === 1 ? '1 commande enregistrée' : '');
+    }
+  }catch(e){ /* on retente simplement au prochain cycle */ }
+}
+
+function demarrerRafraichissementAutoSuivi(){
+  if(intervalleRafraichissementSuivi) return;
+  intervalleRafraichissementSuivi = setInterval(rafraichirSuiviSilencieusement, 25000);
+}
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && !$('etape-liste').hidden) rafraichirSuiviSilencieusement();
+});
+</script>
+<div class="voile-modale-qr" id="modale-liens" role="dialog" aria-modal="true" aria-labelledby="modale-liens-titre">
+  <div class="modale-qr">
+    <h3 id="modale-liens-titre">Liens</h3>
+    <p id="modale-liens-intro"></p>
+    <div id="modale-liens-liste" class="ml-liste"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px"><button type="button" class="btn btn-secondary" id="modale-liens-fermer">Fermer</button></div>
+  </div>
+</div>
+</body>
+</html>

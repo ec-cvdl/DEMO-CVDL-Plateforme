@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<!-- Bon de livraison — jetons : STRUCTURE, ADRESSE, EMAIL, TELEPHONE, REFERENCE_COMMANDE, DATE, PRODUIT_n, QUANTITE_n, NUMERO_SERIE_n, MARQUE_MODELE_n, RESPONSABLE_*.
+     Modèle HTML à téléverser depuis l'admin (Réglages → modèles). Les jetons {{…}} sont remplacés à la
+     génération ; les lignes de tableau dont le jeton reste vide sont masquées automatiquement. -->
+<html lang="fr"><head><meta charset="utf-8"><title>Bon de livraison {{REFERENCE_COMMANDE}}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700&family=Inter:wght@400;500;600;700&display=swap">
+<style>:root{--acc:#00ACB0;--acc1:#e0f6f6;--acc2:#00777A}
+*{box-sizing:border-box}
+@page{size:A4;margin:14mm}
+body{margin:0;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;color:#14202b;font-size:12.5px;line-height:1.5;background:#eef1f4;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{max-width:780px;margin:24px auto;background:#fff;border-radius:18px;padding:34px 38px;box-shadow:0 10px 30px rgba(0,39,67,.08)}
+@media print{body{background:#fff}.page{margin:0;box-shadow:none;border-radius:0;padding:0;max-width:none}.no-print{display:none}}
+.entete{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:18px;border-bottom:3px solid var(--acc)}
+.marque{display:flex;align-items:center;gap:10px;font:700 18px/1.1 'Space Grotesk',system-ui,sans-serif;color:#002743}
+.points{display:grid;grid-template-columns:repeat(3,7px);gap:3px}.points i{width:7px;height:7px;border-radius:50%;display:block}
+.marque small{display:block;font:500 11px 'Inter',sans-serif;color:#5A6D7D;letter-spacing:.02em}
+.titre{text-align:right}.titre h1{margin:0;font:700 24px/1.1 'Space Grotesk',system-ui,sans-serif;color:#002743;letter-spacing:-.01em}
+.titre .ref{display:inline-block;margin-top:8px;background:var(--acc1);color:var(--acc2);font-weight:700;border-radius:999px;padding:3px 12px;font-size:12px}
+.titre .date{color:#5A6D7D;font-size:11.5px;margin-top:6px}
+.blocs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0}
+.bloc{border:1px solid #E3E8EC;border-radius:14px;padding:12px 14px}
+.lab{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#5A6D7D;font-weight:700;margin-bottom:5px}
+.bloc b{font-size:13.5px}
+table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #E3E8EC;border-radius:14px;overflow:hidden;margin:6px 0 18px}
+th{background:#F6F8FA;text-align:left;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#5A6D7D;padding:9px 12px}
+td{padding:9px 12px;border-top:1px solid #EDF1F4}
+td.n,th.n{text-align:right;white-space:nowrap}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600}
+tr:has(> td.cle:empty){display:none}
+h2{font:700 14px 'Space Grotesk',system-ui,sans-serif;margin:18px 0 4px;color:#002743}
+.pied{margin-top:26px;padding-top:14px;border-top:1px solid #E3E8EC;display:flex;justify-content:space-between;gap:20px;color:#5A6D7D;font-size:11px}
+.pied b{color:#14202b}
+.bouton{position:fixed;right:20px;bottom:20px;border:0;background:var(--acc);color:#fff;font:700 13px 'Inter',sans-serif;padding:11px 18px;border-radius:999px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+</style></head>
+<body><div class="page">
+<div class="entete"><div class="marque"><span class="points"><i style="background:#E62460"></i><i style="background:#00ACB0"></i><i style="background:#f5a623"></i><i style="background:#00ACB0"></i><i style="background:#002743"></i><i style="background:#E62460"></i><i style="background:#f5a623"></i><i style="background:#E62460"></i><i style="background:#00ACB0"></i></span><span>Emmaüs Connect<small>Matériel informatique reconditionné</small></span></div>
+<div class="titre"><h1>Bon de livraison</h1><span class="ref">Commande {{REFERENCE_COMMANDE}}</span><div class="date">Émis le {{DATE}}</div></div></div>
+<div class="blocs"><div class="bloc"><div class="lab">Structure</div><b>{{STRUCTURE}}</b><div>{{ADRESSE}}</div></div>
+<div class="bloc"><div class="lab">Contact</div><div>{{EMAIL}}</div><div>{{TELEPHONE}}</div></div></div><h2>Matériel livré</h2><table><thead><tr><th>Produit</th><th class="n">Quantité</th></tr></thead><tbody><tr><td class="cle">{{PRODUIT_1}}</td><td class="n">{{QUANTITE_1}}</td></tr><tr><td class="cle">{{PRODUIT_2}}</td><td class="n">{{QUANTITE_2}}</td></tr><tr><td class="cle">{{PRODUIT_3}}</td><td class="n">{{QUANTITE_3}}</td></tr><tr><td class="cle">{{PRODUIT_4}}</td><td class="n">{{QUANTITE_4}}</td></tr><tr><td class="cle">{{PRODUIT_5}}</td><td class="n">{{QUANTITE_5}}</td></tr><tr><td class="cle">{{PRODUIT_6}}</td><td class="n">{{QUANTITE_6}}</td></tr><tr><td class="cle">{{PRODUIT_7}}</td><td class="n">{{QUANTITE_7}}</td></tr><tr><td class="cle">{{PRODUIT_8}}</td><td class="n">{{QUANTITE_8}}</td></tr><tr><td class="cle">{{PRODUIT_9}}</td><td class="n">{{QUANTITE_9}}</td></tr><tr><td class="cle">{{PRODUIT_10}}</td><td class="n">{{QUANTITE_10}}</td></tr></tbody></table><h2>Appareils</h2><table><thead><tr><th>N° de série</th><th>Marque et modèle</th></tr></thead><tbody><tr><td class="cle mono">{{NUMERO_SERIE_1}}</td><td>{{MARQUE_MODELE_1}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_2}}</td><td>{{MARQUE_MODELE_2}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_3}}</td><td>{{MARQUE_MODELE_3}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_4}}</td><td>{{MARQUE_MODELE_4}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_5}}</td><td>{{MARQUE_MODELE_5}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_6}}</td><td>{{MARQUE_MODELE_6}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_7}}</td><td>{{MARQUE_MODELE_7}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_8}}</td><td>{{MARQUE_MODELE_8}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_9}}</td><td>{{MARQUE_MODELE_9}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_10}}</td><td>{{MARQUE_MODELE_10}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_11}}</td><td>{{MARQUE_MODELE_11}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_12}}</td><td>{{MARQUE_MODELE_12}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_13}}</td><td>{{MARQUE_MODELE_13}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_14}}</td><td>{{MARQUE_MODELE_14}}</td></tr><tr><td class="cle mono">{{NUMERO_SERIE_15}}</td><td>{{MARQUE_MODELE_15}}</td></tr></tbody></table><div class="blocs" style="margin-top:26px"><div class="bloc" style="height:96px"><div class="lab">Remis par — date et signature</div></div><div class="bloc" style="height:96px"><div class="lab">Reçu par la structure — date et signature</div></div></div>
+<div class="pied"><span>Votre contact : <b>{{RESPONSABLE_NOM}}</b><br>{{RESPONSABLE_TELEPHONE}} · {{RESPONSABLE_EMAIL}}</span><span style="text-align:right">Emmaüs Connect<br>Document généré depuis la plateforme CVDL</span></div>
+</div>
+<button class="bouton no-print" onclick="window.print()">Imprimer / enregistrer en PDF</button>
+</body></html>

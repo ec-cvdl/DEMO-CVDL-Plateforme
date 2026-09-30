@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script>
+const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
+</script>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ma flotte — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<script src="qrcode.min.js"></script>
+<style>
+/* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
+[hidden]{ display:none!important; }
+main{ max-width:1240px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
+main.large{ max-width:1320px; }
+main.large.tableur{ max-width:90vw; }
+.flotte-toggle{ display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; position:relative; }
+.flotte-toggle input{ position:absolute; opacity:0; width:0; height:0; }
+.flotte-toggle .piste{ width:34px; height:20px; position:relative; flex:none; }
+.tableau-flotte input[type="date"]{ padding:5px 6px; }
+.spinner-inline{ display:inline-block; width:14px; height:14px; animation:tourner .7s linear infinite; margin-right:8px; vertical-align:-2px; }
+@keyframes tourner{ to{ transform:rotate(360deg); } }
+html.deja-identifie .etape[data-etape="code"]{ display:none!important; }
+html.deja-identifie #voile-verification-precoce{ display:flex; }
+#voile-verification-precoce{ display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+#voile-verification-precoce .spinner-precoce{ width:34px; height:34px; animation:tourner .8s linear infinite; }
+.tuto-flotte{ margin:var(--space-6) 0 0; padding:0; }
+.tuto-flotte li{ list-style:none; position:relative; padding:0 0 26px 42px; margin:0; }
+.tuto-flotte li:last-child{ padding-bottom:0; }
+.tuto-flotte .titre-etape{ margin-bottom:4px; }
+.tuto-flotte .desc-etape{ opacity:0.65; }
+.compteur-ajouts{ opacity:0.6; margin-top:8px; }
+.compteur-ajouts:has(.msg){ opacity:1; }
+.fl-depot-vente{ margin-top:12px; }
+.flotte-entete{ display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; margin-bottom:var(--space-5); }
+.flotte-entete h1{ margin:0 0 6px; }
+.flotte-entete p{ opacity:0.6; margin:0; max-width:52ch; }
+.flotte-actions{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.flotte-bouton{ box-sizing:border-box; display:inline-flex; align-items:center; gap:7px; cursor:pointer; padding:10px 16px; white-space:nowrap; }
+.flotte-tuiles{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:var(--space-5) 0; }
+.flotte-tuile{ padding:16px 18px; }
+.flotte-tuile .l{ opacity:0.6; margin-top:4px; }
+.flotte-tuile-alerte .n, .flotte-tuile-alerte .l{ opacity:1; }
+.flotte-barre{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:var(--space-5) 0 var(--space-2); }
+.flotte-recherche{ position:relative; flex:1; min-width:220px; max-width:360px; }
+.flotte-recherche svg{ position:absolute; left:13px; top:50%; opacity:0.4; pointer-events:none; }
+.flotte-recherche input{ width:100%; padding-left:38px; }
+.flotte-tri{ box-sizing:border-box; padding:8px 12px; cursor:pointer; }
+.grille-dispositifs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:16px; margin-top:var(--space-4); }
+.carte-dispositif{ padding:0; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+.cd-corps{ padding:16px; display:flex; flex-direction:column; gap:12px; flex:1; }
+.cd-entete-carte{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.cd-champs{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cd-champ label{ display:block; opacity:0.45; margin-bottom:4px; }
+.cd-champ input, .cd-champ select{ width:100%; padding:7px 9px; }
+.cd-pied{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; }
+.cd-select-statut{ padding:7px 10px; cursor:pointer; }
+.cd-verrou-badge{ opacity:0.55; display:flex; align-items:center; gap:5px; }
+.cd-checkbox{ position:absolute; top:12px; left:12px; width:20px; height:20px; z-index:2; }
+.btn-personne-flotte-portail{ box-sizing:border-box; display:inline-flex; align-items:center; gap:5px; cursor:pointer; padding:7px 12px; white-space:nowrap; }
+.pille-passeport-flotte{ display:inline-flex; align-items:center; gap:7px; cursor:pointer; width:fit-content; padding:7px 13px; white-space:nowrap; }
+.bascule-vue-flotte{ display:inline-flex; overflow:hidden; }
+.bascule-vue-flotte button{ box-sizing:border-box; padding:8px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+.tableau-flotte{ width:100%; border-collapse:collapse; margin-top:var(--space-4); }
+.tableau-flotte th{ text-align:left; opacity:0.5; padding:8px 10px; white-space:nowrap; }
+.tableau-flotte td{ padding:7px 10px; vertical-align:middle; }
+.tableau-flotte tr.tf-verrouillee td{ opacity:0.6; }
+.tableau-flotte td.tf-serie{ white-space:nowrap; }
+.tableau-flotte input[type="text"], .tableau-flotte select{ width:100%; min-width:80px; padding:6px 8px; }
+.tableau-flotte-scroll{ overflow-x:auto; }
+.flotte-filtres{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.flotte-carte{ overflow:hidden; margin-top:var(--space-4); }
+.flotte-carte-entete{ display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3); flex-wrap:wrap; padding:var(--space-6) var(--space-6) 0; }
+.flotte-carte-sous{ opacity:0.6; margin-top:6px; }
+.flotte-carte-panel{ padding:var(--space-6); }
+.voile-modale-qr{ display:none; position:fixed; inset:0; z-index:500; align-items:center; justify-content:center; padding:20px; }
+.voile-modale-qr.visible{ display:flex; }
+.modale-qr{ padding:var(--space-6); max-width:320px; width:100%; text-align:center; }
+.modale-qr h3{ margin:0 0 4px; }
+.modale-qr p{ margin:0 0 var(--space-4); opacity:0.6; }
+.modale-qr label{ display:block; }
+#qr-code-conteneur{ display:flex; justify-content:center; margin-bottom:var(--space-4); }
+.modale-qr .mono{ word-break:break-all; opacity:0.55; margin-bottom:var(--space-4); display:block; }
+.modale-qr-entete{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+.modale-qr-entete h3{ margin:0; }
+.modale-fermer-rond-qr{ box-sizing:border-box; width:26px; height:26px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; }
+.lien-changer-code{ box-sizing:border-box; display:block; text-align:center; cursor:pointer; width:100%; margin-top:12px; padding:10px 16px; }
+.btn-deconnexion-fixe{ position:fixed; top:var(--space-4); right:var(--space-4); z-index:150; display:flex; align-items:center; gap:6px; padding:9px 16px; cursor:pointer; }
+@media (max-width: 640px){
+.cd-champs{ grid-template-columns:1fr; }
+main{ padding:var(--space-6) var(--space-4); }
+}
+.bascule-vue-flotte{ padding:3px; gap:2px; }
+.bascule-vue-flotte button{ padding:6px 13px; }
+.tableau-flotte-scroll{ margin-top:var(--space-4); }
+.tableau-flotte{ margin-top:0; }
+.tableau-flotte th{ padding:11px 12px; }
+.tableau-flotte td{ padding:9px 12px; }
+.tableau-flotte .cd-select-statut{ width:auto !important; min-width:112px; }
+.tableau-flotte tr.cd-d3e td{ opacity:.55; }
+.cd-select-statut.pk-st-stock, .cd-select-statut.pk-st-ok, .cd-select-statut.pk-st-sav, .cd-select-statut.pk-st-d3e{ padding:5px 26px 5px 12px; cursor:pointer; }
+.tableau-flotte-liste thead th{ position:sticky; top:0; z-index:2; opacity:1; }
+.tableau-flotte-liste td{ padding:10px 14px !important; height:62px; }
+.tableau-flotte-liste tr.tl-d3e td{ opacity:.5; }
+.tableau-flotte tr[data-statut-flotte="remis"] td{ background:color-mix(in srgb, #1F9D55 7%, #fff); }
+.tableau-flotte tr[data-statut-flotte="sav"] td{ background:color-mix(in srgb, #D97706 9%, #fff); }
+.tableau-flotte tr[data-statut-flotte="d3e"] td{ background:color-mix(in srgb, #8FA3B3 12%, #fff); }
+.tableau-flotte tr[data-statut-flotte] td:first-child{ box-shadow:inset 4px 0 0 var(--teinte-flotte, transparent); }
+.tableau-flotte tr[data-statut-flotte="remis"]{ --teinte-flotte:#1F9D55; } .tableau-flotte tr[data-statut-flotte="sav"]{ --teinte-flotte:#D97706; } .tableau-flotte tr[data-statut-flotte="d3e"]{ --teinte-flotte:#8FA3B3; }
+.carte-dispositif[data-statut-flotte="remis"]{ background:color-mix(in srgb, #1F9D55 6%, #fff) !important; }
+.carte-dispositif[data-statut-flotte="sav"]{ background:color-mix(in srgb, #D97706 8%, #fff) !important; }
+.carte-dispositif[data-statut-flotte="d3e"]{ background:color-mix(in srgb, #8FA3B3 10%, #fff) !important; }
+
+.tableau-flotte-liste tr.tf-verrouillee td{ opacity:.6; }
+.tl-col-case{ width:40px; padding-right:0 !important; }
+.tl-case{ width:17px; height:17px; cursor:pointer; }
+.tl-centre{ text-align:center; }
+.tl-muet{ white-space:nowrap; }
+.tl-appareil{ display:flex; align-items:center; gap:12px; min-width:240px; }
+.tl-appareil .tl-ico{ width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+.tl-app-txt{ display:flex; flex-direction:column; min-width:0; }
+.tl-ligne1{ display:flex; gap:2px; align-items:center; }
+.tableau-flotte-liste input.tl-champ{ box-sizing:border-box; padding:3px 6px; margin-left:-6px; min-width:3ch; max-width:100%; cursor:text; }
+.tableau-flotte-liste input.tl-sous{ padding-top:1px; padding-bottom:1px; }
+.tableau-flotte-liste .pille-passeport-flotte{ padding:5px 10px; }
+.tl-personne{ box-sizing:border-box; display:inline-flex; align-items:center; gap:9px; cursor:pointer; padding:4px 10px 4px 4px; white-space:nowrap; }
+span.tl-personne{ cursor:default; }
+.tl-personne-champ{ display:inline-flex; align-items:center; gap:8px; }
+.tl-av{ width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; flex:none; }
+.tl-verrou{ display:inline-flex; gap:6px; align-items:center; padding:4px 10px; white-space:nowrap; }
+.tl-lieu select{ box-sizing:border-box; cursor:pointer; padding:5px 26px 5px 10px; min-width:120px; }
+.tableau-compta td{ height:54px; white-space:nowrap; }
+.tableau-compta input[type="checkbox"]{ width:17px; height:17px; }
+.carte-dispositif.fiche{ padding:0 !important; overflow:hidden; display:flex; flex-direction:column; }
+.fi-vis{ position:relative; height:104px; display:flex; align-items:center; justify-content:center; }
+.fi-vis .fi-etat{ position:absolute; top:10px; right:10px; }
+.fi-vis .fi-case{ position:absolute; top:12px; left:12px; }
+.fi-corps{ padding:12px 14px 14px; display:flex; flex-direction:column; gap:6px; }
+.fi-personne{ margin:4px 0 2px; }
+.fi-ligne{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.fi-sf{ display:inline-flex; align-items:center; gap:6px; }
+.fi-paye{ padding:5px 10px; }
+.fi-pied{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:6px; padding-top:10px; }
+.fiche.fi-d3e{ opacity:.55; }
+.fiche-verrouillee{ opacity:.65; }
+
+/* ════ Flotte — refonte des fiches, onglets d'affichage, identité en ligne (28/09) ════ */
+.flotte-vues{ display:flex; gap:10px; flex-wrap:wrap; margin:var(--space-6) 0 0; }
+.flotte-vues button{ all:unset; box-sizing:border-box; cursor:pointer; flex:1 1 200px; max-width:300px; display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:14px; background:#fff; border:1.5px solid color-mix(in srgb, #002743 22%, transparent); color:#002743; transition:transform .12s, box-shadow .12s, border-color .12s, background .12s; }
+.flotte-vues button svg{ width:22px; height:22px; flex:none; padding:8px; box-sizing:content-box; border-radius:10px; background:var(--fond-doux, #F3F6F8); }
+.flotte-vues button span{ display:flex; flex-direction:column; gap:1px; }
+.flotte-vues button b{ font-size:14.5px; } .flotte-vues button small{ font-size:12px; opacity:.65; }
+.flotte-vues button:hover{ border-color:#002743; transform:translate(-1px,-1px); box-shadow:3px 3px 0 color-mix(in srgb, #002743 14%, transparent); }
+.flotte-vues button.actif{ background:#002743; color:#fff; border-color:#002743; box-shadow:4px 4px 0 color-mix(in srgb, var(--acc, #00ACB0) 55%, transparent); }
+.flotte-vues button.actif svg{ background:rgba(255,255,255,.14); }
+.flotte-vues button.actif small{ opacity:.8; }
+.flotte-vues button:focus-visible{ outline:2px solid var(--acc, #00ACB0); outline-offset:2px; }
+.flotte-barre{ padding:12px 14px; border-radius:14px; background:var(--fond-doux, #F3F6F8); margin-top:12px !important; }
+.flotte-filtres, .flotte-tris{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.flotte-tris{ margin-left:auto; }
+.flotte-lab{ font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; opacity:.6; margin-right:2px; }
+.flotte-barre .flotte-tri{ padding:6px 11px; font-size:12.5px; }
+/* Fiche appareil */
+.grille-dispositifs{ display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:18px; }
+.fi3{ --st:#1F9D55; padding:0 !important; display:flex; flex-direction:column; border-left:5px solid var(--st) !important; background:#fff !important; }
+.fi3[data-statut-flotte="remis"]{ --st:#00ACB0; } .fi3[data-statut-flotte="sav"]{ --st:#E24B4A; } .fi3[data-statut-flotte="d3e"]{ --st:#8FA3B3; }
+.fi3.fi3-alerte{ box-shadow:4px 4px 0 color-mix(in srgb, #FECC38 70%, transparent) !important; }
+.fi3-tete{ display:flex; align-items:flex-start; gap:12px; padding:16px 16px 12px; }
+.fi3-tete .fi-case{ margin-top:4px; width:18px; height:18px; flex:none; }
+.fi3-vis{ width:50px; height:50px; flex:none; border-radius:12px; background:var(--fond-doux, #F3F6F8); display:flex; align-items:center; justify-content:center; }
+.fi3-vis svg, .fi3-vis .ill{ width:38px !important; height:38px !important; }
+.fi3-titre{ flex:1; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.fi3-produit{ font-family:var(--police-titre); font-size:15px; line-height:1.25; }
+.fi3-livre{ font-size:12px; color:var(--d-texte2, #5A6D7D); }
+.fi3-sn-ligne{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 16px 12px; flex-wrap:wrap; }
+.fi3-sn{ display:flex; min-width:0; }
+.fi3-statut{ flex:none; }
+.fi3-pied-vide{ padding:0 0 6px !important; }
+.tl-ident{ flex-wrap:nowrap !important; }
+.tl-ident .tl-ident-champ{ display:inline-block !important; width:auto !important; flex:0 1 auto; max-width:14ch; min-width:0 !important; }
+.fi3-ident{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); margin:0 16px; border:1px solid color-mix(in srgb, #002743 12%, transparent); border-radius:12px; overflow:hidden; }
+.fi3-champ{ display:flex; flex-direction:column; gap:1px; padding:7px 10px; min-width:0; cursor:text; }
+.fi3-champ + .fi3-champ{ border-left:1px solid color-mix(in srgb, #002743 12%, transparent); }
+.fi3-champ span{ font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; opacity:.55; }
+.fi3-champ .tl-champ{ font-size:13.5px !important; font-weight:600; padding:1px 0 !important; margin:0 !important; width:100%; min-width:0; background:transparent; border:0 !important; }
+.fi3-champ:focus-within{ background:color-mix(in srgb, var(--acc, #00ACB0) 8%, #fff); }
+.fi3-ident-lu{ margin:0 16px; font-size:13px; opacity:.75; }
+.fi3-infos{ display:flex; flex-direction:column; gap:2px; padding:10px 16px 4px; }
+.fi3-l{ display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:36px; }
+.fi3-l + .fi3-l{ border-top:1px dashed color-mix(in srgb, #002743 14%, transparent); }
+.fi3-k{ font-size:12.5px; opacity:.65; flex:none; white-space:nowrap; }
+.fi3-v .tl-personne{ max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+.fi3-v{ display:flex; align-items:center; gap:8px; justify-content:flex-end; min-width:0; }
+.fi3-pied{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:10px 16px 14px; font-size:12px; opacity:1; color:var(--d-texte2, #5A6D7D); }
+.fi3-pied b{ color:#002743; }
+.fi3-puce{ font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; }
+.fi3-puce.att{ background:#FFF3CC; color:#7A5A00; } .fi3-puce.sav{ background:#FDECEC; color:#B42318; }
+/* Vue Liste : produit en titre, marque · modèle · catégorie sur UNE ligne */
+.tl-produit-nom{ display:block; font-size:13.5px; line-height:1.3; }
+.tl-ident{ display:flex; align-items:center; gap:2px; flex-wrap:wrap; margin-top:2px; }
+.tl-ident i{ font-style:normal; opacity:.4; margin:0 2px; }
+.tl-ident .tl-ident-champ{ font-size:12.5px !important; font-weight:500 !important; padding:1px 4px !important; margin:0 !important; opacity:.85; }
+.tl-ident-lu{ font-size:12.5px; opacity:.7; }
+@media (max-width:600px){ .fi3-ident{ grid-template-columns:1fr; } .fi3-champ + .fi3-champ{ border-left:0; border-top:1px solid color-mix(in srgb, #002743 12%, transparent); } .flotte-vues button{ max-width:none; } .flotte-vues small{ display:none; } .flotte-tris{ margin-left:0; } }
+
+/* Modale statistiques de la flotte */
+.fs-tuiles{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; }
+.fs-tuile{ display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; background:var(--fond-doux, #F3F6F8); min-width:0; }
+.fs-tuile .ill{ width:34px; height:34px; flex:none; }
+.fs-tuile b{ display:block; font-family:var(--police-titre); font-size:20px; line-height:1.1; }
+.fs-tuile span:not(.ill){ font-size:12px; color:var(--d-texte2, #5A6D7D); }
+.fs-alerte{ margin-top:10px; padding:9px 12px; border-radius:12px; background:#FFF3CC; color:#7A5A00; font-size:13px; font-weight:700; }
+.fs-grille{ display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:14px; margin-top:14px; }
+.fs-bloc{ border:1.5px solid color-mix(in srgb, #002743 14%, transparent); border-radius:16px; padding:14px 16px; min-width:0; }
+.fs-bloc h4{ margin:0 0 10px; font-family:var(--police-titre); font-size:15px; }
+.fs-anneau-ligne{ display:flex; align-items:center; gap:16px; }
+.fs-anneau{ flex:none; overflow:visible; }
+.fs-legende{ flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; }
+.fs-leg{ display:flex; flex-direction:column; gap:3px; }
+.fs-leg-tete{ display:flex; align-items:center; gap:7px; font-size:12.5px; }
+.fs-leg-tete i{ width:10px; height:10px; border-radius:3px; flex:none; box-shadow:0 0 0 1.5px #002743; }
+.fs-leg-tete span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.fs-leg-tete small{ opacity:.6; width:36px; text-align:right; }
+.fs-barre{ height:5px; border-radius:999px; background:#EEF2F5; overflow:hidden; }
+.fs-barre span{ display:block; height:100%; border-radius:inherit; }
+.fs-vide{ opacity:.55; font-size:13px; margin:0; }
+@media (max-width:720px){ .fs-tuiles{ grid-template-columns:1fr 1fr; } .fs-grille{ grid-template-columns:1fr; } .fs-anneau-ligne{ flex-direction:column; align-items:stretch; } .fs-anneau{ align-self:center; } }
+
+/* Vue matériel (depuis l'admin) : bandeau d'information */
+.flotte-note-materiel{ margin:10px 0 0; font-size:13px; padding:9px 12px; border-radius:10px; background:color-mix(in srgb, #00ACB0 10%, transparent); border-left:3px solid #00ACB0; }
+/* Ouverte depuis l'admin : le titre de page fait doublon avec l'en-tête de la modale */
+html.flotte-depuis-admin .flotte-entete > div:first-child{ display:none; }
+html.flotte-depuis-admin .flotte-entete{ justify-content:flex-end; margin-bottom:0; }
+html.flotte-depuis-admin main{ padding-top:14px !important; }
+
+.flotte-vues button[data-vue-flotte="compta"]{ margin-left:auto; }
+@media (max-width:600px){ .flotte-vues button[data-vue-flotte="compta"]{ margin-left:0; } }
+
+/* Pastilles n° de série de la flotte : toutes de la même largeur (celle du plus long numéro),
+   numéro centré — la largeur est calculée par le script (--sn-ch, en caractères). */
+#zone-flotte .cvdl-sn .cvdl-sn-t{ min-width:calc(var(--sn-ch, 10) * 1ch + .3ch); text-align:center; flex:1; }
+#zone-flotte .cvdl-sn{ justify-content:space-between; }
+
+/* Prix dans la flotte + tarifs de revente */
+.fl-prix{ display:inline-flex; flex-direction:column; align-items:flex-end; line-height:1.2; }
+.fl-prix.compact{ align-items:flex-start; }
+.fl-prix b{ font-family:var(--police-titre); font-size:14.5px; }
+.fl-prix small{ font-size:11.5px; opacity:.65; white-space:nowrap; }
+.fl-prix-fixer{ all:unset; cursor:pointer; font-size:12.5px; font-weight:700; text-decoration:underline dashed; text-underline-offset:3px; }
+.tr-liste{ display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+.tr-ligne{ display:grid; grid-template-columns:40px minmax(0,1fr) auto 120px auto; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; background:var(--fond-doux, #F3F6F8); }
+.tr-nom{ display:flex; flex-direction:column; min-width:0; } .tr-nom b{ font-size:14px; } .tr-nom small{ font-size:12px; opacity:.7; }
+.tr-max{ font-size:12.5px; white-space:nowrap; }
+.tr-champ{ display:flex; align-items:center; gap:6px; } .tr-champ .input{ min-height:36px; padding:6px 10px; }
+.tr-ok{ min-height:36px; padding:6px 12px; }
+@media (max-width:640px){ .tr-ligne{ grid-template-columns:34px 1fr; } .tr-max, .tr-champ, .tr-ok{ grid-column:2; } }
+/* Projet de distribution d'un appareil remis (Interne) */
+.fl-projet{ display:block; margin-top:6px; width:100%; min-width:150px; max-width:230px; font:inherit; font-size:12.5px !important; padding:4px 8px !important; border-radius:999px !important; border:1.5px dashed color-mix(in srgb, var(--navy, #002743) 35%, transparent) !important; background:#fff !important; color:inherit; cursor:pointer; text-overflow:ellipsis; }
+.fl-projet.on{ border-style:solid !important; border-color:var(--tur, #00ACB0) !important; background:color-mix(in srgb, var(--tur, #00ACB0) 12%, #fff) !important; font-weight:600; }
+.fi3-v .fl-projet{ margin-top:0; max-width:100%; }
+.fl-projet-lu{ display:inline-block; margin-top:6px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; background:color-mix(in srgb, var(--tur, #00ACB0) 12%, #fff); }
+</style>
+<script src="portail-ui.js?v=22" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
+<link rel="stylesheet" href="retours.css?v=1">
+<script src="retours.js?v=1" defer></script>
+</head>
+<body data-famille="materiel">
+<div class="voile-modale-qr" id="modale-qr-passeport">
+  <div class="modale-qr">
+    <span data-ill="passeport" class="pk-modale-ill"></span><h3>Passeport de l'appareil</h3>
+    <p>Scannez pour ouvrir la fiche, ou imprimez ce QR pour le coller sur l'appareil.</p>
+    <div id="qr-code-conteneur"></div>
+    <span class="mono" id="qr-url-affichee"></span>
+    <a class="btn btn-primary" style="width:100%;justify-content:center" id="qr-ouvrir-passeport" href="#" target="_blank" rel="noopener">Ouvrir le passeport ↗</a>
+    <button type="button" class="lien-changer-code" id="qr-fermer">Fermer</button>
+  </div>
+</div>
+
+<div class="voile-modale-qr" id="modale-personne-portail">
+  <div class="modale-qr" style="text-align:left;max-width:420px;max-height:85vh;overflow-y:auto">
+    <div class="modale-qr-entete">
+      <span data-ill="personne" class="pk-modale-ill"></span><h3>Personne — <span id="personne-portail-titre"></span></h3>
+      <button type="button" class="modale-fermer-rond-qr" id="personne-portail-fermer-x" aria-label="Fermer">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="personne-portail-contenu"></div>
+    <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:10px" id="personne-portail-enregistrer">Enregistrer</button>
+  </div>
+</div>
+
+<div class="voile-modale-qr" id="modale-tarifs-revente">
+  <div class="modale-qr" style="max-width:720px;text-align:left">
+    <span data-ill="tarifs" class="pk-modale-ill"></span><h3>Tarifs de revente</h3>
+    <p>Le prix auquel vous revendez chaque appareil à la personne accompagnée. Il ne peut pas dépasser le prix maximal fixé par Emmaüs Connect ; laissé vide, c’est ce prix maximal qui s’applique.</p>
+    <div id="tarifs-revente-contenu"></div>
+    <button type="button" class="lien-changer-code" id="tarifs-revente-fermer">Fermer</button>
+  </div>
+</div>
+
+<div class="voile-modale-qr" id="modale-attestation-flotte">
+  <div class="modale-qr">
+    <span data-ill="attestations" class="pk-modale-ill"></span><h3>Attestation de paiement</h3>
+    <p>La date de naissance n'est pas enregistrée dans la flotte — à indiquer à chaque génération.</p>
+    <input type="text" id="attestation-nom-input" class="input" aria-label="Nom complet de la personne" autocomplete="name" style="margin-bottom:10px" placeholder="Nom complet">
+    <input type="date" id="attestation-naissance-input" class="input" aria-label="Date de naissance" style="margin-bottom:10px">
+    <div id="retour-attestation-flotte" style="margin-bottom:10px"></div>
+    <button type="button" class="btn btn-primary" style="width:100%;justify-content:center" id="btn-generer-attestation-flotte">Générer l'attestation</button>
+    <button type="button" class="lien-changer-code" id="attestation-fermer">Annuler</button>
+  </div>
+</div>
+
+<div class="voile-modale-qr" id="modale-stats-flotte-portail">
+  <div class="modale-qr fs-modale" style="max-width:820px;text-align:left">
+    <span data-ill="flotte" class="pk-modale-ill"></span><h3>Statistiques de ma flotte</h3>
+    <div id="stats-flotte-portail-contenu" style="margin-top:var(--space-4)"></div>
+    <button type="button" class="lien-changer-code" id="stats-flotte-portail-fermer">Fermer</button>
+  </div>
+</div>
+
+<div class="voile-modale-qr" id="modale-lieu-stockage">
+  <div class="modale-qr" style="text-align:left;max-width:400px">
+    <span data-ill="flotte" class="pk-modale-ill"></span><h3>Lieu de stockage</h3>
+    <p id="lieu-stockage-titre" style="margin-bottom:6px"></p>
+    <p id="lieu-stockage-actuel" style="opacity:0.75"></p>
+    <select id="lieu-stockage-select" class="input" aria-label="Lieu de stockage" style="margin-bottom:10px"></select>
+    <input type="text" id="lieu-stockage-nouveau" class="input" aria-label="Nom du nouveau lieu" placeholder="Nom du nouveau lieu" style="margin-bottom:10px;display:none">
+    <div id="retour-lieu-stockage" style="margin-bottom:6px"></div>
+    <button type="button" class="btn btn-primary" style="width:100%;justify-content:center" id="btn-lieu-enregistrer">Modifier le lieu de stockage</button>
+    <button type="button" class="lien-changer-code" id="btn-lieu-conserver">Conserver le lieu actuel</button>
+  </div>
+</div>
+
+<div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
+<button type="button" class="btn-deconnexion-fixe" id="btn-deconnexion-flotte" hidden>
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  Déconnexion
+</button>
+
+<main id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" onclick="location.href='portail-structure.html'">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Portail
+  </button>
+
+  <section class="etape" data-etape="code" style="max-width:460px;margin:0 auto">
+    <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
+      <span data-ill="cle" class="pk-titre-ill"></span>
+      <h1 style="margin:0">Quel est votre <em>code structure</em> ?</h1>
+      <p style="opacity:0.6;margin:0">Le même code que pour commander ou suivre vos commandes.</p>
+      <div class="field">
+        <label for="code" class="sr-only">Code structure</label>
+        <input type="text" class="input" id="code" autocomplete="off" spellcheck="false" placeholder="Saisissez votre code">
+      </div>
+      <div id="retour-code" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary btn-block" id="btn-verifier">Continuer</button>
+    </div>
+  </section>
+
+  <section class="etape" data-etape="flotte" hidden>
+    <div id="zone-flotte"><div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div></div>
+  </section>
+</main>
+
+<script>
+try{ if(sessionStorage.getItem('cvdl-code-structure') || new URLSearchParams(location.search).get('code')) document.documentElement.classList.add('deja-identifie'); }catch(e){}
+</script>
+<script>
+const $  = id => document.getElementById(id);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+/* Vue « matériel » : page ouverte depuis l'admin (modale Flotte). On y voit tout le matériel
+   (statut, n° de série, lieu, garantie, passeport…) mais ni l'identité des personnes (nom,
+   prénom, date de naissance) ni la comptabilité (prix, paiements, rapprochement). Le serveur
+   ne renvoie pas ces données dans ce mode (paramètre vue=materiel). */
+const VUE_MATERIEL = (() => { try{ return new URLSearchParams(location.search).get('integre') === '1'; }catch(e){ return false; } })();
+if(VUE_MATERIEL) document.documentElement.classList.add('vue-materiel');
+const avecVue = o => VUE_MATERIEL ? { ...o, vue: 'materiel' } : o;
+function jsonp(params){
+  return fetch(API + '?' + new URLSearchParams(avecVue(params))).then(r => r.json());
+}
+function poster(data){
+  return fetch(API, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(avecVue(data))
+  }).then(r => r.json());
+}
+function afficherMsg(cible, texte, type){
+  $(cible).innerHTML = texte ? '<div class="msg msg-' + type + '">' + texte + '</div>' : '';
+}
+function echapper(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+// Même règle de casse que commande.html/sav.html : première lettre de chaque mot en majuscule
+// pour le prénom (tirets/espaces gérés), tout en majuscule pour le NOM.
+function capitaliserPrenom(valeur){
+  let resultat = '';
+  let debutMot = true;
+  for (const car of valeur) {
+    if (car === ' ' || car === '-') { resultat += car; debutMot = true; }
+    else if (debutMot) { resultat += car.toUpperCase(); debutMot = false; }
+    else { resultat += car.toLowerCase(); }
+  }
+  return resultat;
+}
+
+let codeValide = '';
+let estInterneFlotte = false;
+// Distinction entre la structure Interne elle-même (peut attribuer des appareils à ses BO
+// partenaires) et une structure BO partenaire qui les reçoit (les gère ensuite normalement,
+// mais ne peut plus rien attribuer elle-même — cf. réponse à Q1/Q2 du 15/09).
+let estProprietaireInterne = false;
+let estPartenaireFlotte = false;
+let lignesSelectionneesAttribution = new Set();
+let estEsnFlotte = false;
+let estPayanteFlotte = false;
+const formatEurFlotte = v => (v == null || v === '' || isNaN(parseFloat(v))) ? '' : `${(Math.round(parseFloat(v) * 100) / 100).toLocaleString('fr-FR')} €`;
+/** Prix d'un appareil : prix de revente (tarif de la structure, plafonné) + prix payé si la
+ *  structure paie son matériel. */
+function prixFlotteHtml(a, compact){
+  const paye = estPayanteFlotte ? formatEurFlotte(a.prix != null && a.prix !== '' ? a.prix : a.prixAchat) : '';
+  const revente = formatEurFlotte(a.prixRevente);
+  if(!paye && !revente) return estInterneFlotte ? '<button type="button" class="fl-prix-fixer" data-ouvrir-tarifs-revente>Fixer un prix</button>' : '<span class="tl-muet">—</span>';
+  return `<span class="fl-prix${compact ? ' compact' : ''}">${revente ? `<b title="Prix de revente${a.tarifPerso ? ' (votre tarif)' : ' (prix maximal conseillé)'}">${revente}</b>` : ''}${paye ? `<small title="Prix payé à Emmaüs Connect">payé ${paye}</small>` : ''}</span>`;
+}
+let masquerTransferes = false;
+let STATUTS_FLOTTE_INTERNE_PORTAIL = ['En stock', 'Remis', 'SAV', 'D3E'];
+/* Dépôt-vente (redéfini le 29/09/2026) : le matériel reste à Emmaüs Connect jusqu'à sa vente.
+   « Vendu » = vente déclarée (facturée si l'option est active). */
+const STATUTS_DEPOT_VENTE_PORTAIL = ['En stock', 'Vendu', 'SAV', 'D3E'];
+let estDepotVenteFlotte = false, facturationDepotVenteFlotte = 'aucune';
+
+async function verifierCode(){
+  const code = $('code').value.trim();
+  if(!code) return;
+  $('btn-verifier').disabled = true;
+  $('btn-verifier').innerHTML = '<span class="spinner-inline"></span>Vérification…';
+  try{
+    const r = await jsonp({action:'check', code: code});
+    if(r.ok){
+      codeValide = code;
+      // Une structure BO auto-créée par une Interne (structurePartenaireDe renseigné) utilise
+      // la même interface que l'Interne — mêmes statuts, mêmes colonnes — juste filtrée côté
+      // back sur ce qui lui a été attribué (voir flotte-attribuer-partenaire).
+      // + structures en dépôt-vente : flotte gérée dans la plateforme (même interface).
+      estInterneFlotte = !!r.interne || !!r.projets || !!r.structurePartenaireDe || !!(r.politique && r.politique.flotte && r.politique.flotte.centralisee);
+      estProprietaireInterne = !!r.interne;
+      estPartenaireFlotte = !!r.structurePartenaireDe;
+      estEsnFlotte = !!r.esn;
+      // Structure qui paie son matériel (RNum, BO, Projets…) : le prix payé est affiché.
+      estPayanteFlotte = !(r.politique && r.politique.paiement && r.politique.paiement.aucun);
+      estDepotVenteFlotte = !!(r.politique && r.politique.depotVente && r.politique.depotVente.actif);
+      facturationDepotVenteFlotte = (r.politique && r.politique.depotVente && r.politique.depotVente.facturation) || 'aucune';
+      STATUTS_FLOTTE_INTERNE_PORTAIL = estDepotVenteFlotte ? STATUTS_DEPOT_VENTE_PORTAIL : ['En stock', 'Remis', 'SAV', 'D3E'];
+      vueFlotteInterne = 'tableau';
+      if(!CODE_URL_FLOTTE){ try{ sessionStorage.setItem('cvdl-code-structure', code); }catch(e){} }
+      document.querySelector('.etape[data-etape="code"]').hidden = true;
+      document.querySelector('.etape[data-etape="flotte"]').hidden = false;
+      $('btn-deconnexion-flotte').hidden = false;
+      document.querySelector('main').classList.add('large');
+      chargerFlotte();
+    }else{
+      afficherMsg('retour-code', echapper(r.erreur || 'Code invalide'), 'erreur');
+    }
+  }catch(e){
+    afficherMsg('retour-code', 'Connexion impossible — réessaie.', 'erreur');
+  }
+  $('btn-verifier').disabled = false;
+  $('btn-verifier').textContent = 'Continuer';
+}
+$('btn-verifier').addEventListener('click', verifierCode);
+$('code').addEventListener('keydown', e => { if(e.key === 'Enter') verifierCode(); });
+
+$('btn-deconnexion-flotte').addEventListener('click', () => {
+  try{ sessionStorage.removeItem('cvdl-code-structure'); }catch(e){}
+  location.reload();
+});
+
+// Ouverture depuis l'admin (modale « Flotte » d'une structure en dépôt-vente) : le code arrive
+// par l'adresse, sans toucher à la session du portail.
+const CODE_URL_FLOTTE = (() => { try{ return new URLSearchParams(location.search).get('code') || ''; }catch(e){ return ''; } })();
+if(CODE_URL_FLOTTE) document.documentElement.classList.add('flotte-depuis-admin');
+try{
+  const codeMemorise = CODE_URL_FLOTTE || sessionStorage.getItem('cvdl-code-structure');
+  if(codeMemorise){
+    $('code').value = codeMemorise;
+    verifierCode().finally(() => {
+      document.documentElement.classList.remove('deja-identifie');
+      const v = $('voile-verification-precoce'); if(v) v.style.display = 'none';
+    });
+  }
+}catch(e){}
+
+let lienFlotteActuel = '';
+
+async function chargerAppareils(lienFlotte){
+  lienFlotteActuel = lienFlotte;
+  $('zone-flotte').innerHTML = '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
+  try{
+    const r = await jsonp({action:'flotte-lister', code: codeValide});
+    if(!r.ok){
+      // Le tableau lié n'est plus accessible (partage retiré, tableau supprimé...) — sans
+      // option de récupération ici, c'était un blocage complet : impossible de continuer à
+      // utiliser la gestion de flotte tant que l'ancien lien restait enregistré. Repris le même
+      // bouton/texte que "Repartir d'un tableau neuf" (déjà existant plus bas, pour le cas où
+      // les données se chargent normalement), pour rester cohérent.
+      $('zone-flotte').innerHTML = `
+        <p class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</p>
+        <p style="font-size:13px;opacity:0.7;margin-top:8px">Le tableau lié n'est peut-être plus accessible (partage retiré, tableau supprimé...).</p>
+        <button type="button" class="flotte-bouton flotte-bouton-contour" style="margin-top:10px" id="btn-recreer-flotte">Repartir d'un tableau neuf</button>`;
+      $('btn-recreer-flotte').addEventListener('click', async () => {
+        if(!await confirmerCvdl('Repartir d\'un tableau neuf ? Votre tableau actuel ne sera pas supprimé (il reste intact sur votre Drive), mais il ne sera plus lié ici — il faudra en dupliquer un nouveau depuis le modèle et recoller son lien.')) return;
+        $('btn-recreer-flotte').disabled = true;
+        $('btn-recreer-flotte').textContent = 'Réinitialisation…';
+        try{
+          const rD = await poster({ action:'flotte-delier', code: codeValide });
+          if(!rD.ok){ alerteCvdl(rD.erreur || 'Impossible de délier le tableau actuel.'); $('btn-recreer-flotte').disabled = false; $('btn-recreer-flotte').textContent = "Repartir d'un tableau neuf"; return; }
+        }catch(e){ alerteCvdl('Impossible de délier le tableau actuel — réessaie.'); $('btn-recreer-flotte').disabled = false; $('btn-recreer-flotte').textContent = "Repartir d'un tableau neuf"; return; }
+        chargerFlotte();
+      });
+      return;
+    }
+    appareilsCourants = r.appareils;
+    await chargerProjetsFlotte();
+    rendreAppareils(appareilsCourants);
+  }catch(e){
+    $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Chargement impossible — réessaie.</p>';
+  }
+}
+
+let appareilsCourants = [];
+let rechercheFlotte = '';
+
+/* ── Projets de distribution (structures Interne) : chaque appareil « Remis » peut être
+   rattaché à un projet (projets-distribution.html) ; il compte alors dans son avancement. ── */
+let projetsFlotte = [];
+async function chargerProjetsFlotte(){
+  projetsFlotte = [];
+  if(!estProprietaireInterne || estDepotVenteFlotte) return;
+  try{
+    const r = await jsonp({ action: 'projets-structure', code: codeValide });
+    if(r && r.ok) projetsFlotte = r.projets || [];
+  }catch(e){ /* non bloquant : la flotte s'affiche sans les projets */ }
+}
+function projetCompteProduit(p, produit){
+  const o = p.objectifs || [];
+  return o.length ? o.some(x => x.produit === produit) : (p.objectifGlobal || 0) > 0;
+}
+/** Sélecteur de projet d'un appareil remis ('' si sans objet). */
+function selectProjetFlotte(a, compact){
+  if(!projetsFlotte.length || a.statut !== 'Remis' || a.verrouille) return '';
+  const actuel = projetsFlotte.find(p => p.id === a.projet);
+  // Vue intégrée à l'admin : le projet est affiché, pas modifiable (c'est la structure qui décide).
+  if(VUE_MATERIEL) return actuel ? `<span class="fl-projet-lu" title="Projet de distribution">${echapper(actuel.nom)}</span>` : '';
+  const choix = projetsFlotte.filter(p => p.id === a.projet || (p.statut !== 'archive' && projetCompteProduit(p, a.produit)));
+  if(!choix.length) return '';
+  return `<select class="fl-projet${a.projet ? ' on' : ''}${compact ? ' compact' : ''}" data-projet-ligne="${a.ligne}" aria-label="Projet de distribution" title="Projet de distribution">
+    <option value="">${actuel || a.projet ? 'Aucun projet' : 'Projet de distribution…'}</option>
+    ${choix.map(p => `<option value="${echapper(p.id)}" ${p.id === a.projet ? 'selected' : ''}>${echapper(p.nom)}${p.statut === 'archive' ? ' (archivé)' : ''}</option>`).join('')}
+    ${a.projet && !actuel ? `<option value="${echapper(a.projet)}" selected>Projet supprimé</option>` : ''}
+  </select>`;
+}
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-projet-ligne]'); if(!sel) return;
+  const ligne = parseInt(sel.dataset.projetLigne, 10);
+  const item = appareilsCourants.find(a => a.ligne == ligne);
+  sel.disabled = true;
+  try{
+    const r = await poster({ action: 'flotte-rattacher-projet', code: codeValide, ligne, projet: sel.value });
+    if(r && r.ok){ if(item) item.projet = sel.value; sel.classList.toggle('on', !!sel.value); }
+    else { alerteCvdl((r && r.erreur) || 'Enregistrement impossible.'); if(item) sel.value = item.projet || ''; }
+  }catch(err){ alerteCvdl('Enregistrement impossible — réessaie.'); if(item) sel.value = item.projet || ''; }
+  sel.disabled = false;
+});
+
+let personnePortailLigneCourante = null;
+let listesPersoFlottePortail = { lieux: [], vendeurs: [] };
+const TYPES_PAIEMENT_PORTAIL = ['', 'Chèque x1', 'Chèque x2', 'CB', 'Monétaire', 'Mixte'];
+
+function ouvrirModalePersonnePortail(ligne){
+  const a = appareilsCourants.find(x => x.ligne === ligne);
+  if(!a) return;
+  personnePortailLigneCourante = ligne;
+  $('personne-portail-titre').textContent = `${a.numeroSerie} — ${a.produit || ''}`.trim();
+  // Le champ "personne" reste une seule chaîne côté backend — on ne fait que scinder l'affichage
+  // en Prénom/NOM (comme le reste du site), reconstitués à la volée à l'enregistrement.
+  const motsPersonne = String(a.personne || '').trim().split(/\s+/).filter(Boolean);
+  const nomFamilleActuel = motsPersonne.length > 1 ? motsPersonne.pop() : '';
+  const prenomActuel = motsPersonne.join(' ');
+  $('personne-portail-contenu').innerHTML = `
+    <div class="field"><label>Prénom et nom</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <input type="text" class="input" data-pp-champ="personne" data-pp-partie="prenom" placeholder="Prénom" value="${echapper(prenomActuel)}">
+        <input type="text" class="input" data-pp-champ="personne" data-pp-partie="nom" placeholder="NOM" style="text-transform:uppercase" value="${echapper(nomFamilleActuel)}">
+      </div>
+    </div>
+    <div class="field"><label>Genre
+      <select class="input" data-pp-champ="genre">
+        <option value="" ${!a.genre ? 'selected' : ''}>—</option>
+        <option ${a.genre === 'Homme' ? 'selected' : ''}>Homme</option>
+        <option ${a.genre === 'Femme' ? 'selected' : ''}>Femme</option>
+      </select>
+    </label></div>
+    <div class="field"><label>Date de naissance<input type="text" class="input" data-pp-champ="dateNaissance" value="${echapper(a.dateNaissance)}" placeholder="jj/mm/aaaa"></label></div>
+    <div class="field"><label>Type de paiement
+      <select class="input" data-pp-champ="typePaiement">
+        ${TYPES_PAIEMENT_PORTAIL.map(t => `<option value="${t}" ${a.typePaiement === t ? 'selected' : ''}>${t || '—'}</option>`).join('')}
+      </select>
+    </label></div>
+    <div class="field"><label>Vendeur
+      <select class="input" data-pp-champ="vendeur">
+        ${['', ...listesPersoFlottePortail.vendeurs].map(v => `<option value="${echapper(v)}" ${a.vendeur === v ? 'selected' : ''}>${v || '—'}</option>`).join('')}
+        <option value="__nouveau__">+ Nouveau…</option>
+      </select>
+    </label></div>
+    <div class="field"><label>Date de vente <em style="font-weight:400">(obligatoire pour passer en « Remis »)</em><input type="text" class="input" data-pp-champ="dateVente" value="${echapper(a.dateVente)}" placeholder="jj/mm/aaaa"></label></div>
+    <div class="field"><label>N° attestation<input type="text" class="input" data-pp-champ="numeroAttestation" value="${echapper(a.numeroAttestation)}"></label></div>
+    <div class="field"><label>N° rapprochement<input type="text" class="input" data-pp-champ="numeroRapprochement" value="${echapper(a.numeroRapprochement)}" placeholder="Zettle / dépôt"></label></div>
+    <div class="field"><label>Commentaire<input type="text" class="input" data-pp-champ="commentaire" value="${echapper(a.commentaire)}"></label></div>
+    <div id="retour-personne-portail" style="margin-top:8px"></div>`;
+  $('modale-personne-portail').classList.add('visible');
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-personne-ligne]');
+  if(!b) return;
+  ouvrirModalePersonnePortail(parseInt(b.dataset.personneLigne, 10));
+});
+// Largeur commune des pastilles n° de série = longueur du plus long numéro affiché.
+(function(){
+  const zone = document.getElementById('zone-flotte');
+  if(!zone) return;
+  const maj = () => {
+    const n = Math.max(0, ...[...zone.querySelectorAll('.cvdl-sn-t')].map(t => (t.textContent || '').trim().length));
+    if(n && zone.style.getPropertyValue('--sn-ch') !== String(n)) zone.style.setProperty('--sn-ch', n);
+  };
+  new MutationObserver(maj).observe(zone, { childList: true, subtree: true });
+})();
+/* ── Tarifs de revente (plafonnés par le prix maximal du catalogue) ── */
+async function ouvrirTarifsRevente(){
+  $('tarifs-revente-contenu').innerHTML = '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
+  $('modale-tarifs-revente').classList.add('visible');
+  try{
+    const r = await jsonp({ action:'flotte-tarifs-revente', code: codeValide });
+    if(!r.ok){ $('tarifs-revente-contenu').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`; return; }
+    if(!r.produits.length){ $('tarifs-revente-contenu').innerHTML = '<p class="tl-muet">Aucun appareil dans votre flotte pour le moment.</p>'; return; }
+    $('tarifs-revente-contenu').innerHTML = `<div class="tr-liste">${r.produits.map(p => `
+      <div class="tr-ligne" data-tarif-produit="${echapper(p.produit)}">
+        <span class="tr-ill">${window.illustrationCvdl && window.cleIllustrationProduit ? window.illustrationCvdl(window.cleIllustrationProduit(p.produit, p.icone), 34) : ''}</span>
+        <span class="tr-nom"><b>${echapper(p.produit)}</b><small>${p.enStock} en stock${p.prixPaye != null && estPayanteFlotte ? ` · payé ${formatEurFlotte(p.prixPaye)}` : ''}</small></span>
+        <span class="tr-max">${p.prixReventeMax != null ? `max <b>${formatEurFlotte(p.prixReventeMax)}</b>` : '<span class="tl-muet">sans plafond</span>'}</span>
+        <span class="tr-champ"><input type="number" class="input" min="0" step="0.5" ${p.prixReventeMax != null ? `max="${p.prixReventeMax}"` : ''} value="${p.tarif != null ? p.tarif : ''}" placeholder="${p.prixReventeMax != null ? p.prixReventeMax : '—'}" aria-label="Votre prix pour ${echapper(p.produit)}"><span>€</span></span>
+        <button type="button" class="btn btn-secondary tr-ok" data-enregistrer-tarif>Enregistrer</button>
+      </div>`).join('')}</div><div id="retour-tarifs-revente"></div>`;
+  }catch(e){ $('tarifs-revente-contenu').innerHTML = '<div class="msg msg-erreur">Connexion impossible — réessayez.</div>'; }
+}
+document.addEventListener('click', async e => {
+  if(e.target.closest('[data-ouvrir-tarifs-revente]')){ ouvrirTarifsRevente(); return; }
+  const b = e.target.closest('[data-enregistrer-tarif]');
+  if(!b) return;
+  const ligne = b.closest('[data-tarif-produit]');
+  const champ = ligne.querySelector('input');
+  b.disabled = true;
+  const r = await poster({ action:'flotte-tarif-revente-definir', code: codeValide, produit: ligne.dataset.tarifProduit, prix: champ.value }).catch(() => ({ ok:false, erreur:'Connexion impossible.' }));
+  b.disabled = false;
+  $('retour-tarifs-revente').innerHTML = r.ok ? '<div class="msg msg-succes">Tarif enregistré.</div>' : `<div class="msg msg-erreur">${echapper(r.erreur || 'Enregistrement impossible.')}</div>`;
+  if(r.ok){ b.textContent = '✓ Enregistré'; setTimeout(() => { b.textContent = 'Enregistrer'; }, 1400); }
+});
+$('tarifs-revente-fermer')?.addEventListener('click', () => { $('modale-tarifs-revente').classList.remove('visible'); chargerFlotte(); });
+
+function fermerModalePersonnePortail(){ $('modale-personne-portail').classList.remove('visible'); }
+$('personne-portail-fermer-x')?.addEventListener('click', fermerModalePersonnePortail);
+
+// Majuscule en temps réel sur les deux champs Prénom/NOM (mêmes règles qu'ailleurs sur le
+// site) — délégué sur le conteneur puisque ces champs sont recréés à chaque ouverture.
+$('personne-portail-contenu')?.addEventListener('input', e => {
+  const el = e.target.closest('[data-pp-partie]');
+  if(!el || e.isComposing) return;
+  const position = el.selectionStart;
+  el.value = el.dataset.ppPartie === 'nom' ? el.value.toUpperCase() : capitaliserPrenom(el.value);
+  el.setSelectionRange(position, position);
+});
+
+// Rien n'est envoyé champ par champ : on remplit tout, puis « Enregistrer » envoie en une fois
+// les seules valeurs modifiées (après vérification). Seul « + Nouveau… » (vendeur) agit tout de
+// suite, pour ajouter le nom à la liste partagée.
+$('personne-portail-contenu')?.addEventListener('change', async e => {
+  const el = e.target.closest('[data-pp-champ="vendeur"]');
+  if(!el || el.value !== '__nouveau__') return;
+  const nouvelle = await demanderCvdl('Nom du nouveau vendeur :');
+  if(!nouvelle || !nouvelle.trim()){ el.value = ''; return; }
+  try{
+    const r = await poster({ action:'flotte-liste-perso-ajouter', code: $('code').value.trim(), liste:'vendeur', valeur: nouvelle.trim() });
+    if(r.ok){
+      listesPersoFlottePortail.vendeurs = r.liste;
+      const opt = document.createElement('option'); opt.value = opt.textContent = nouvelle.trim();
+      el.insertBefore(opt, el.querySelector('option[value="__nouveau__"]')); el.value = nouvelle.trim();
+    }else{ $('retour-personne-portail').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Ajout impossible.')}</div>`; el.value = ''; }
+  }catch(err){ el.value = ''; }
+});
+$('personne-portail-enregistrer')?.addEventListener('click', async () => {
+  const a = appareilsCourants.find(x => x.ligne === personnePortailLigneCourante);
+  if(!a) return;
+  const retour = $('retour-personne-portail');
+  const val = champ => { const el = document.querySelector(`#personne-portail-contenu [data-pp-champ="${champ}"]`); return el ? el.value.trim() : ''; };
+  const prenom = (document.querySelector('[data-pp-partie="prenom"]') || {}).value || '';
+  const nom = (document.querySelector('[data-pp-partie="nom"]') || {}).value || '';
+  const valeurs = {
+    personne: [prenom.trim(), nom.trim()].filter(Boolean).join(' '),
+    genre: val('genre'), dateNaissance: val('dateNaissance'), typePaiement: val('typePaiement'),
+    vendeur: val('vendeur') === '__nouveau__' ? '' : val('vendeur'), dateVente: val('dateVente'),
+    numeroAttestation: val('numeroAttestation'), numeroRapprochement: val('numeroRapprochement'), commentaire: val('commentaire'),
+  };
+  const dateOk = v => !v || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v);
+  if(!prenom.trim() || !nom.trim()){ retour.innerHTML = '<div class="msg msg-erreur">Indiquez le prénom et le NOM de la personne.</div>'; return; }
+  if(!dateOk(valeurs.dateNaissance) || !dateOk(valeurs.dateVente)){ retour.innerHTML = '<div class="msg msg-erreur">Les dates s’écrivent jj/mm/aaaa.</div>'; return; }
+  const aEnvoyer = Object.keys(valeurs).filter(k => String(valeurs[k]) !== String(a[k] || ''));
+  const bouton = $('personne-portail-enregistrer');
+  if(!aEnvoyer.length){ fermerModalePersonnePortail(); return; }
+  bouton.disabled = true; bouton.innerHTML = '<span class="spinner-inline"></span>Enregistrement…';
+  let erreur = '';
+  for(const champ of aEnvoyer){
+    try{
+      const r = await poster({ action:'flotte-modifier', code: codeValide, ligne: personnePortailLigneCourante, champ, valeur: valeurs[champ] });
+      if(r.ok) a[champ] = valeurs[champ]; else { erreur = r.erreur || 'Enregistrement impossible.'; break; }
+    }catch(err){ erreur = 'Enregistrement impossible — réessayez.'; break; }
+  }
+  bouton.disabled = false; bouton.textContent = 'Enregistrer';
+  if(erreur){ retour.innerHTML = `<div class="msg msg-erreur">${echapper(erreur)}</div>`; return; }
+  fermerModalePersonnePortail();
+  rerendreFlotte();
+});
+
+/* ── Aides communes : tri, listes partagées, popup lieu de stockage, largeur ── */
+function parserDateFr(v){
+  const m = String(v || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : NaN;
+}
+/** Tri des appareils selon flotteTriColonne/flotteTriSens. Les dates jj/mm/aaaa sont comparées
+ *  comme de vraies dates (avant : parseFloat("05/03/2026") = 5, donc tri sur le jour seul), les
+ *  n° de série avec un tri « naturel », et les valeurs vides toujours en fin de liste. */
+function trierAppareils(liste){
+  if(!flotteTriColonne) return liste;
+  const sens = flotteTriSens;
+  return [...liste].sort((a, b) => {
+    const va = a[flotteTriColonne], vb = b[flotteTriColonne];
+    const videA = va == null || va === '', videB = vb == null || vb === '';
+    if(videA || videB) return videA === videB ? 0 : (videA ? 1 : -1);
+    const da = parserDateFr(va), db = parserDateFr(vb);
+    if(!isNaN(da) && !isNaN(db)) return (da - db) * sens;
+    return String(va).localeCompare(String(vb), 'fr', { numeric: true, sensitivity: 'base' }) * sens;
+  });
+}
+function rechercherAppareils(liste){
+  const terme = rechercheFlotte.trim().toLowerCase();
+  if(!terme) return liste;
+  return liste.filter(a => [a.numeroSerie, a.personne, a.marque, a.modele, a.lieuStockage, a.vendeur].some(v => String(v || '').toLowerCase().includes(terme)));
+}
+/** Colonnes « Lieu de stockage » et « Salesforce » : structures Internes (propriétaires) et ESN uniquement. */
+function aColonnesStockage(){ return estProprietaireInterne || estEsnFlotte; }
+function statutVenduFlotte(){ return (estInterneFlotte && !estDepotVenteFlotte) ? 'Remis' : 'Vendu'; }
+function rerendreFlotte(){ if(estInterneFlotte) rendreFlotteInterneParitePortail(appareilsCourants); else rendreAppareils(appareilsCourants); }
+function majLargeurMain(){
+  // Même largeur quelle que soit la vue (Liste, Fiches, Comptabilité) : rien ne « saute ».
+  document.querySelector('main').classList.toggle('tableur', true);
+}
+/** Menu déroulant alimenté par une liste partagée entre toutes les structures (lieux, vendeurs). */
+function selectListePerso(champ, liste, valeur, ligne){
+  const options = ['', ...liste];
+  if(valeur && !liste.includes(valeur)) options.push(valeur);
+  return `<select data-ligne="${ligne}" data-champ="${champ}">${options.map(o => `<option value="${echapper(o)}" ${o === (valeur || '') ? 'selected' : ''}>${echapper(o) || '—'}</option>`).join('')}<option value="__nouveau__">+ Nouveau…</option></select>`;
+}
+function caseSalesforce(a){
+  return `<label class="flotte-toggle"><input type="checkbox" data-ligne="${a.ligne}" data-champ="saisieSalesforce" data-checkbox="1" ${a.saisieSalesforce === 'Oui' ? 'checked' : ''} aria-label="Saisi dans Salesforce"><span class="piste"></span></label>`;
+}
+
+let resoudreLieuStockage = null;
+/** Popup « modifier le lieu de stockage ? » — renvoie le nouveau lieu, ou null si on garde l'actuel. */
+function demanderLieuStockage(titre, lieuActuel){
+  return new Promise(resolve => {
+    resoudreLieuStockage = resolve;
+    $('lieu-stockage-titre').textContent = titre;
+    $('lieu-stockage-actuel').textContent = lieuActuel ? 'Lieu actuel : ' + lieuActuel : 'Aucun lieu renseigné pour le moment.';
+    const lieux = [...listesPersoFlottePortail.lieux];
+    if(lieuActuel && !lieux.includes(lieuActuel)) lieux.push(lieuActuel);
+    $('lieu-stockage-select').innerHTML = ['', ...lieux].map(l => `<option value="${echapper(l)}">${echapper(l) || '— Choisir —'}</option>`).join('') + '<option value="__nouveau__">+ Nouveau lieu…</option>';
+    $('lieu-stockage-select').value = lieuActuel || '';
+    $('lieu-stockage-nouveau').value = '';
+    $('lieu-stockage-nouveau').style.display = 'none';
+    $('retour-lieu-stockage').innerHTML = '';
+    $('modale-lieu-stockage').classList.add('visible');
+  });
+}
+function fermerLieuStockage(valeur){
+  $('modale-lieu-stockage').classList.remove('visible');
+  const r = resoudreLieuStockage; resoudreLieuStockage = null;
+  if(r) r(valeur);
+}
+$('lieu-stockage-select').addEventListener('change', () => {
+  $('lieu-stockage-nouveau').style.display = $('lieu-stockage-select').value === '__nouveau__' ? '' : 'none';
+});
+$('btn-lieu-conserver').addEventListener('click', () => fermerLieuStockage(null));
+$('modale-lieu-stockage').addEventListener('click', e => { if(e.target.id === 'modale-lieu-stockage') fermerLieuStockage(null); });
+$('btn-lieu-enregistrer').addEventListener('click', async function(){
+  let lieu = $('lieu-stockage-select').value;
+  if(lieu === '__nouveau__'){
+    lieu = $('lieu-stockage-nouveau').value.trim();
+    if(!lieu){ $('retour-lieu-stockage').innerHTML = '<div class="msg msg-erreur">Saisissez le nom du nouveau lieu.</div>'; return; }
+    this.disabled = true;
+    try{
+      const r = await poster({ action:'flotte-liste-perso-ajouter', code: $('code').value.trim(), liste:'lieu', valeur: lieu });
+      if(r.ok) listesPersoFlottePortail.lieux = r.liste;
+      else{ $('retour-lieu-stockage').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Ajout impossible.')}</div>`; this.disabled = false; return; }
+    }catch(e){ $('retour-lieu-stockage').innerHTML = '<div class="msg msg-erreur">Ajout impossible.</div>'; this.disabled = false; return; }
+    this.disabled = false;
+  }
+  fermerLieuStockage(lieu);
+});
+
+/** Couleur de la pastille de statut (kit portail) : turquoise en stock, vert remis/vendu,
+ *  ambre en SAV, gris D3E. */
+const FORMES_STATUT_FLOTTE = { 'En stock': 'rond', 'Remis': 'carre', 'Vendu': 'carre', 'SAV': 'losange', 'En SAV': 'losange', 'D3E': 'rond', 'À traiter': 'losange', 'Rapproché': 'rond', 'Pointé': 'carre' };
+function formeFiltreFlotte(s){ const f = FORMES_STATUT_FLOTTE[s]; return f ? `<span class="fl-f fl-f-${echapper(s).replace(/\s+/g, '-')}" data-forme="${f}"></span>` : ''; }
+function classeStatutKitFlotte(statut){
+  if(statut === 'Remis' || statut === 'Vendu') return 'pk-st-ok';
+  if(statut === 'SAV' || statut === 'En SAV') return 'pk-st-sav';
+  if(statut === 'D3E') return 'pk-st-d3e';
+  return 'pk-st-stock';
+}
+/** Teinte légère d'une ligne / fiche selon le statut (remis, SAV, D3E…). */
+function statutTeinteFlotte(statut){
+  const t = String(statut || '').toLowerCase();
+  if(/remis|vendu/.test(t)) return 'remis';
+  if(/sav/.test(t)) return 'sav';
+  if(/d3e/.test(t)) return 'd3e';
+  return 'stock';
+}
+function classeLigneFlottePortail(a){
+  if(a.statut === 'D3E') return 'cd-d3e';
+  if(a.statut === 'Remis' || a.statut === 'Vendu') return 'cd-remis';
+  if(a.statut === 'SAV') return 'cd-sav';
+  if(a.statut === 'En stock' && a.alerte2Mois) return 'cd-alerte';
+  return '';
+}
+/** Icône passeport + numéro de série réunis en une seule pastille cliquable. */
+function pillePasseportFlotte(numeroSerie, alerte){
+  // Pilule commune (portail-ui.js) : ouvre le passeport en modale ; le QR reste sur le passeport.
+  return window.piluleSerieCvdl(numeroSerie, { query: '&code=' + encodeURIComponent(codeValide || '') })
+    + (alerte ? ' <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#7A5A00" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-1px" aria-label="Alerte"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' : '');
+}
+/** Carte d'un appareil — composant unique partagé par les deux designs (structure Interne/
+ *  partenaire BO et structure RNum/ESN/BO externe), pour qu'ils restent visuellement identiques
+ *  malgré des colonnes de données différentes. `opts` décrit ce que CE type de structure peut
+ *  voir/modifier : statuts disponibles, case à cocher d'attribution (Interne uniquement),
+ *  personne en bouton (Interne, avec fiche détaillée) ou en champ simple (externe), et Payé
+ *  (externe uniquement, pas de sens pour de la remise gratuite côté Interne). */
+function carteDispositif(a, opts){
+  const classeCouleur = classeLigneFlottePortail(a);
+  const visuel = visuelAppareilFlotte(a, 64);
+  const statutKit = classeStatutKitFlotte(a.statut);
+  if(opts.verrouille){
+    return `
+    <div data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="carte-dispositif fiche fi3 fiche-verrouillee" title="Attribué à ${echapper(a.attribueANom || a.attribueA)}">
+      <div class="fi3-tete">
+        <span class="fi3-vis">${visuel}</span>
+        <div class="fi3-titre"><b class="fi3-produit">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b><span class="fi3-sn">${pillePasseportFlotte(a.numeroSerie, false)}</span></div>
+      </div>
+      <div class="fi3-ident-lu">${[a.marque, a.modele, a.categorie].filter(Boolean).map(echapper).join(' · ') || '—'}</div>
+      ${VUE_MATERIEL || a.masque ? '' : `<div class="fi3-infos"><div class="fi3-l"><span class="fi3-k">Utilisé par</span><span class="fi3-v">${a.personne ? `<span class="tl-personne vide"><span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}</span>` : '—'}</span></div></div>`}
+      <div class="fi3-pied"><span class="tl-verrou"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> ${echapper(a.attribueANom || a.attribueA)}</span><span>${a.dateLivraison ? `Livré le <b>${echapper(a.dateLivraison)}</b>` : ''}</span></div>
+    </div>`;
+  }
+  const personne = opts.personneMode === 'button'
+    ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-ligne="${a.ligne}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
+    : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-ligne="${a.ligne}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
+  const alerte = a.alerte2Mois && a.statut === 'En stock';
+  const champIdent = (champ, lib) => `<label class="fi3-champ"><span>${lib}</span><input type="text" class="tl-champ" data-ligne="${a.ligne}" data-champ="${champ}" value="${echapper(a[champ])}" placeholder="—"></label>`;
+  const lignesInfos = [
+    VUE_MATERIEL ? '' : `<div class="fi3-l"><span class="fi3-k">Utilisé par</span><span class="fi3-v fi-personne">${personne}</span></div>`,
+    VUE_MATERIEL ? '' : `<div class="fi3-l"><span class="fi3-k">Prix</span><span class="fi3-v">${prixFlotteHtml(a)}</span></div>`,
+    opts.stockage ? `<div class="fi3-l"><span class="fi3-k">Lieu</span><span class="fi3-v tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.ligne)}</span></div>` : '',
+    opts.stockage && !VUE_MATERIEL ? `<div class="fi3-l"><span class="fi3-k">Salesforce</span><span class="fi3-v fi-sf">${caseSalesforce(a)}</span></div>` : '',
+    selectProjetFlotte(a) ? `<div class="fi3-l"><span class="fi3-k">Projet</span><span class="fi3-v">${selectProjetFlotte(a)}</span></div>` : '',
+    VUE_MATERIEL && a.dateVente ? `<div class="fi3-l"><span class="fi3-k">Remis le</span><span class="fi3-v">${echapper(a.dateVente)}</span></div>` : '',
+    opts.showPaye && !VUE_MATERIEL ? `<div class="fi3-l"><span class="fi3-k">Paiement</span><span class="fi3-v"><select class="fi-paye" data-ligne="${a.ligne}" data-champ="paye">
+          <option value=""${!a.paye ? ' selected' : ''}>Payé ?</option>
+          <option value="Oui"${a.paye === 'Oui' ? ' selected' : ''}>Payé</option>
+          <option value="Non"${a.paye === 'Non' ? ' selected' : ''}>Non payé</option>
+        </select>${a.lienPaiement && a.paye !== 'Oui' ? `<a class="pk-lien" href="${echapper(urlSure(a.lienPaiement))}" target="_blank" rel="noopener">Lien de paiement</a>` : ''}</span></div>` : '',
+  ].join('');
+  // Fiche appareil : 1) ce que c'est (visuel, produit, n° de série) + son statut ;
+  // 2) marque · modèle · catégorie sur une ligne ; 3) à qui / où ; 4) date de livraison + alerte.
+  return `
+  <div data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="carte-dispositif fiche fi3${alerte ? ' fi3-alerte' : ''}">
+    <div class="fi3-tete">
+      ${opts.checkbox ? `<input type="checkbox" class="tl-case fi-case" data-select-attribution="${a.ligne}" ${opts.checkbox.checked ? 'checked' : ''} aria-label="Sélectionner pour attribution">` : ''}
+      <span class="fi3-vis">${visuel}</span>
+      <div class="fi3-titre">
+        <b class="fi3-produit">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b>
+        <span class="fi3-livre">${a.dateLivraison ? `Livré le ${echapper(a.dateLivraison)}` : ''}</span>
+      </div>
+    </div>
+    <div class="fi3-sn-ligne">
+      <span class="fi3-sn">${pillePasseportFlotte(a.numeroSerie, false)}</span>
+      <select class="cd-select-statut fi3-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${statutKit}" data-ligne="${a.ligne}" data-champ="statut" aria-label="Statut de l'appareil">
+        ${opts.statuts.map(s => `<option value="${echapper(s)}" ${a.statut === s ? 'selected' : ''}>${echapper(s)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fi3-ident tableau-flotte-liste">${champIdent('marque', 'Marque')}${champIdent('modele', 'Modèle')}${champIdent('categorie', 'Catégorie')}</div>
+    <div class="fi3-infos tableau-flotte-liste">${lignesInfos}</div>
+    ${a.statut === 'SAV' || alerte ? `<div class="fi3-pied">${a.statut === 'SAV' ? '<span class="fi3-puce sav">Appareil en SAV</span>' : '<span class="fi3-puce att">En stock depuis + de 2 mois</span>'}</div>` : '<div class="fi3-pied fi3-pied-vide"></div>'}
+  </div>`;
+}
+/* Icône d'appareil déduite de la catégorie (texte libre) — sert à la vue Liste. */
+/** Illustration de l'appareil (même dessin que les commandes) : icône du produit catalogue,
+ *  sinon reconnue d'après produit / catégorie / modèle. */
+function visuelAppareilFlotte(a, taille){
+  if(!window.illustrationCvdl || !window.cleIllustrationProduit) return iconeCategorieFlotte(a.categorie);
+  const cle = window.cleIllustrationProduit([a.produit, a.categorie, a.modele].filter(Boolean).join(' '), a.icone);
+  return window.illustrationCvdl(cle, taille);
+}
+function iconeCategorieFlotte(categorie){
+  const c = String(categorie || '').toLowerCase();
+  const d = /t[ée]l[ée]phone|smartphone|mobile/.test(c) ? '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>'
+    : /tablette/.test(c) ? '<rect x="4" y="2" width="16" height="20" rx="2.5"/><path d="M11 18h2"/>'
+    : /fixe|unit[ée]|tour|[ée]cran/.test(c) ? '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>'
+    : /ordi|portable|laptop|pc/.test(c) ? '<rect x="4" y="4" width="16" height="11" rx="2"/><path d="M2 19h20"/>'
+    : '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>';
+  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+}
+function initialesFlotte(nom){ return String(nom || '').trim().split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase(); }
+/** Vue Liste (tous types de structure) : une ligne par appareil, champs modifiables sur place
+ *  qui ressemblent à du texte tant qu'on ne les survole / sélectionne pas. */
+function construireTableauFlotteInterne(appareils, opts){
+  const colonneAttribution = !!opts.avecCheckbox;
+  const entetes = `
+    <tr>
+      ${colonneAttribution ? '<th class="tl-col-case"></th>' : ''}
+      <th>Appareil</th><th>N° de série</th>${VUE_MATERIEL ? '' : '<th>Personne</th>'}<th>Statut</th>${VUE_MATERIEL ? '' : '<th>Prix</th>'}${opts.stockage ? `<th>Lieu de stockage</th>${VUE_MATERIEL ? '' : '<th class="tl-centre">Salesforce</th>'}` : ''}<th>Livré le</th>
+    </tr>`;
+  const celluleAppareil = (a, modifiable) => `
+      <td><div class="tl-appareil">
+        <span class="tl-ico">${visuelAppareilFlotte(a, 34)}</span>
+        <span class="tl-app-txt">
+          <b class="tl-produit-nom">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b>
+          ${modifiable
+            ? `<span class="tl-ident">${['marque', 'modele', 'categorie'].map(ch => `<input type="text" class="tl-champ tl-ident-champ" data-ligne="${a.ligne}" data-champ="${ch}" value="${echapper(a[ch])}" placeholder="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}" size="${Math.max(6, String(a[ch] || '').length + 1)}" aria-label="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}">`).join('<i aria-hidden="true">·</i>')}</span>`
+            : `<span class="tl-ident tl-ident-lu">${[a.marque, a.modele, a.categorie].filter(Boolean).map(echapper).join(' · ') || '—'}</span>`}
+        </span>
+      </div></td>`;
+  const lignes = appareils.map(a => {
+    const alerte = a.statut === 'En stock' && a.alerte2Mois;
+    if(a.verrouille){
+      return `
+      <tr data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="tf-verrouillee" title="Attribué à ${echapper(a.attribueANom || a.attribueA)}">
+        ${colonneAttribution ? '<td class="tl-col-case"></td>' : ''}
+        ${celluleAppareil(a, false)}
+        <td>${pillePasseportFlotte(a.numeroSerie, a.alerte2Mois)}</td>
+        ${VUE_MATERIEL ? '' : `<td><span class="tl-personne vide">${a.masque ? '<span class="tl-muet">Géré par la structure</span>' : a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '—'}</span></td>`}
+        <td><span class="tl-verrou"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> ${echapper(a.attribueANom || a.attribueA)}</span></td>
+        ${VUE_MATERIEL ? '' : `<td>${a.masque ? '<span class="tl-muet">—</span>' : prixFlotteHtml(a, true)}</td>`}
+        ${opts.stockage ? `<td class="tl-muet">${echapper(a.lieuStockage) || '—'}</td>${VUE_MATERIEL ? '' : `<td class="tl-centre">${a.saisieSalesforce === 'Oui' ? '✓' : '—'}</td>`}` : ''}
+        <td class="tl-muet">${a.dateLivraison ? echapper(a.dateLivraison) : '—'}</td>
+      </tr>`;
+    }
+    const personne = opts.personneMode === 'button'
+      ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-ligne="${a.ligne}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
+      : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-ligne="${a.ligne}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
+    return `
+    <tr data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="${alerte ? 'tl-alerte' : ''}${a.statut === 'D3E' ? ' tl-d3e' : ''}${lignesSelectionneesAttribution.has(a.ligne) ? ' tl-selection' : ''}">
+      ${colonneAttribution ? `<td class="tl-col-case"><input type="checkbox" class="tl-case" data-select-attribution="${a.ligne}" ${lignesSelectionneesAttribution.has(a.ligne) ? 'checked' : ''} aria-label="Sélectionner pour attribution"></td>` : ''}
+      ${celluleAppareil(a, true)}
+      <td>${pillePasseportFlotte(a.numeroSerie, a.alerte2Mois)}</td>
+      ${VUE_MATERIEL ? '' : `<td>${personne}</td>`}
+      <td>
+        <select class="cd-select-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${classeStatutKitFlotte(a.statut)}" data-ligne="${a.ligne}" data-champ="statut">
+          ${opts.statuts.map(s => `<option value="${echapper(s)}" ${a.statut === s ? 'selected' : ''}>${echapper(s)}</option>`).join('')}
+        </select>${selectProjetFlotte(a, true)}
+      </td>
+      ${VUE_MATERIEL ? '' : `<td>${prixFlotteHtml(a, true)}</td>`}
+      ${opts.stockage ? `<td class="tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.ligne)}</td>${VUE_MATERIEL ? '' : `<td class="tl-centre">${caseSalesforce(a)}</td>`}` : ''}
+      <td class="tl-muet">${a.dateLivraison ? echapper(a.dateLivraison) : '—'}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="tableau-flotte-scroll"><table class="tableau-flotte tableau-flotte-liste"><thead>${entetes}</thead><tbody>${lignes}</tbody></table></div>`;
+}
+function construireTableauAppareils(appareils){
+  appareils = trierAppareils(appareils);
+  const cartes = appareils.map(a => carteDispositif(a, {
+    statuts: ['En stock', 'Vendu', 'En SAV'], personneMode: 'input', showPaye: true, stockage: aColonnesStockage(),
+  })).join('');
+  return `<div class="grille-dispositifs">${cartes}</div>`;
+}
+
+
+/** Onglets d'affichage (Liste · Fiches · Comptabilité) : contrôle segmenté bien visible, sur sa
+ *  propre ligne — il se confondait avec les filtres de statut et les tris. */
+function ongletsVueFlotte(){
+  const ic = {
+    tableau: '<svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="14" height="14" rx="1.5"/><line x1="2" y1="7" x2="16" y2="7"/><line x1="2" y1="12" x2="16" y2="12"/><line x1="7" y1="2" x2="7" y2="16"/></svg>',
+    cartes: '<svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="2" width="6" height="6" rx="1.2"/><rect x="10" y="2" width="6" height="6" rx="1.2"/><rect x="2" y="10" width="6" height="6" rx="1.2"/><rect x="10" y="10" width="6" height="6" rx="1.2"/></svg>',
+    compta: '<svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="9" r="7"/><path d="M9 5.5v7M11 7c0-1-.9-1.5-2-1.5s-2 .5-2 1.5.9 1.3 2 1.5c1.1.2 2 .6 2 1.5s-.9 1.5-2 1.5-2-.5-2-1.5"/></svg>',
+  };
+  const b = (cle, lib, sous) => `<button type="button" data-vue-flotte="${cle}" class="${vueFlotteInterne === cle ? 'actif' : ''}" aria-pressed="${vueFlotteInterne === cle}">${ic[cle]}<span><b>${lib}</b><small>${sous}</small></span></button>`;
+  if(VUE_MATERIEL && vueFlotteInterne === 'compta') vueFlotteInterne = 'tableau';
+  return `<div class="flotte-vues" role="group" aria-label="Affichage">${b('tableau', 'Liste', 'Tout sur une ligne')}${b('cartes', 'Fiches', 'Une carte par appareil')}${VUE_MATERIEL ? '' : b('compta', 'Comptabilité', 'Remis et rapprochement')}</div>${VUE_MATERIEL ? '<p class="flotte-note-materiel">Vue matériel : l’identité des personnes accompagnées et la comptabilité restent visibles uniquement par la structure.</p>' : ''}`;
+}
+const libelleTriFlotte = '<span class="flotte-lab">Trier</span>';
+const libelleFiltreFlotte = '<span class="flotte-lab">Statut</span>';
+
+let flotteTriColonne = null;
+let flotteTriSens = 1;
+let vueFlotteInterne = 'tableau';
+let filtreStatutFlotte = '';
+let filtreRapprochementFlotte = '';
+const STATUTS_RAPPROCHEMENT_FLOTTE = ['À traiter', 'Rapproché'];
+
+/** Vue comptabilité (structures Internes uniquement) — reprend les colonnes du tableur pour le
+ *  matériel remis/vendu, avec les champs de rapprochement bancaire déjà supportés côté backend
+ *  (numeroRapprochement / statutRapprochement) mais jusqu'ici jamais exposés dans cette page. */
+function construireTableauComptaFlotte(appareils){
+  const entetes = `
+    <tr>
+      <th>N° de série</th><th>Catégorie</th><th>Marque</th><th>Modèle</th><th>Personne</th>
+      <th>Vendu le</th><th>Type paiement</th><th>Vendeur</th><th>N° rapprochement</th><th>Rapproché</th><th>Date de rapprochement</th>
+    </tr>`;
+  const lignes = appareils.map(a => `
+    <tr class="${a.statutRapprochement === 'Rapproché' ? 'cd-remis' : ''}">
+      <td class="tf-serie">${pillePasseportFlotte(a.numeroSerie, false)}</td>
+      <td>${echapper(a.categorie) || '—'}</td>
+      <td>${echapper(a.marque) || '—'}</td>
+      <td>${echapper(a.modele) || '—'}</td>
+      <td>${echapper(a.personne) || '—'}</td>
+      <td style="white-space:nowrap">${a.dateVente ? echapper(a.dateVente) : '—'}</td>
+      <td><select data-ligne="${a.ligne}" data-champ="typePaiement">${TYPES_PAIEMENT_PORTAIL.map(t => `<option value="${t}" ${(a.typePaiement || '') === t ? 'selected' : ''}>${t || '—'}</option>`).join('')}</select></td>
+      <td>${selectListePerso('vendeur', listesPersoFlottePortail.vendeurs, a.vendeur, a.ligne)}</td>
+      <td><input type="text" data-ligne="${a.ligne}" data-champ="numeroRapprochement" value="${echapper(a.numeroRapprochement)}" placeholder="Zettle / dépôt"></td>
+      <td style="text-align:center">
+        <input type="checkbox" data-ligne="${a.ligne}" data-champ="statutRapprochement" data-checkbox="1" data-checkbox-on="Rapproché" data-checkbox-off="À traiter" ${a.statutRapprochement === 'Rapproché' ? 'checked' : ''} aria-label="Rapproché">
+      </td>
+      <td><input type="date" data-ligne="${a.ligne}" data-champ="dateRapprochement" data-date="1" value="${echapper(dateVersISO(a.dateRapprochement))}" aria-label="Date de rapprochement"></td>
+    </tr>`).join('');
+  return `<div class="tableau-flotte-scroll"><table class="tableau-flotte tableau-flotte-liste tableau-compta"><thead>${entetes}</thead><tbody>${lignes}</tbody></table></div>`;
+}
+
+/* Anneau unique segmenté (donut en conic-gradient + légende), même principe visuel que côté
+   admin — remplace l'ancien tableau détaillé par produit, trop chargé pour cette modale.
+   2e teinte figée en dur (magenta de charte) plutôt que var(--color-accent) : cette page
+   surcharge --color-accent en turquoise comme le reste de l'espace self-service (même
+   couleur que --color-accent-2), ce qui aurait rendu les 2 premières teintes identiques ici. */
+const PALETTE_ANNEAUX_FLOTTE = ['#00ACB0', '#E62460', '#6338F5', '#FECC38', '#1F9D55', '#00777A', '#C2185B', '#8FA3B3'];
+/** Anneau segmenté en SVG (trait bleu nuit + aplat décalé, comme les illustrations) avec
+ *  légende à barres — remplace l'ancien camembert en dégradé conique. */
+function anneauUniqueFlotte(lignes, titre, palette){
+  palette = palette || PALETTE_ANNEAUX_FLOTTE;
+  const total = lignes.reduce((t, l) => t + l.valeur, 0);
+  const r = 44, c = 2 * Math.PI * r;
+  let cumul = 0;
+  const arcs = total ? lignes.map((l, i) => {
+    const long = l.valeur / total * c;
+    const arc = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${palette[i % palette.length]}" stroke-width="16" stroke-dasharray="${Math.max(0, long - 1.5)} ${c}" stroke-dashoffset="${-cumul}" transform="rotate(-90 60 60)"/>`;
+    cumul += long; return arc;
+  }).join('') : '';
+  const max = Math.max(1, ...lignes.map(l => l.valeur));
+  return `
+    <section class="fs-bloc">
+      <h4>${echapper(titre)}</h4>
+      <div class="fs-anneau-ligne">
+        <svg class="fs-anneau" viewBox="0 0 120 120" width="136" height="136" aria-hidden="true">
+          <circle cx="63" cy="63" r="${r + 9}" fill="color-mix(in srgb, #002743 10%, transparent)"/>
+          <circle cx="60" cy="60" r="${r + 9}" fill="#fff" stroke="#002743" stroke-width="1.5"/>
+          <circle cx="60" cy="60" r="${r}" fill="none" stroke="#EEF2F5" stroke-width="16"/>
+          ${arcs}
+          <circle cx="60" cy="60" r="${r - 9}" fill="#fff" stroke="#002743" stroke-width="1.5"/>
+          <text x="60" y="60" text-anchor="middle" font-size="22" font-weight="700" fill="#002743" font-family="Space Grotesk, system-ui">${total}</text>
+          <text x="60" y="75" text-anchor="middle" font-size="9.5" fill="#5A6D7D" font-family="Inter, system-ui">appareils</text>
+        </svg>
+        <div class="fs-legende">
+          ${lignes.length ? lignes.map((l, i) => `
+            <div class="fs-leg">
+              <span class="fs-leg-tete"><i style="background:${palette[i % palette.length]}"></i><span>${echapper(l.label)}</span><b>${l.valeur}</b><small>${total ? Math.round(l.valeur / total * 100) : 0} %</small></span>
+              <span class="fs-barre"><span style="width:${Math.max(3, Math.round(l.valeur / max * 100))}%;background:${palette[i % palette.length]}"></span></span>
+            </div>`).join('') : '<p class="fs-vide">Aucune donnée.</p>'}
+        </div>
+      </div>
+    </section>`;
+}
+
+function afficherStatsFlottePortail(appareils){
+  const total = appareils.length;
+  const vendus = appareils.filter(a => a.statut === 'Vendu' || a.statut === 'Remis');
+  const montantTotal = vendus.reduce((t, a) => t + (parseFloat(a.prixAchat) || parseFloat(a.prix) || 0), 0);
+  const enStock = appareils.filter(a => a.statut === 'En stock').length;
+  const anciens = appareils.filter(a => a.statut === 'En stock' && (a.alerte2Mois || a.alerteGarantie)).length;
+  const compter = cle => { const o = {}; appareils.forEach(a => { const k = cle(a) || 'Non précisé'; o[k] = (o[k] || 0) + 1; }); return Object.entries(o).sort((x, y) => y[1] - x[1]).map(([label, valeur]) => ({ label, valeur })); };
+  const parProduit = compter(a => a.produit || a.categorie);
+  const parStatut = compter(a => a.statut);
+  const couleursStatut = parStatut.map(l => ({ 'En stock': '#1F9D55', 'Remis': '#00ACB0', 'Vendu': '#00ACB0', 'SAV': '#E24B4A', 'En SAV': '#E24B4A', 'D3E': '#8FA3B3' }[l.label] || '#6338F5'));
+  const produitsAffiches = parProduit.slice(0, 6);
+  if(parProduit.length > 6) produitsAffiches.push({ label: `Autres (${parProduit.length - 6})`, valeur: parProduit.slice(6).reduce((t, l) => t + l.valeur, 0) });
+  const tuile = (ill, n, l, cls) => `<div class="fs-tuile ${cls || ''}"><span data-ill="${ill}" class="ill"></span><div><b>${n}</b><span>${l}</span></div></div>`;
+  $('stats-flotte-portail-contenu').innerHTML = `
+    <div class="fs-tuiles">
+      ${tuile('flotte', total, 'appareils au total')}
+      ${tuile('stock', enStock, 'en stock')}
+      ${tuile('personne', vendus.length, 'distribués')}
+      ${VUE_MATERIEL ? '' : tuile('facture', `${Math.round(montantTotal).toLocaleString('fr-FR')} €`, 'montant distribué')}
+    </div>
+    ${anciens ? `<div class="fs-alerte">${anciens} appareil${anciens > 1 ? 's' : ''} en stock depuis plus de 2 mois.</div>` : ''}
+    <div class="fs-grille">
+      ${anneauUniqueFlotte(parStatut, 'Par statut', couleursStatut)}
+      ${anneauUniqueFlotte(produitsAffiches, 'Par produit')}
+    </div>`;
+  if(window.portailIllustrations) window.portailIllustrations($('stats-flotte-portail-contenu'));
+  $('modale-stats-flotte-portail').classList.add('visible');
+}
+$('stats-flotte-portail-fermer')?.addEventListener('click', () => $('modale-stats-flotte-portail').classList.remove('visible'));
+$('modale-stats-flotte-portail')?.addEventListener('click', e => { if(e.target.id === 'modale-stats-flotte-portail') $('modale-stats-flotte-portail').classList.remove('visible'); });
+
+function rendreFlotteInterneParitePortail(appareils){
+  lignesSelectionneesAttribution.clear();
+  const entete = `
+    <div class="flotte-entete">
+      <div>
+        <span data-ill="flotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
+        <p>${estPartenaireFlotte ? 'Le matériel qui vous a été attribué par votre structure Interne — indiquez qui utilise chaque appareil.' : 'Le matériel déjà livré à votre structure — indiquez qui utilise chaque appareil.'}</p>
+      </div>
+      <div class="flotte-actions">
+        <button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-actualiser-flotte">↻ Actualiser</button>
+        ${VUE_MATERIEL ? '' : '<button type="button" class="flotte-bouton flotte-bouton-contour" data-role="responsable" data-ouvrir-tarifs-revente>€ Tarifs de revente</button>'}
+        <button type="button" class="flotte-bouton flotte-bouton-plein" id="btn-stats-flotte-portail">Statistiques</button>
+      </div>
+    </div>
+    <div id="retour-actualiser-flotte" class="compteur-ajouts"></div>
+    ${estDepotVenteFlotte ? `<div class="msg fl-depot-vente"><span><b>Matériel en dépôt-vente.</b> Rien à régler à la commande : passez un appareil en « Vendu » dès qu’il est vendu${facturationDepotVenteFlotte === 'chaque-vente' ? ' (une facture de son prix de cession est alors émise automatiquement)' : ''}.</span></div>` : ''}`;
+
+  if(!appareils.length){
+    $('zone-flotte').innerHTML = entete + `<p style="opacity:0.6;font-size:14px;margin-top:14px">${estPartenaireFlotte ? 'Aucun appareil ne vous a encore été attribué.' : 'Aucun appareil pour le moment — ils apparaîtront ici automatiquement dès qu\'une commande sera livrée.'}</p>`;
+    cablerBarreOutilsPortailInterne();
+    majLargeurMain();
+    return;
+  }
+
+  const vendus = appareils.filter(a => a.statut === statutVenduFlotte() || a.dateVente);
+  const referencesEnStock = new Set(appareils.filter(a => a.statut === 'En stock').map(a => a.produit)).size;
+  const alerte2Mois = appareils.filter(a => a.statut === 'En stock' && a.alerte2Mois).length;
+
+  let appareilsAffiches = rechercherAppareils(appareils);
+  if(masquerTransferes || vueFlotteInterne === 'compta') appareilsAffiches = appareilsAffiches.filter(a => !a.verrouille);
+  if(vueFlotteInterne === 'compta'){
+    appareilsAffiches = appareilsAffiches.filter(a => a.statut === statutVenduFlotte());
+    if(filtreRapprochementFlotte) appareilsAffiches = appareilsAffiches.filter(a => (a.statutRapprochement || 'À traiter') === filtreRapprochementFlotte);
+  }else if(filtreStatutFlotte){
+    appareilsAffiches = appareilsAffiches.filter(a => a.statut === filtreStatutFlotte);
+  }
+  appareilsAffiches = trierAppareils(appareilsAffiches);
+
+  const cartes = vueFlotteInterne === 'compta'
+    ? construireTableauComptaFlotte(appareilsAffiches)
+    : vueFlotteInterne === 'tableau'
+    ? construireTableauFlotteInterne(appareilsAffiches, {
+        avecCheckbox: estProprietaireInterne, statuts: STATUTS_FLOTTE_INTERNE_PORTAIL, personneMode: 'button', stockage: aColonnesStockage(),
+      })
+    : `<div class="grille-dispositifs">${appareilsAffiches.map(a => carteDispositif(a, {
+        checkbox: estProprietaireInterne && !a.verrouille ? { checked: lignesSelectionneesAttribution.has(a.ligne) } : null,
+        verrouille: !!a.verrouille,
+        statuts: STATUTS_FLOTTE_INTERNE_PORTAIL, personneMode: 'button', showPaye: false, stockage: aColonnesStockage(),
+      })).join('')}</div>`;
+
+  const optionsTri = [['numeroSerie','N° de série'], ['dateLivraison','Livré le'], ...(VUE_MATERIEL ? [] : [['personne','Personne']]), ['statut','Statut']];
+  const svgIconeCartes = '<svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="6" height="6" rx="1"/><rect x="10" y="2" width="6" height="6" rx="1"/><rect x="2" y="10" width="6" height="6" rx="1"/><rect x="10" y="10" width="6" height="6" rx="1"/></svg>';
+  const svgIconeTableau = '<svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="14" height="14" rx="1.3"/><line x1="2" y1="7" x2="16" y2="7"/><line x1="2" y1="12" x2="16" y2="12"/><line x1="7" y1="2" x2="7" y2="16"/></svg>';
+  const svgIconeCompta = '<svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="7"/><path d="M9 5.5v7M11 7c0-1-.9-1.5-2-1.5s-2 .5-2 1.5.9 1.3 2 1.5c1.1.2 2 .6 2 1.5s-.9 1.5-2 1.5-2-.5-2-1.5"/></svg>';
+  const boutonsVue = `
+    <button type="button" data-vue-flotte="tableau" class="${vueFlotteInterne === 'tableau' ? 'actif' : ''}">${svgIconeTableau}Liste</button>
+    <button type="button" data-vue-flotte="cartes" class="${vueFlotteInterne === 'cartes' ? 'actif' : ''}">${svgIconeCartes}Fiches</button>
+    <button type="button" data-vue-flotte="compta" class="${vueFlotteInterne === 'compta' ? 'actif' : ''}">${svgIconeCompta}Comptabilité</button>`;
+  const filtres = vueFlotteInterne === 'compta'
+    ? ['', ...STATUTS_RAPPROCHEMENT_FLOTTE].map(s => `<button type="button" class="flotte-tri${filtreRapprochementFlotte === s ? ' actif' : ''}" data-filtre-rapprochement-flotte="${echapper(s)}">${formeFiltreFlotte(s)}${s || 'Tous'}</button>`).join('')
+    : ['', ...STATUTS_FLOTTE_INTERNE_PORTAIL].map(s => `<button type="button" class="flotte-tri${filtreStatutFlotte === s ? ' actif' : ''}" data-filtre-statut-flotte="${echapper(s)}">${formeFiltreFlotte(s)}${s || 'Tous'}</button>`).join('');
+  const barreAttribution = !estProprietaireInterne ? '' : `
+  <div class="card elev-sm" data-role="responsable" id="barre-attribution-flotte" style="padding:12px 16px;margin-top:16px;display:none;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:13px;font-weight:700" id="compteur-selection-attribution"></span>
+    <select class="input" id="select-partenaire-attribution" style="flex:1;min-width:200px"><option value="">Attribuer à…</option></select>
+    <button type="button" class="btn btn-primary" id="btn-confirmer-attribution">Attribuer définitivement</button>
+    <div id="retour-attribution-flotte" style="width:100%"></div>
+  </div>`;
+
+  $('zone-flotte').innerHTML = `
+  ${entete}
+  <div class="flotte-tuiles">
+    <div class="flotte-tuile"><span data-ill="personne" class="ill"></span><div><div class="l">${estDepotVenteFlotte ? 'Appareils vendus' : 'Appareils remis'}</div><div class="n">${vendus.length}</div></div></div>
+    <div class="flotte-tuile"><span data-ill="stock" class="ill"></span><div><div class="l">Références en stock</div><div class="n">${referencesEnStock}</div></div></div>
+    <div class="flotte-tuile flotte-tuile-alerte"><span data-ill="panne" class="ill"></span><div><div class="l">En stock depuis + de 2 mois</div><div class="n">${alerte2Mois}</div></div></div>
+  </div>
+  ${ongletsVueFlotte()}
+  <div class="flotte-barre">
+    <div class="flotte-recherche">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="recherche-flotte" class="input" placeholder="${VUE_MATERIEL ? 'Rechercher (n° de série, modèle…)' : 'Rechercher (n° de série, personne, modèle…)'}" value="${echapper(rechercheFlotte)}">
+    </div>
+    <div class="flotte-filtres">${libelleFiltreFlotte}${filtres}</div>
+    ${estProprietaireInterne ? `<label class="flotte-toggle" title="Masque les appareils déjà transférés à une structure partenaire"><input type="checkbox" data-toggle-transferes ${masquerTransferes ? 'checked' : ''}><span class="piste"></span>Masquer les appareils transférés</label>` : ''}
+    ${vueFlotteInterne !== 'compta' ? `<div class="flotte-tris">${libelleTriFlotte}${optionsTri.map(([champ, label]) => `<button type="button" class="flotte-tri${flotteTriColonne === champ ? ' actif' : ''}" data-tri-champ-standard="${champ}">${label}${flotteTriColonne === champ ? (flotteTriSens === 1 ? ' ↑' : ' ↓') : ''}</button>`).join('')}</div>` : ''}
+  </div>
+  ${cartes}
+  ${vueFlotteInterne === 'tableau' ? `<div style="display:flex;gap:16px;margin-top:14px;font-size:11.5px;opacity:0.7;flex-wrap:wrap"><span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#7A5A00" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ligne ambrée : en stock depuis plus de 2 mois</span><span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> attribué à une structure partenaire (verrouillé)</span><span>Le statut se change directement dans sa pastille.</span></div>` : ''}
+  ${vueFlotteInterne === 'cartes' ? `<div class="cvdl-legende fl-legende"><span data-forme="rond" style="--forme:var(--vert)">En stock</span><span data-forme="carre" style="--forme:var(--tur)">${statutVenduFlotte()}</span><span data-forme="losange" style="--forme:var(--rouge)">SAV</span><span data-forme="rond" style="--forme:#8FA3B3">D3E</span>${estProprietaireInterne ? '<span>Verrouillé : attribué à une structure partenaire</span>' : ''}</div>` : ''}
+  ${barreAttribution}`;
+
+  document.querySelectorAll('[data-vue-flotte]').forEach(b => {
+    b.addEventListener('click', () => {
+      vueFlotteInterne = b.dataset.vueFlotte;
+      rendreFlotteInterneParitePortail(appareilsCourants);
+    });
+  });
+  cablerBarreOutilsPortailInterne();
+  if(estProprietaireInterne) cablerAttributionFlottePortail();
+  majLargeurMain();
+}
+
+function cablerRechercheFlotte(){
+  $('recherche-flotte')?.addEventListener('input', () => {
+    rechercheFlotte = $('recherche-flotte').value;
+    rerendreFlotte();
+    const champ = $('recherche-flotte');
+    if(champ){ champ.focus(); champ.setSelectionRange(champ.value.length, champ.value.length); }
+  });
+}
+function cablerBarreOutilsPortailInterne(){
+  cablerRechercheFlotte();
+  document.querySelector('[data-toggle-transferes]')?.addEventListener('change', e => { masquerTransferes = e.target.checked; rendreFlotteInterneParitePortail(appareilsCourants); });
+  $('btn-stats-flotte-portail')?.addEventListener('click', () => afficherStatsFlottePortail(appareilsCourants));
+  document.querySelector('.flotte-barre')?.addEventListener('click', e => {
+    const filtreStatut = e.target.closest('[data-filtre-statut-flotte]');
+    if(filtreStatut){ filtreStatutFlotte = filtreStatut.dataset.filtreStatutFlotte; rendreFlotteInterneParitePortail(appareilsCourants); return; }
+    const filtreRappro = e.target.closest('[data-filtre-rapprochement-flotte]');
+    if(filtreRappro){ filtreRapprochementFlotte = filtreRappro.dataset.filtreRapprochementFlotte; rendreFlotteInterneParitePortail(appareilsCourants); return; }
+    const th = e.target.closest('[data-tri-champ-standard]');
+    if(!th) return;
+    const champ = th.dataset.triChampStandard;
+    flotteTriSens = (flotteTriColonne === champ) ? -flotteTriSens : 1;
+    flotteTriColonne = champ;
+    rendreFlotteInterneParitePortail(appareilsCourants);
+  });
+  $('btn-actualiser-flotte')?.addEventListener('click', async function(){
+    this.disabled = true;
+    $('retour-actualiser-flotte').textContent = 'Actualisation…';
+    try{
+      const rA = await poster({ action:'flotte-actualiser', code: codeValide });
+      if(rA.ok){
+        $('retour-actualiser-flotte').textContent = rA.ajoutes > 0 ? rA.ajoutes + ' nouvel(aux) appareil(s) ajouté(s).' : 'Déjà à jour, rien de nouveau.';
+        await chargerAppareils(lienFlotteActuel);
+      }else{
+        $('retour-actualiser-flotte').textContent = rA.erreur || 'Actualisation impossible.';
+      }
+    }catch(e){ $('retour-actualiser-flotte').textContent = 'Actualisation impossible.'; }
+    this.disabled = false;
+  });
+
+  cablerChampsFlotte();
+}
+
+/** Sélection des appareils à attribuer + chargement des structures partenaires + confirmation.
+ *  Uniquement câblé côté structure Interne elle-même (jamais côté BO partenaire, qui n'a rien
+ *  à attribuer). Attribution volontairement définitive — pas de bouton pour annuler ensuite. */
+function cablerAttributionFlottePortail(){
+  const barre = $('barre-attribution-flotte');
+  const majBarre = () => {
+    const n = lignesSelectionneesAttribution.size;
+    if(barre) barre.style.display = n ? 'flex' : 'none';
+    const compteur = $('compteur-selection-attribution');
+    if(compteur) compteur.textContent = `${n} appareil${n > 1 ? 's' : ''} sélectionné${n > 1 ? 's' : ''}`;
+  };
+
+  document.querySelectorAll('[data-select-attribution]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const ligne = parseInt(cb.dataset.selectAttribution, 10);
+      if(cb.checked) lignesSelectionneesAttribution.add(ligne); else lignesSelectionneesAttribution.delete(ligne);
+      const ligneTableau = cb.closest('tr'); if(ligneTableau) ligneTableau.classList.toggle('tl-selection', cb.checked);
+      majBarre();
+    });
+  });
+  majBarre();
+
+  const select = $('select-partenaire-attribution');
+  if(select && !select.dataset.charge){
+    select.dataset.charge = '1';
+    poster({ action: 'structures-partenaires-lister', codeCreateur: codeValide }).then(r => {
+      if(r.ok && r.structures && r.structures.length){
+        select.innerHTML = '<option value="">Attribuer à…</option>' + r.structures.map(s => `<option value="${echapper(s.code)}">${echapper(s.nom)}</option>`).join('');
+      }else{
+        select.innerHTML = '<option value="">Aucune structure partenaire créée</option>';
+        select.disabled = true;
+      }
+    }).catch(() => { select.innerHTML = '<option value="">Chargement impossible</option>'; select.disabled = true; });
+  }
+
+  $('btn-confirmer-attribution')?.addEventListener('click', async function(){
+    const codePartenaire = select?.value;
+    if(!codePartenaire) return afficherMsg('retour-attribution-flotte', 'Choisissez une structure partenaire.', 'erreur');
+    if(!lignesSelectionneesAttribution.size) return;
+    const nomPartenaire = select.options[select.selectedIndex].textContent;
+    if(!await confirmerCvdl(`Attribuer définitivement ${lignesSelectionneesAttribution.size} appareil(s) à ${nomPartenaire} ? Cette action est irréversible depuis cette interface — seule ${nomPartenaire} pourra ensuite les modifier.`)) return;
+
+    this.disabled = true;
+    // Avant le transfert (après, l'appareil devient verrouillé côté Interne) : proposer de mettre à
+    // jour le lieu de stockage des appareils concernés.
+    if(aColonnesStockage()){
+      const lignesTransfert = [...lignesSelectionneesAttribution];
+      const lieuxActuels = new Set(lignesTransfert.map(l => (appareilsCourants.find(a => a.ligne === l) || {}).lieuStockage || ''));
+      const lieu = await demanderLieuStockage(`${lignesTransfert.length} appareil${lignesTransfert.length > 1 ? 's' : ''} transféré${lignesTransfert.length > 1 ? 's' : ''} à ${nomPartenaire}`, lieuxActuels.size === 1 ? [...lieuxActuels][0] : '');
+      if(lieu !== null){
+        for(const l of lignesTransfert){
+          const rLieu = await poster({ action:'flotte-modifier', code: codeValide, ligne: l, champ:'lieuStockage', valeur: lieu }).catch(() => ({ ok:false }));
+          if(!rLieu.ok){
+            afficherMsg('retour-attribution-flotte', echapper(rLieu.erreur || 'Mise à jour du lieu de stockage impossible — transfert annulé.'), 'erreur');
+            this.disabled = false;
+            return;
+          }
+        }
+      }
+    }
+    this.textContent = 'Attribution…';
+    try{
+      const r = await poster({ action: 'flotte-attribuer-partenaire', codeCreateur: codeValide, codePartenaire, lignes: [...lignesSelectionneesAttribution] });
+      if(r.ok){
+        await chargerAppareils(lienFlotteActuel);
+      }else{
+        afficherMsg('retour-attribution-flotte', echapper(r.erreur || 'Attribution impossible.'), 'erreur');
+        this.disabled = false;
+        this.textContent = 'Attribuer définitivement';
+      }
+    }catch(e){
+      afficherMsg('retour-attribution-flotte', 'Attribution impossible.', 'erreur');
+      this.disabled = false;
+      this.textContent = 'Attribuer définitivement';
+    }
+  });
+}
+
+function rendreAppareils(appareils){
+  if(estInterneFlotte){ rendreFlotteInterneParitePortail(appareils); return; }
+
+  const nbAlertes = appareils.filter(a => a.alerteGarantie).length;
+  const barreOutilsSecondaire = `
+    <div class="flotte-actions">
+      <button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-actualiser-flotte">↻ Actualiser</button>
+      <button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-recreer-tableau-flotte">Repartir d'un tableau neuf</button>
+      ${lienFlotteActuel !== 'interne' ? `<a href="${echapper(urlSure(lienFlotteActuel))}" target="_blank" rel="noopener" class="flotte-bouton flotte-bouton-contour" style="text-decoration:none">Ouvrir dans Sheets ↗</a>` : ''}
+      <button type="button" class="flotte-bouton flotte-bouton-plein" id="btn-stats-flotte-portail-simple">Statistiques</button>
+    </div>
+    <div id="retour-actualiser-flotte" class="compteur-ajouts"></div>`;
+
+  if(!appareils.length){
+    $('zone-flotte').innerHTML = `
+      <div class="flotte-entete">
+        <div>
+          <span data-ill="flotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
+          <p>Le matériel déjà livré à votre structure — indiquez qui utilise chaque appareil.</p>
+        </div>
+      </div>
+      ${barreOutilsSecondaire}
+      <p style="opacity:0.6;font-size:14px;margin-top:14px">Aucun appareil pour le moment — ils apparaîtront ici automatiquement dès qu'une commande sera livrée.</p>`;
+    cablerBarreOutils();
+    return;
+  }
+
+  let appareilsFiltres = rechercherAppareils(appareils);
+  if(vueFlotteInterne === 'compta'){
+    appareilsFiltres = appareilsFiltres.filter(a => a.statut === 'Vendu');
+    if(filtreRapprochementFlotte) appareilsFiltres = appareilsFiltres.filter(a => (a.statutRapprochement || 'À traiter') === filtreRapprochementFlotte);
+  }else if(filtreStatutFlotte){
+    appareilsFiltres = appareilsFiltres.filter(a => a.statut === filtreStatutFlotte);
+  }
+  appareilsFiltres = trierAppareils(appareilsFiltres);
+
+  const optionsTri = [['numeroSerie','N° de série'], ['dateLivraison','Livré le'], ...(VUE_MATERIEL ? [] : [['personne','Personne']]), ['statut','Statut']];
+  const contenu = !appareilsFiltres.length
+    ? '<p style="opacity:0.6;font-size:14px;margin-top:14px">Aucun appareil ne correspond à cette recherche.</p>'
+    : vueFlotteInterne === 'compta'
+      ? construireTableauComptaFlotte(trierAppareils(appareilsFiltres))
+      : vueFlotteInterne === 'tableau'
+        ? construireTableauFlotteInterne(appareilsFiltres, { statuts: ['En stock', 'Vendu', 'En SAV'], personneMode: 'input', stockage: aColonnesStockage() })
+        : construireTableauAppareils(appareilsFiltres);
+  const STATUTS_EXTERNES = ['En stock', 'Vendu', 'En SAV'];
+  const filtresExterne = vueFlotteInterne === 'compta'
+    ? ['', ...STATUTS_RAPPROCHEMENT_FLOTTE].map(x => `<button type="button" class="flotte-tri${filtreRapprochementFlotte === x ? ' actif' : ''}" data-filtre-rapprochement-flotte="${echapper(x)}">${formeFiltreFlotte(x)}${x || 'Tous'}</button>`).join('')
+    : ['', ...STATUTS_EXTERNES].map(x => `<button type="button" class="flotte-tri${filtreStatutFlotte === x ? ' actif' : ''}" data-filtre-statut-flotte="${echapper(x)}">${formeFiltreFlotte(x)}${x || 'Tous'}</button>`).join('');
+  const boutonsVueExterne = `
+    <button type="button" data-vue-flotte="tableau" class="${vueFlotteInterne === 'tableau' ? 'actif' : ''}">Liste</button>
+    <button type="button" data-vue-flotte="cartes" class="${vueFlotteInterne === 'cartes' ? 'actif' : ''}">Fiches</button>
+    <button type="button" data-vue-flotte="compta" class="${vueFlotteInterne === 'compta' ? 'actif' : ''}">Comptabilité</button>`;
+
+  $('zone-flotte').innerHTML = `
+    <div class="flotte-entete">
+      <div>
+        <span data-ill="flotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
+        <p>Le matériel déjà livré à votre structure — indiquez qui utilise chaque appareil.</p>
+      </div>
+    </div>
+    ${barreOutilsSecondaire}
+    ${nbAlertes ? `<div class="msg msg-warn fl-alerte-stock">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      ${nbAlertes} appareil${nbAlertes > 1 ? 's' : ''} en stock depuis plus de 3 mois — la garantie court sur ${nbAlertes > 1 ? 'eux' : 'lui'}.
+    </div>` : ''}
+    ${ongletsVueFlotte()}
+    <div class="flotte-barre">
+      <div class="flotte-recherche">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="recherche-flotte" class="input" placeholder="Rechercher (n° de série, personne, modèle…)" value="${echapper(rechercheFlotte)}">
+      </div>
+      <div class="flotte-filtres">${libelleFiltreFlotte}${filtresExterne}</div>
+      ${vueFlotteInterne === 'compta' ? '' : `<div class="flotte-tris">${libelleTriFlotte}${optionsTri.map(([champ, label]) => `<button type="button" class="flotte-tri${flotteTriColonne === champ ? ' actif' : ''}" data-tri-champ-standard="${champ}">${label}${flotteTriColonne === champ ? (flotteTriSens === 1 ? ' ↑' : ' ↓') : ''}</button>`).join('')}</div>`}
+    </div>
+    ${contenu}`;
+  cablerBarreOutils();
+  document.querySelectorAll('[data-vue-flotte]').forEach(b => b.addEventListener('click', () => { vueFlotteInterne = b.dataset.vueFlotte; rendreAppareils(appareilsCourants); }));
+  majLargeurMain();
+  $('btn-stats-flotte-portail-simple')?.addEventListener('click', () => afficherStatsFlottePortail(appareilsCourants));
+
+  $('recherche-flotte').addEventListener('input', () => {
+    rechercheFlotte = $('recherche-flotte').value;
+    rendreAppareils(appareilsCourants);
+    const champ = $('recherche-flotte');
+    champ.focus();
+    champ.setSelectionRange(champ.value.length, champ.value.length);
+  });
+
+  cablerChampsFlotte();
+}
+/** Écoute les changements sur tous les champs [data-champ] (marque, modèle, statut...) et
+ *  enregistre via flotte-modifier — commune aux deux designs (RNum/ESN/BO externe et Interne),
+ *  qui partagent le même gabarit de tableau et donc les mêmes attributs data-*. */
+function cablerChampsFlotte(){
+  document.querySelectorAll('#zone-flotte [data-champ]').forEach(champ => {
+    champ.addEventListener('change', async () => {
+      const ligne = champ.dataset.ligne;
+      const nomChamp = champ.dataset.champ;
+      let valeur = champ.dataset.checkbox
+        ? (champ.checked ? (champ.dataset.checkboxOn || 'Oui') : (champ.dataset.checkboxOff || 'Non'))
+        : champ.dataset.date ? isoVersDateFr(champ.value) : champ.value;
+
+      if(valeur === '__nouveau__' && (nomChamp === 'lieuStockage' || nomChamp === 'vendeur')){
+        const label = nomChamp === 'lieuStockage' ? 'lieu de stockage' : 'vendeur';
+        const nouvelle = await demanderCvdl(`Nom du nouveau ${label} :`);
+        if(!nouvelle || !nouvelle.trim()){ rerendreFlotte(); return; }
+        const r = await poster({ action:'flotte-liste-perso-ajouter', code: $('code').value.trim(), liste: nomChamp === 'lieuStockage' ? 'lieu' : 'vendeur', valeur: nouvelle.trim() });
+        if(r.ok){
+          if(nomChamp === 'lieuStockage') listesPersoFlottePortail.lieux = r.liste; else listesPersoFlottePortail.vendeurs = r.liste;
+          valeur = nouvelle.trim();
+        }else{
+          alerteCvdl(r.erreur || 'Ajout impossible.');
+          rerendreFlotte();
+          return;
+        }
+      }
+
+      if(nomChamp === 'statut' && valeur === 'D3E'){
+        if(!await confirmerCvdl('Confirmer le passage de cet appareil en D3E (déchet électronique) ?')){ rerendreFlotte(); return; }
+      }
+
+      champ.disabled = true;
+      try{
+        const r = await poster({ action:'flotte-modifier', code: codeValide, ligne, champ: nomChamp, valeur });
+        const item = appareilsCourants.find(a => a.ligne == ligne);
+        if(!r.ok){
+          alerteCvdl(r.erreur || 'Enregistrement impossible.');
+          rerendreFlotte(); // remet l'affichage sur la vraie valeur enregistrée
+          return;
+        }
+        if(item) item[nomChamp] = valeur;
+        if(item && r.dateVente) item.dateVente = r.dateVente;
+        if(r.facture && !r.facture.deja) afficherMsg('retour-actualiser-flotte', `Vente enregistrée — facture ${echapper(r.facture.numero)} émise.`, 'succes');
+        else if(r.factureErreur) afficherMsg('retour-actualiser-flotte', echapper(r.factureErreur), 'erreur');
+        // Appareil remis/vendu : proposer (sans l'imposer) de mettre à jour son lieu de stockage.
+        if(item && nomChamp === 'statut' && valeur === statutVenduFlotte() && aColonnesStockage()){
+          const lieu = await demanderLieuStockage(`${item.numeroSerie} passe en « ${valeur} ».`, item.lieuStockage);
+          if(lieu !== null && lieu !== item.lieuStockage){
+            const rLieu = await poster({ action:'flotte-modifier', code: codeValide, ligne, champ:'lieuStockage', valeur: lieu }).catch(() => ({ ok:false }));
+            if(rLieu.ok) item.lieuStockage = lieu; else alerteCvdl(rLieu.erreur || 'Mise à jour du lieu de stockage impossible.');
+          }
+        }
+        if(['statut','lieuStockage','vendeur','statutRapprochement','saisieSalesforce'].includes(nomChamp)) rerendreFlotte();
+      }catch(e){
+        alerteCvdl('Enregistrement impossible — réessaie.');
+      }
+      champ.disabled = false;
+    });
+  });
+}
+function cablerBarreOutils(){
+  const bouton = $('btn-actualiser-flotte');
+  if(!bouton) return;
+  document.querySelector('.flotte-barre')?.addEventListener('click', e => {
+    const filtreStatut = e.target.closest('[data-filtre-statut-flotte]');
+    if(filtreStatut){ filtreStatutFlotte = filtreStatut.dataset.filtreStatutFlotte; rendreAppareils(appareilsCourants); return; }
+    const filtreRappro = e.target.closest('[data-filtre-rapprochement-flotte]');
+    if(filtreRappro){ filtreRapprochementFlotte = filtreRappro.dataset.filtreRapprochementFlotte; rendreAppareils(appareilsCourants); return; }
+    const th = e.target.closest('[data-tri-champ-standard]');
+    if(!th) return;
+    const champ = th.dataset.triChampStandard;
+    flotteTriSens = (flotteTriColonne === champ) ? -flotteTriSens : 1;
+    flotteTriColonne = champ;
+    rendreAppareils(appareilsCourants);
+  });
+  bouton.addEventListener('click', async () => {
+    bouton.disabled = true;
+    $('retour-actualiser-flotte').textContent = 'Actualisation…';
+    try{
+      const rA = await poster({ action:'flotte-actualiser', code: codeValide });
+      if(rA.ok){
+        $('retour-actualiser-flotte').textContent = rA.ajoutes > 0 ? rA.ajoutes + ' nouvel(aux) appareil(s) ajouté(s).' : 'Déjà à jour, rien de nouveau.';
+        await chargerAppareils(lienFlotteActuel);
+      }else{
+        $('retour-actualiser-flotte').textContent = rA.erreur || 'Actualisation impossible.';
+      }
+    }catch(e){
+      $('retour-actualiser-flotte').textContent = 'Actualisation impossible.';
+    }
+    bouton.disabled = false;
+  });
+
+  const boutonLieu = $('btn-nouveau-lieu-stockage-portail');
+  if(boutonLieu){
+    boutonLieu.addEventListener('click', async () => {
+      const nouvelle = await demanderCvdl('Nom du nouveau lieu de stockage :');
+      if(!nouvelle || !nouvelle.trim()) return;
+      try{
+        const r = await poster({ action:'flotte-liste-perso-ajouter', code: $('code').value.trim(), liste:'lieu', valeur: nouvelle.trim() });
+        if(r.ok){ listesPersoFlottePortail.lieux = r.liste; $('retour-actualiser-flotte').textContent = 'Lieu ajouté.'; }
+        else $('retour-actualiser-flotte').textContent = r.erreur || 'Ajout impossible.';
+      }catch(e){ $('retour-actualiser-flotte').textContent = 'Ajout impossible.'; }
+    });
+  }
+
+  const boutonRecreer = $('btn-recreer-tableau-flotte');
+  if(boutonRecreer){
+    boutonRecreer.addEventListener('click', async () => {
+      if(!await confirmerCvdl('Repartir d\'un tableau neuf ? Votre tableau actuel ne sera pas supprimé (il reste intact sur votre Drive), mais il ne sera plus lié ici — il faudra en dupliquer un nouveau depuis le modèle et recoller son lien.')) return;
+      try{
+        const r = await poster({ action:'flotte-delier', code: codeValide });
+        if(r.ok) chargerFlotte();
+        else alerteCvdl(r.erreur || 'Impossible de délier le tableau actuel.');
+      }catch(e){ alerteCvdl('Impossible de délier le tableau actuel — réessaie.'); }
+    });
+  }
+
+}
+
+function dateVersISO(dateStr){
+  if(!dateStr) return '';
+  const [j, m, a] = dateStr.split('/');
+  if(!j || !m || !a) return '';
+  return `${a}-${m}-${j}`;
+}
+function isoVersDateFr(iso){
+  if(!iso) return '';
+  const [a, m, j] = iso.split('-');
+  if(!j || !m || !a) return '';
+  return `${j}/${m}/${a}`;
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-qr-serie]');
+  if(!b) return;
+  const numeroSerie = b.dataset.qrSerie;
+  // URL résolue relativement à la page courante : marche que l'adresse se termine par
+  // « flotte-structure.html » ou non (avant, sans le « .html » dans l'adresse, le lien devenait
+  // « …flotte-structurepasseport.html » → page d'erreur).
+  const lien = new URL('passeport.html', location.href);
+  lien.search = ''; lien.hash = '';
+  lien.searchParams.set('sn', numeroSerie);
+  const urlQr = lien.toString();
+  lien.searchParams.set('code', codeValide);
+  const urlOuvrir = lien.toString();
+
+  $('qr-code-conteneur').innerHTML = '';
+  try{
+    new QRCode($('qr-code-conteneur'), { text: urlQr, width: 200, height: 200, colorDark: '#002743', colorLight: '#ffffff' });
+  }catch(err){
+    $('qr-code-conteneur').innerHTML = '<p style="opacity:0.6;font-size:13px">QR indisponible — le lien reste utilisable ci-dessous.</p>';
+  }
+  $('qr-url-affichee').textContent = urlQr;
+  $('qr-ouvrir-passeport').href = urlOuvrir;
+  $('modale-qr-passeport').dataset.numeroSerie = numeroSerie;
+  $('modale-qr-passeport').classList.add('visible');
+});
+$('qr-fermer').addEventListener('click', () => $('modale-qr-passeport').classList.remove('visible'));
+$('modale-qr-passeport').addEventListener('click', e => { if(e.target.id === 'modale-qr-passeport') $('modale-qr-passeport').classList.remove('visible'); });
+
+let attestationSerieCourante = '';
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-attestation-serie]');
+  if(!b) return;
+  attestationSerieCourante = b.dataset.attestationSerie;
+  const nomPersonne = b.dataset.attestationPersonne || '';
+  $('attestation-nom-input').value = nomPersonne;
+  $('attestation-naissance-input').value = '';
+  $('retour-attestation-flotte').innerHTML = '';
+  $('modale-attestation-flotte').classList.add('visible');
+  if(nomPersonne){
+    poster({ action:'flotte-date-naissance', code: codeValide, numeroSerie: attestationSerieCourante, nomComplet: nomPersonne })
+      .then(r => { if(r.ok && r.dateNaissance && !$('attestation-naissance-input').value){ $('attestation-naissance-input').value = dateVersISO(r.dateNaissance); } })
+      .catch(() => {});
+  }
+});
+$('attestation-fermer').addEventListener('click', () => $('modale-attestation-flotte').classList.remove('visible'));
+$('modale-attestation-flotte').addEventListener('click', e => { if(e.target.id === 'modale-attestation-flotte') $('modale-attestation-flotte').classList.remove('visible'); });
+
+$('btn-generer-attestation-flotte').addEventListener('click', async () => {
+  const nomComplet = $('attestation-nom-input').value.trim();
+  const dateNaissanceISO = $('attestation-naissance-input').value;
+  if(!nomComplet){ $('retour-attestation-flotte').innerHTML = '<div class="msg msg-erreur">Le nom est obligatoire.</div>'; return; }
+  const dateNaissance = dateNaissanceISO ? dateNaissanceISO.split('-').reverse().join('/') : '';
+
+  $('btn-generer-attestation-flotte').disabled = true;
+  $('retour-attestation-flotte').innerHTML = '<div class="msg msg-info">Génération en cours…</div>';
+  try{
+    const r = await poster({ action:'flotte-generer-attestation', code: codeValide, numeroSerie: attestationSerieCourante, nomComplet, dateNaissance });
+    if(r.ok){
+      $('retour-attestation-flotte').innerHTML = `<div class="msg msg-succes">Prête — <a href="${echapper(urlSure(r.url))}" target="_blank" rel="noopener" download="Attestation de paiement.pdf">l'ouvrir ↗</a></div>`;
+    }else{
+      $('retour-attestation-flotte').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Génération impossible.')}</div>`;
+    }
+  }catch(e){
+    $('retour-attestation-flotte').innerHTML = '<div class="msg msg-erreur">Génération impossible — réessaie.</div>';
+  }
+  $('btn-generer-attestation-flotte').disabled = false;
+});
+
+async function chargerFlotte(){
+  try{
+    // Listes partagées (lieux de stockage, vendeurs) : communes à TOUTES les structures, de tout
+    // type — rechargées à chaque ouverture pour voir ce qu'une autre structure vient d'ajouter.
+    {
+      const rListes = await jsonp({action:'flotte-listes-perso'}).catch(() => null);
+      if(rListes && rListes.ok) listesPersoFlottePortail = rListes;
+    }
+    const r = await jsonp({action:'flotte-obtenir', code: codeValide});
+    if(!r.ok){ $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Chargement impossible.</p>'; return; }
+
+    if(r.lienFlotte){
+      await chargerAppareils(r.lienFlotte);
+      return;
+    }
+
+    if(!r.lienModele){
+      $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Cette fonctionnalité n\'est pas encore configurée — contactez-nous directement.</p>';
+      return;
+    }
+
+    $('zone-flotte').innerHTML = `
+      <ol class="tuto-flotte">
+        <li>
+          <div class="titre-etape">Copiez le modèle dans votre propre Google Drive</div>
+          <div class="desc-etape">Cliquez ce lien, connecté à votre compte Google : <a href="${echapper(urlSure(r.lienModele))}" target="_blank" rel="noopener">Créer ma copie du modèle</a>. Une copie s'ouvre, qui vous appartient entièrement.</div>
+        </li>
+        <li>
+          <div class="titre-etape">Partagez-la en modification par lien</div>
+          <div class="desc-etape">Dans votre copie : bouton <b>Partager</b> (en haut à droite) → sous "Accès général", choisissez <b>"Toute personne disposant du lien"</b> → rôle <b>Éditeur</b> → Copier le lien.</div>
+        </li>
+        <li>
+          <div class="titre-etape">Collez ce lien ici</div>
+          <div class="desc-etape">On le vérifie, puis on pré-remplit automatiquement avec tous les appareils déjà livrés à votre structure — vous n'aurez plus qu'à indiquer qui utilise chaque appareil.</div>
+          <div class="field" style="margin-top:10px">
+            <label for="lien-flotte-champ" class="sr-only">Lien de votre tableau</label>
+            <input type="text" class="input" id="lien-flotte-champ" placeholder="Collez le lien de votre copie ici">
+          </div>
+          <div id="retour-lien-flotte" aria-live="polite"></div>
+          <button type="button" class="btn btn-primary" style="margin-top:10px" id="btn-valider-flotte">Valider et pré-remplir</button>
+        </li>
+      </ol>`;
+
+    $('btn-valider-flotte').addEventListener('click', async () => {
+      const lien = $('lien-flotte-champ').value.trim();
+      if(!lien){ afficherMsg('retour-lien-flotte', 'Collez d\'abord le lien de votre copie.', 'erreur'); return; }
+      $('btn-valider-flotte').disabled = true;
+      $('btn-valider-flotte').textContent = 'Vérification…';
+      afficherMsg('retour-lien-flotte', '', 'info');
+      try{
+        const rL = await poster({ action:'flotte-lier', code: codeValide, lienFlotte: lien });
+        if(rL.ok){
+          chargerFlotte();
+        }else{
+          afficherMsg('retour-lien-flotte', echapper(rL.erreur || 'Erreur inconnue'), 'erreur');
+        }
+      }catch(e){
+        afficherMsg('retour-lien-flotte', 'Connexion impossible — réessaie.', 'erreur');
+      }
+      $('btn-valider-flotte').disabled = false;
+      $('btn-valider-flotte').textContent = 'Valider et pré-remplir';
+    });
+  }catch(e){
+    $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Chargement impossible — réessaie.</p>';
+  }
+}
+</script>
+</body>
+</html>

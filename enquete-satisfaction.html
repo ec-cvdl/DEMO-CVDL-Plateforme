@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script>
+const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
+</script>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Votre avis — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<style>
+/* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
+[hidden]{ display:none!important; }
+main{ max-width:720px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
+.notation{ display:flex; gap:var(--space-2); }
+.notation button{ box-sizing:border-box; cursor:pointer; flex:1; height:46px; text-align:center; }
+.legende-notation{ display:flex; justify-content:space-between; opacity:0.5; margin-top:6px; }
+.bloc-question .titre-question{ display:block; margin-bottom:var(--space-3); }
+@media (max-width: 640px){
+main{ padding:var(--space-6) var(--space-4); }
+}
+.notation{ gap:4px !important; }
+.notation button{ cursor:pointer; width:44px; height:44px; display:inline-flex; align-items:center; justify-content:center; }
+.legende-notation{ max-width:236px; }
+</style>
+<script src="portail-ui.js?v=22" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
+<link rel="stylesheet" href="retours.css?v=1">
+<script src="retours.js?v=1" defer></script>
+</head>
+<body data-famille="commandes">
+<main id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" onclick="location.href='portail-structure.html'">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Portail
+  </button>
+
+  <div id="etape-formulaire">
+    <span data-ill="enquete" class="pk-titre-ill xl"></span>
+    <h1 style="margin-bottom:var(--space-2)">Comment s'est passée votre commande ?</h1>
+    <p style="opacity:0.6;margin:0 0 var(--space-6)" id="reference-affichee"></p>
+
+    <div class="card elev-sm" style="padding:var(--space-6);gap:var(--space-6)">
+      <div class="bloc-question">
+        <label class="titre-question">Globalement, êtes-vous satisfait·e ?</label>
+        <div class="notation" data-note="noteGlobale">
+          <button type="button" data-valeur="1" aria-label="1 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="2" aria-label="2 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="3" aria-label="3 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="4" aria-label="4 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="5" aria-label="5 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+        </div>
+        <div class="legende-notation"><span>Pas du tout</span><span>Tout à fait</span></div>
+      </div>
+
+      <div class="bloc-question">
+        <label class="titre-question">Le délai de livraison vous a-t-il convenu ?</label>
+        <div class="notation" data-note="noteDelai">
+          <button type="button" data-valeur="1" aria-label="1 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="2" aria-label="2 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="3" aria-label="3 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="4" aria-label="4 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="5" aria-label="5 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+        </div>
+        <div class="legende-notation"><span>Pas du tout</span><span>Tout à fait</span></div>
+      </div>
+
+      <div class="bloc-question">
+        <label class="titre-question">Que pensez-vous de l'état du matériel reçu ?</label>
+        <div class="notation" data-note="noteMateriel">
+          <button type="button" data-valeur="1" aria-label="1 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="2" aria-label="2 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="3" aria-label="3 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="4" aria-label="4 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+          <button type="button" data-valeur="5" aria-label="5 sur 5"><svg viewBox="0 0 24 24" width="28" height="28" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z"/></svg></button>
+        </div>
+        <div class="legende-notation"><span>Décevant</span><span>Excellent</span></div>
+      </div>
+
+      <div class="field" style="margin:0">
+        <label for="commentaire">Une remarque à ajouter ? (facultatif)</label>
+        <input class="input" id="commentaire" placeholder="Dites-nous ce qui a bien ou moins bien fonctionné…">
+      </div>
+
+      <div id="retour-enquete" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary" style="align-self:flex-start" id="btn-envoyer-enquete">Envoyer mon avis</button>
+    </div>
+  </div>
+
+  <div id="etape-merci" hidden style="text-align:center;padding:var(--space-8) 0">
+    <div class="confirmation-icone" style="display:flex;align-items:center;justify-content:center;margin:0 auto var(--space-4)">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-2)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <h1 style="margin-bottom:8px">Merci pour votre retour !</h1>
+    <p style="opacity:0.6;margin:0">Votre avis a bien été enregistré et nous aide à améliorer le service.</p>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+function echapper(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function poster(data){
+  return fetch(API, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(data)
+  }).then(r => r.json());
+}
+
+const params = new URLSearchParams(location.search);
+const reference = params.get('ref') || '';
+const jetonEnquete = params.get('t') || '';
+const dateLivraison = params.get('date') || '';
+$('reference-affichee').textContent = reference ? `${reference}${dateLivraison ? ` · livrée le ${dateLivraison}` : ''}` : '';
+
+const notes = {};
+$$('.notation').forEach(groupe => {
+  const cle = groupe.dataset.note;
+  groupe.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      notes[cle] = b.dataset.valeur;
+      groupe.querySelectorAll('button').forEach(x => x.classList.toggle('actif', x === b));
+    });
+  });
+});
+
+$('btn-envoyer-enquete').addEventListener('click', async () => {
+  if(!reference){
+    $('retour-enquete').innerHTML = '<div class="msg msg-erreur">Lien invalide — référence de commande manquante.</div>';
+    return;
+  }
+  $('btn-envoyer-enquete').disabled = true;
+  $('btn-envoyer-enquete').textContent = 'Envoi…';
+  try{
+    const r = await poster({
+      action: 'enquete-repondre',
+      reference: reference,
+      jeton: jetonEnquete,
+      noteGlobale: notes.noteGlobale || '',
+      noteDelai: notes.noteDelai || '',
+      noteMateriel: notes.noteMateriel || '',
+      commentaire: $('commentaire').value.trim()
+    });
+    if(r.ok){
+      $('etape-formulaire').hidden = true;
+      $('etape-merci').hidden = false;
+    }else{
+      $('retour-enquete').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Envoi impossible.')}</div>`;
+      $('btn-envoyer-enquete').disabled = false;
+      $('btn-envoyer-enquete').textContent = 'Envoyer mon avis';
+    }
+  }catch(e){
+    $('retour-enquete').innerHTML = '<div class="msg msg-erreur">Envoi impossible — réessaie.</div>';
+    $('btn-envoyer-enquete').disabled = false;
+    $('btn-envoyer-enquete').textContent = 'Envoyer mon avis';
+  }
+});
+</script>
+</body>
+</html>

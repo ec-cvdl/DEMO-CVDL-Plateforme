@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CVDL — Espace personne accompagnée</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<style>
+/* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
+[hidden]{ display:none!important; }
+main{ max-width:1040px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
+.carte-choix{ display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:var(--space-3); padding:var(--space-6); cursor:pointer; position:relative; min-height:225px; }
+.carte-choix.desactivee{ opacity:0.5; cursor:not-allowed; }
+@media (max-width: 640px){
+main{ padding:var(--space-6) var(--space-4); }
+.carte-choix{ min-height:0; padding:var(--space-5); }
+}
+</style>
+<script src="portail-ui.js?v=22" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
+<link rel="stylesheet" href="retours.css?v=1">
+<script src="retours.js?v=1" defer></script>
+</head>
+<body data-famille="accueil">
+<main>
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <button type="button" class="btn-retour" style="margin-bottom:var(--space-4)" onclick="location.href='portail.html'">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Retour
+  </button>
+  <div class="ps-titre">
+    <span data-ill="personne" class="ill xl"></span>
+    <div>
+      <div class="cvdl-surtitre">Espace personnel</div>
+      <h1>Espace personne accompagnée</h1>
+      <p>Vous avez reçu du matériel reconditionné et rencontrez un problème ? C’est ici.</p>
+    </div>
+  </div>
+  <div class="ps-choix">
+    <a class="ps-choix-carte" href="sav-beneficiaire.html" style="--ps-c:var(--rouge)">
+      <span data-ill="panne" class="ill xl"></span>
+      <span class="ps-choix-txt"><b>Signaler une panne</b><span>Sans code, avec le numéro de série de votre appareil.</span></span>
+      <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <a class="ps-choix-carte" href="suivi-sav-beneficiaire.html" style="--ps-c:var(--rouge)">
+      <span data-ill="suiviSav" class="ill xl"></span>
+      <span class="ps-choix-txt"><b>Suivre ma demande</b><span>Avancement de votre panne, avec le numéro de série.</span></span>
+      <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <a class="ps-choix-carte" href="linux-info.html" style="--ps-c:var(--tur)">
+      <span data-ill="linux" class="ill xl"></span>
+      <span class="ps-choix-txt"><b>C’est quoi Linux ?</b><span>Comprendre le système de votre ordinateur reconditionné, et le tester en direct.</span></span>
+      <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <a class="ps-choix-carte" href="categories-materiel.html" style="--ps-c:var(--mag)">
+      <span data-ill="categories" class="ill xl"></span>
+      <span class="ps-choix-txt"><b>Bien choisir un ordinateur</b><span>Comparer les modèles : système, mémoire, processeur, stockage.</span></span>
+      <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <div class="ps-choix-carte desactivee" aria-disabled="true" title="Bientôt disponible">
+      <span data-ill="aide" class="ill xl"></span>
+      <span class="ps-choix-txt"><b>Besoin d’aide ?</b><span>Un espace d’entraide arrive bientôt ici.</span></span>
+      <span class="ps-choix-go">Bientôt disponible</span>
+    </div>
+  </div>
+</main>
+</body>
+</html>

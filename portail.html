@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CVDL — Qui êtes-vous ?</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<style>
+/* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
+[hidden]{ display:none!important; }
+.lien-evitement{ position:absolute; left:-9999px; top:0; z-index:200; padding:12px 20px; }
+.lien-evitement:focus{ left:0; }
+.conteneur{ width:100%; max-width:940px; margin-top:1.5vh; }
+.carte-choix{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:var(--space-4); padding:var(--space-8) var(--space-6); cursor:pointer; }
+.carte-choix .card-body{ opacity:1; }
+@media (max-width: 640px){
+.conteneur{ margin-top:2vh; }
+}
+</style>
+<script src="portail-ui.js?v=22" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
+<link rel="stylesheet" href="retours.css?v=1">
+<script src="retours.js?v=1" defer></script>
+</head>
+<body data-famille="accueil">
+<a href="#contenu-principal" class="lien-evitement">Aller au contenu</a>
+
+<div class="conteneur" id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <div class="ps-titre">
+    <span data-ill="cle" class="ill xl"></span>
+    <div>
+      <div class="cvdl-surtitre">Bienvenue</div>
+      <h1>Qui êtes-vous ?</h1>
+      <p>Choisissez votre profil pour accéder aux bons formulaires.</p>
+    </div>
+  </div>
+  <div class="ps-choix ps-choix-2">
+    <a class="ps-choix-carte" href="portail-structure.html" style="--ps-c:var(--mag)">
+      <span data-ill="structure" class="ill xl"></span>
+      <span class="ps-choix-txt"><b>Je suis une structure</b><span>Commander du matériel, suivre une commande ou signaler une panne, avec votre code structure.</span></span>
+      <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+    <a class="ps-choix-carte" href="portail-beneficiaire.html" style="--ps-c:var(--tur)">
+      <span data-ill="personne" class="ill xl"></span>
+      <span class="ps-choix-txt"><b>Je suis une personne accompagnée</b><span>Vous avez reçu du matériel et rencontrez un problème : sans code, avec le numéro de série.</span></span>
+      <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+    </a>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C'est quoi Linux ? — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<style>
+/* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
+main{ max-width:720px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
+.article-linux h2{ margin:var(--space-8) 0 var(--space-3); }
+.article-linux p{ margin:0 0 var(--space-3); }
+.article-linux ul{ margin:0 0 var(--space-3); padding-left:20px; }
+.article-linux li{ margin-bottom:6px; }
+.illustration-linux{ width:100%; max-width:420px; display:block; margin:var(--space-6) auto; padding:var(--space-5); box-sizing:border-box; }
+.bloc-demo{ padding:var(--space-6); margin:var(--space-8) 0; text-align:center; gap:var(--space-3); }
+.bloc-demo p{ margin:0; }
+@media (max-width: 640px){
+main{ padding:var(--space-6) var(--space-4); }
+}
+</style>
+<script src="portail-ui.js?v=22" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
+</head>
+<body data-famille="materiel">
+<main id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" onclick="location.href='portail-beneficiaire.html'">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Portail
+  </button>
+
+  <article class="article-linux">
+    <span data-ill="linux" class="pk-titre-ill xl"></span>
+    <h1 style="margin-bottom:var(--space-2)">C'est quoi, <em>Linux</em> ?</h1>
+    <p style="opacity:0.6;margin-bottom:var(--space-6)">
+      Si votre ordinateur reconditionné tourne sous Linux plutôt que sous Windows, voici de quoi
+      comprendre rapidement ce que ça change — et pourquoi ce n'est pas un problème.
+    </p>
+
+    <svg class="illustration-linux" viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+      <rect x="40" y="20" width="320" height="150" rx="10" fill="none" stroke="var(--color-accent-2)" stroke-width="3"/>
+      <rect x="55" y="35" width="290" height="105" rx="4" fill="var(--color-accent-2)" opacity="0.08"/>
+      <rect x="70" y="50" width="80" height="10" rx="2" fill="var(--color-accent-2)" opacity="0.5"/>
+      <rect x="70" y="68" width="140" height="8" rx="2" fill="var(--color-accent-2)" opacity="0.3"/>
+      <rect x="70" y="84" width="110" height="8" rx="2" fill="var(--color-accent-2)" opacity="0.3"/>
+      <circle cx="290" cy="95" r="28" fill="none" stroke="var(--color-accent-2)" stroke-width="3"/>
+      <path d="M280 95l7 7 14-14" fill="none" stroke="var(--color-accent-2)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M185 170l6 22h18l6-22z" fill="none" stroke="var(--color-accent-2)" stroke-width="3" stroke-linejoin="round"/>
+      <rect x="150" y="192" width="100" height="10" rx="3" fill="var(--color-accent-2)" opacity="0.25"/>
+    </svg>
+
+    <h2>Un autre système, tout aussi capable</h2>
+    <p>
+      Windows et Linux sont deux systèmes d'exploitation — le logiciel de base qui fait fonctionner
+      l'ordinateur. Linux existe depuis plus de 30 ans, fait tourner l'immense majorité des serveurs
+      d'internet, et équipe aujourd'hui des millions d'ordinateurs de bureau dans le monde. Ce n'est
+      pas une version dégradée de Windows : c'est un système à part entière, gratuit, et souvent plus
+      léger — ce qui le rend particulièrement adapté aux ordinateurs reconditionnés.
+    </p>
+
+    <h2>Ce qui change, concrètement</h2>
+    <ul>
+      <li>Le bureau, les icônes et les menus ont une apparence un peu différente, mais le principe reste le même : cliquer, ouvrir des fenêtres, lancer des programmes.</li>
+      <li>Un navigateur web (souvent Firefox ou Chrome), une suite bureautique compatible avec Word/Excel, une messagerie et un lecteur de fichiers sont déjà installés.</li>
+      <li>Les logiciels s'installent depuis un "magasin d'applications" intégré, gratuitement, sans code d'activation à chercher.</li>
+      <li>Antivirus : Linux est beaucoup moins ciblé par les virus que Windows, il n'y a généralement rien de spécial à installer.</li>
+    </ul>
+
+    <h2>Et si j'ai l'habitude de Windows ?</h2>
+    <p>
+      La prise en main demande quelques minutes d'adaptation, pas plus. Les gestes de base (ouvrir un
+      document, se connecter à internet, imprimer) fonctionnent de la même façon. En cas de blocage,
+      l'équipe reste joignable via le SAV du portail.
+    </p>
+
+    <div class="card elev-sm bloc-demo">
+      <p>Le plus simple : l'essayer directement, sans rien installer.</p>
+      <a class="btn btn-primary" href="https://distrosea.com/fr/start/linuxmint-22.3-cinnamon/" target="_blank" rel="noopener" style="align-self:center">
+        Tester une démo dans le navigateur
+      </a>
+      <p style="opacity:0.55">Un vrai bureau Linux s'ouvre dans un nouvel onglet — aucune installation, aucune inscription.</p>
+    </div>
+  </article>
+</main>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net https://accounts.google.com/gsi/; frame-src 'self' https://accounts.google.com/gsi/; object-src 'none'; base-uri 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- La connexion Google exige que l'origine soit transmise (pas de « no-referrer » ici). -->
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>/* Anti-clickjacking : jamais dans un cadre d'un autre site. */
+(function(){ if(window.top === window.self) return; var ok = false; try{ ok = window.top.location.origin === window.location.origin; }catch(e){} if(!ok){ document.documentElement.style.display = 'none'; try{ window.top.location = window.location.href; }catch(e){} } })();</script>
+<script>const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo</script>
+<title>Support SAV — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="sav-fil.css?v=1">
+<link rel="stylesheet" href="support.css?v=2">
+<script src="portail-ui.js?v=22" defer></script>
+<script src="support.js?v=2" defer></script>
+</head>
+<body data-famille="sav" data-vue="chargement">
+<main>
+  <!-- Connexion -->
+  <section id="vue-connexion" class="sp-vue" aria-labelledby="sp-titre-cx">
+    <div class="sp-login">
+      <img src="logo.png" alt="Emmaüs Connect" class="sp-login-logo">
+      <span class="sp-k">Espace support SAV</span>
+      <h1 id="sp-titre-cx">Connexion</h1>
+      <p>Accès réservé à l’équipe SAV : tickets, échanges et bons Colissimo.</p>
+      <div id="sp-google" class="sp-google"></div>
+      <div id="sp-login-msg" class="sp-err" role="alert"></div>
+      <p class="sp-note">Connectez-vous avec votre compte Google <b data-sp-domaine>@emmaus-connect.org</b>. Vos réponses, notes et consultations d’identité sont signées à votre nom.</p>
+      <details class="sp-secours"><summary>Accès de secours (mot de passe admin)</summary>
+        <form id="sp-form-mdp"><label class="sp-sr" for="sp-mdp">Mot de passe admin</label><input class="input" type="password" id="sp-mdp" autocomplete="current-password" placeholder="Mot de passe admin"><button class="btn btn-secondary" type="submit">Entrer</button></form>
+      </details>
+    </div>
+  </section>
+
+  <!-- Boîte de tickets -->
+  <section id="vue-boite" class="sp-vue">
+    <header class="sp-barre">
+      <img src="logo.png" alt="" class="sp-barre-logo">
+      <span class="sp-titre">Support SAV<small>CVDL</small></span>
+      <label class="sp-sr" for="sp-recherche">Rechercher</label>
+      <input class="input sp-recherche" id="sp-recherche" type="search" placeholder="Rechercher : SAV-…, n° de série, structure, symptôme">
+      <button type="button" class="sp-moi" id="sp-moi" aria-haspopup="true"></button>
+    </header>
+    <div class="sp-cols">
+      <nav class="sp-nav" id="sp-nav" aria-label="Files de tickets"></nav>
+      <div class="sp-liste" id="sp-liste" aria-live="polite"></div>
+      <div class="sp-detail" id="sp-detail"></div>
+    </div>
+  </section>
+  <div class="sp-etat" id="sp-etat" role="status" aria-live="polite"></div>
+</main>
+</body>
+</html>

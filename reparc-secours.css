@@ -1,0 +1,597 @@
+/* ============================================================
+   Design system — copie exacte de maquette/Canvas.dc.html
+   (design system "organic" + overrides couleurs/police ReParc)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap');
+
+:root {
+  --color-bg: #f5ead8;
+  --color-surface: #ebddc5;
+  --color-text: #201e1d;
+  --color-accent: #c67139;
+  --color-accent-2: #7a8a5e;
+  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+  --color-neutral-100: #f9f4ed;
+  --color-neutral-200: #eee7db;
+  --color-neutral-300: #dcd3c4;
+  --color-neutral-400: #c0b6a5;
+  --color-neutral-500: #a19786;
+  --color-neutral-600: #82796a;
+  --color-neutral-700: #645c50;
+  --color-neutral-800: #474238;
+  --color-neutral-900: #2e2b25;
+
+  --color-accent-100: #fff2eb;
+  --color-accent-200: #ffe1d0;
+  --color-accent-300: #ffc6a5;
+  --color-accent-400: #f6a06b;
+  --color-accent-500: #d67f48;
+  --color-accent-600: #b2622d;
+  --color-accent-700: #8c491a;
+  --color-accent-800: #643312;
+  --color-accent-900: #402310;
+
+  --color-accent-2-100: #f0fae1;
+  --color-accent-2-200: #e1eecc;
+  --color-accent-2-300: #ccdbb2;
+  --color-accent-2-400: #aebf92;
+  --color-accent-2-500: #8fa073;
+  --color-accent-2-600: #728157;
+  --color-accent-2-700: #56633f;
+  --color-accent-2-800: #3d472b;
+  --color-accent-2-900: #272e1b;
+
+  --font-heading: "Caprasimo", system-ui, sans-serif;
+  --font-heading-weight: 400;
+  --font-body: "Figtree", system-ui, sans-serif;
+
+  --space-1: 4.4px;
+  --space-2: 8.8px;
+  --space-3: 13.2px;
+  --space-4: 17.6px;
+  --space-5: 22px;
+  --space-6: 26.4px;
+  --space-8: 35.2px;
+
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+
+  --shadow-sm: 0 1px 2px color-mix(in srgb, #2e2b25 14%, transparent);
+  --shadow-md: 0 3px 10px color-mix(in srgb, #2e2b25 16%, transparent);
+  --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+}
+h1, h2, h3, h4 { font-family: var(--font-heading); font-weight: var(--font-heading-weight); }
+
+.washed{filter:saturate(0.6) contrast(0.85) brightness(1.1) opacity(0.94)}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; font-size: 15px; line-height: 1.55; font-weight: 400; }
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 var(--space-2);
+}
+h1 { font-size: 42px; }
+h2 { font-size: 32px; }
+h3 { font-size: 25px; }
+h4 { font-size: 20px; }
+h5 { font-size: 16px; }
+h6 { font-size: 13px; }
+h6 { letter-spacing: 0.08em; text-transform: uppercase; }
+p { margin: 0 0 var(--space-3); }
+a { color: var(--color-accent); text-underline-offset: 3px; }
+img { display: block; max-width: 100%; }
+figure { margin: 0; }
+figcaption {
+  font-size: 11px; margin-top: var(--space-1);
+  color: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+.text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
+
+.hr {
+  height: 1px; border: 0; margin: var(--space-4) 0;
+  background: var(--color-divider);
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; text-decoration: none;
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 14px; line-height: 1.2; color: var(--color-text);
+  background: transparent; border: 1px solid transparent;
+  padding: var(--space-2) calc(var(--space-3) * 1.2);
+  border-radius: var(--radius-md);
+}
+.btn svg { display: block; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--color-accent); color: var(--color-bg); }
+.btn-primary:hover { background: var(--color-accent-600); color: var(--color-bg); }
+.btn-primary:active { background: var(--color-accent-700); color: var(--color-bg); }
+.btn-secondary { border-color: var(--color-divider); }
+.btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
+.btn-ghost { color: var(--color-accent); padding-inline: var(--space-3); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.btn-icon { width: 36px; height: 36px; padding: 0; }
+.btn-block { width: 100%; margin-top: var(--space-2); }
+
+.field > label {
+  display: block; font-size: 12px; margin-bottom: 5px;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+.input {
+  width: 100%; min-height: 36px; padding: 6px 10px; font: inherit;
+  font-size: 14px; color: var(--color-text); caret-color: var(--color-accent);
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.input:hover { border-color: color-mix(in srgb, var(--color-text) 45%, transparent); }
+.input:focus-visible { border-color: var(--color-accent); outline-offset: 0; }
+textarea.input { min-height: 90px; resize: vertical; }
+.radio { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+.radio input, .seg-opt input {
+  position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;
+}
+.radio .dot {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 1.5px solid var(--color-divider);
+}
+.radio:hover .dot { border-color: var(--color-accent); }
+.radio input:checked + .dot {
+  border-color: var(--color-accent); background: var(--color-accent);
+  box-shadow: inset 0 0 0 4px var(--color-bg);
+}
+.radio input:focus-visible + .dot { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.seg {
+  display: inline-flex; overflow: hidden;
+  border: 1px solid var(--color-divider); border-radius: var(--radius-md);
+}
+.seg-opt {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 12px; font-size: 13px; cursor: pointer;
+}
+.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider); }
+.seg-opt:has(input:checked) { background: var(--color-accent); color: var(--color-bg); }
+.seg-opt:not(:has(input:checked)):hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
+.seg-opt:has(input:focus-visible) { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+
+/* ── Bascule à boutons (liste/kanban etc.) — plus simple que .seg (pas de input caché) ── */
+.rp-seg{ display:inline-flex; border-radius:999px; overflow:hidden; border:1px solid var(--color-divider); }
+.rp-seg button{ all:unset; box-sizing:border-box; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer; color:var(--color-text); }
+.rp-seg button + button{ border-left:1px solid var(--color-divider); }
+.rp-seg button.actif{ background:var(--color-accent); color:#fff; }
+.rp-seg button:not(.actif):hover{ background:var(--color-neutral-100); }
+
+.card {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface);
+}
+.card-kicker { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-500); font-weight: 700; }
+.card-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 17px; line-height: 1.2;
+}
+.card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
+.card-meta {
+  display: flex; align-items: center; gap: 6px; font-size: 11px;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+.elev-sm { box-shadow: var(--shadow-sm); }
+.elev-md { box-shadow: var(--shadow-md); }
+.elev-lg { box-shadow: var(--shadow-lg); }
+
+/* gap:6px ajouté — avant ça, l'espacement entre une icône et son texte à l'intérieur d'un
+   .tag dépendait d'un espace tapé à la main dans le HTML (présent à certains endroits, oublié
+   à d'autres, d'où des tags "collés" par endroits). Avec un gap sur la classe elle-même, plus
+   besoin d'y penser au cas par cas. */
+.tag {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 11px;
+  letter-spacing: 0.02em; padding: 3px 10px;
+  border-radius: calc(var(--radius-md) * 0.75);
+}
+.tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
+.tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
+.tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
+.tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent); }
+.tag-bleu { background: var(--color-bleu-100); color: var(--color-bleu-700); }
+.tag-violet { background: var(--color-violet-100); color: var(--color-violet-700); }
+.tag-orange { background: var(--color-orange-100); color: var(--color-orange-700); }
+.tag-vert { background: var(--color-vert-100); color: var(--color-vert-700); }
+
+/* Messages de retour (erreur/succès/info) — jamais définis jusqu'ici pour les pages
+   publiques (seul admin.html avait sa propre règle .msg-erreur en local), donc invisibles
+   partout ailleurs. Rouge dédié pour l'erreur, indépendant de --color-accent qui varie d'une
+   page à l'autre (magenta admin, turquoise public). admin.html garde son propre style local
+   (chargé après ce fichier), donc rien ne change côté admin. */
+.msg{ font-size:13px; border-radius:var(--radius-md); padding:10px 14px; line-height:1.5; font-weight:600; }
+.msg-erreur{
+  background:color-mix(in oklch, white 88%, #E0303D 12%); color:color-mix(in oklch, #E0303D 60%, black 40%);
+  border:1px solid color-mix(in oklch, #E0303D 55%, white 45%);
+}
+.msg-succes{ background:var(--color-accent-2-100); color:var(--color-accent-2-700); border:1px solid color-mix(in oklch, var(--color-accent-2) 55%, white 45%); }
+.msg-info{ background:var(--color-neutral-100); color:var(--color-text); font-weight:500; }
+
+.nav {
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: none;
+}
+.nav-brand {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 18px; margin-right: auto;
+}
+.nav a { color: inherit; text-decoration: none; font-size: 14px; }
+.nav a:hover, .nav a[aria-current='page'] { color: var(--color-accent); }
+
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th {
+  text-align: left; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 60%, transparent);
+  padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-divider);
+  background: var(--color-neutral-100);
+}
+.table th:first-child, .table td:first-child{ padding-left: var(--space-5); }
+.table th:last-child, .table td:last-child{ padding-right: var(--space-5); }
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+.table tbody tr:hover { background: color-mix(in srgb, var(--color-text) 4%, transparent); }
+.table tbody tr:last-child td{ border-bottom: none; }
+
+.dialog-backdrop {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--color-neutral-900) 50%, transparent);
+}
+#connexion.dialog-backdrop {
+  background: color-mix(in srgb, var(--color-neutral-900) 78%, transparent);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.dialog {
+  width: min(480px, 94vw); max-height: 88vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: var(--space-4);
+  padding: var(--space-6); border-radius: var(--radius-lg);
+  background: var(--color-surface); box-shadow: var(--shadow-lg);
+  font-size: 14.5px; line-height: 1.6;
+}
+.dialog-title {
+  font-family: var(--font-heading); font-weight: var(--font-heading-weight);
+  font-size: 22px;
+}
+.dialog-body { font-size: 14.5px; opacity: 0.85; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+.dialog .field label{ white-space: normal; }
+.dialog .field, .dialog p { overflow-wrap: anywhere; }
+
+.card, .dialog { border-radius: calc(var(--radius-lg) * 1.15); }
+.btn, .tag, .seg { border-radius: 999px; }
+
+/* Volet latéral (fiche commande) — même rôle qu'une .dialog mais ancré à droite, pour garder
+   le tableau/kanban visible derrière pendant la gestion d'une commande, avec plus de hauteur
+   utile qu'une modale centrée classique. */
+.rp-drawer-backdrop {
+  position: fixed; inset: 0; display: flex; justify-content: flex-end;
+  background: color-mix(in srgb, var(--color-neutral-900) 42%, transparent);
+  z-index: 55;
+}
+.rp-drawer {
+  width: min(640px, 96vw); height: 100%; flex: none;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--color-surface); box-shadow: var(--shadow-lg);
+  border-radius: 20px 0 0 20px;
+  animation: rp-drawer-in .22s cubic-bezier(.2,.7,.3,1);
+}
+@keyframes rp-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.rp-drawer-header {
+  flex: none; padding: var(--space-5) var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--color-divider);
+}
+.rp-drawer-body {
+  flex: 1; overflow-y: auto; padding: var(--space-5);
+  display: flex; flex-direction: column; gap: var(--space-4);
+  font-size: 14.5px; line-height: 1.6;
+}
+.rp-drawer-footer {
+  flex: none; padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-divider);
+  display: flex; justify-content: flex-end; gap: var(--space-2);
+}
+@media (max-width: 720px) {
+  .rp-drawer { border-radius: 0; }
+}
+/* .input sorti de la règle "pill" ci-dessus : en plein arrondi (999px), le rayon devient plus
+   grand que la moitié de la hauteur du champ dès qu'il a un peu de padding vertical, et mange
+   visuellement le début/la fin du texte saisi (surtout sur les champs larges). Un arrondi
+   modéré (--radius-md) reste dans l'esprit du design sans ce défaut. */
+.input { border-radius: var(--radius-md); padding-inline: 14px; }
+
+/* ── Overrides ReParc (Canvas.dc.html) — même ordre : ceci écrase les tokens ci-dessus ── */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap');
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-text: #002743;
+  --color-accent: #E62460;
+  --color-accent-2: #00ACB0;
+  --color-divider: color-mix(in srgb, #002743 14%, transparent);
+  --color-neutral-100: color-mix(in oklch, white 95%, #002743 5%);
+  --color-neutral-200: color-mix(in oklch, white 88%, #002743 12%);
+  --color-neutral-300: color-mix(in oklch, white 75%, #002743 25%);
+  --color-neutral-400: color-mix(in oklch, white 55%, #002743 45%);
+  --color-neutral-500: color-mix(in oklch, white 35%, #002743 65%);
+  --color-neutral-700: color-mix(in oklch, white 8%, #002743 92%);
+  --color-neutral-900: #002743;
+  --color-accent-100: color-mix(in oklch, white 88%, #E62460 12%);
+  --color-accent-300: color-mix(in oklch, white 45%, #E62460 55%);
+  --color-accent-600: color-mix(in oklch, #E62460 85%, white 15%);
+  --color-accent-700: color-mix(in oklch, #E62460 70%, black 30%);
+  --color-accent-2-100: color-mix(in oklch, white 88%, #00ACB0 12%);
+  --color-accent-2-700: color-mix(in oklch, #00ACB0 65%, black 35%);
+  --color-warn: #FECC38;
+  --color-warn-100: color-mix(in oklch, white 80%, #FECC38 20%);
+  --color-warn-700: color-mix(in oklch, #FECC38 65%, black 35%);
+  --color-warn-800: color-mix(in oklch, #FECC38 55%, black 45%);
+  /* Ces 3 variables n'étaient jamais redéfinies ici : .tag-accent/.tag-accent-2/.tag-neutral
+     (et .rp-pilule-neutre) retombaient donc sur le thème de base ci-dessus (brun/olive, pensé
+     pour une tout autre palette) — illisible une fois le mode sombre ajouté (texte foncé sur
+     fond assombri). */
+  --color-accent-800: color-mix(in oklch, #E62460 55%, black 45%);
+  --color-accent-2-800: color-mix(in oklch, #00ACB0 55%, black 45%);
+  --color-neutral-800: color-mix(in oklch, white 4%, #002743 96%);
+  /* Badges bleu/violet/orange/vert (devis/factures, garantie...) — sortis du hex brut codé en
+     dur dans BADGE (app.js) pour pouvoir être réadaptés proprement en mode sombre ci-dessous,
+     sans toucher au JS qui les consomme (déjà via var()). */
+  --color-bleu-100: #dce7fa; --color-bleu-700: #1d4ed8;
+  --color-violet-100: #ede1f7; --color-violet-700: #6b2e8c;
+  --color-orange-100: #ffe7d6; --color-orange-700: #a0470f;
+  --color-vert-100: #e1f5ee; --color-vert-700: #0f6e56;
+  --color-bleu: #1d4ed8; --color-violet: #6b2e8c; --color-orange: #d9691f; --color-vert: #0f6e56;
+  --color-corail-100: #FBE4E3; --color-corail-700: #8C2C2A;
+  --color-vert-garantie: #1F9D55;
+  --font-heading: "Space Grotesk", system-ui, sans-serif;
+  --font-heading-weight: 700;
+  --font-body: "Inter", system-ui, sans-serif;
+  --shadow-sm: 0 2px 8px color-mix(in srgb, #002743 12%, transparent);
+  --shadow-md: 0 4px 14px color-mix(in srgb, #002743 16%, transparent);
+  --shadow-lg: 0 20px 48px color-mix(in srgb, #002743 24%, transparent);
+}
+
+/* ══════════════════════════ Mode sombre ══════════════════════════
+   Palette pensée pour elle-même (pas un simple filtre inversé) : bleu-nuit plutôt que gris/noir
+   neutre, pour rester dans l'identité de marque (le navy #002743 déjà utilisé en clair). Les
+   tuiles "hero" (KPI tableau de bord, bandeau SAV) qui utilisaient neutral-900 comme un navy
+   volontairement plus sombre que leurs cartes voisines gardent ce même rôle ici : neutral-900
+   redevient le point le plus sombre de la page (plus sombre que --color-bg), pas un blanc
+   inversé — sinon ces tuiles "hero" perdraient tout leur contraste et disparaîtraient.
+   Teintes de base (accent/accent-2/warn) volontairement moins vives que dans un premier jet :
+   éclaircir une couleur déjà saturée pour la faire "ressortir" sur fond sombre la rend criarde
+   bien avant qu'elle en ait besoin — un soupçon de désaturation suffit à rester lisible sans
+   agresser. À l'inverse, les teintes -100 (fonds de pastille, ligne "Livrée"...) sont montées
+   à 30% de mélange plutôt que 22% : à 22% elles étaient trop proches du fond et se noyaient
+   dedans ("étouffées"), invisibles en un coup d'œil. */
+html.rp-dark {
+  --color-bg: #0A1622;
+  --color-surface: #101E2E;
+  --color-text: #E8EEF4;
+  --color-accent: #EF5C90;
+  --color-accent-2: #2FC1C4;
+  --color-divider: color-mix(in srgb, #E8EEF4 32%, transparent);
+  --color-neutral-100: #16283B;
+  --color-neutral-200: #1D3347;
+  --color-neutral-300: #2A4459;
+  --color-neutral-400: #4E6B85;
+  --color-neutral-500: #93A7B8;
+  --color-neutral-700: #C2D0DC;
+  --color-neutral-900: #050B12;
+  --color-accent-100: color-mix(in oklch, black 70%, #EF5C90 30%);
+  --color-accent-300: color-mix(in oklch, black 45%, #EF5C90 55%);
+  --color-accent-600: color-mix(in oklch, #EF5C90 85%, white 15%);
+  --color-accent-700: #FF8FB8;
+  --color-accent-2-100: color-mix(in oklch, black 70%, #2FC1C4 30%);
+  --color-accent-2-700: #5DDBDE;
+  --color-warn: #F0C450;
+  --color-warn-100: color-mix(in oklch, black 70%, #F0C450 30%);
+  --color-warn-700: #F5CC5C;
+  --color-warn-800: #FFEAB5;
+  --color-accent-800: #FFA6C6;
+  --color-accent-2-800: #7FE5E8;
+  --color-neutral-800: #D8E3EC;
+  --color-bleu-100: color-mix(in oklch, black 70%, #4C8DFF 30%); --color-bleu-700: #6FA0FF;
+  --color-violet-100: color-mix(in oklch, black 70%, #B48CFF 30%); --color-violet-700: #C4A3FF;
+  --color-orange-100: color-mix(in oklch, black 70%, #FF9A4D 30%); --color-orange-700: #FFA968;
+  --color-vert-100: color-mix(in oklch, black 70%, #22C58E 30%); --color-vert-700: #4FDBA8;
+  --color-bleu: #4C8DFF; --color-violet: #B48CFF; --color-orange: #FF9A4D; --color-vert: #22C58E;
+  --color-corail-100: color-mix(in oklch, black 70%, #FF6B5B 30%); --color-corail-700: #FF9686;
+  --color-vert-garantie: #22C58E;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.45);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.5);
+  --shadow-lg: 0 20px 48px rgba(0,0,0,.6);
+}
+/* Interrupteur clair/sombre, en bas de la barre latérale — même gabarit que le bouton "Lien du
+   portail public" juste au-dessus. */
+.rp-toggle-theme{
+  all:unset; box-sizing:border-box; display:flex; align-items:center; width:100%;
+  padding:11px var(--space-3); border-radius:var(--radius-md); cursor:pointer;
+  font-weight:600; font-size:14px; color:rgba(255,255,255,.75); margin-top:4px;
+}
+.rp-toggle-theme:hover{ background:#ffffff; color:var(--color-neutral-900); }
+.rp-toggle-theme svg{ width:18px; height:18px; flex:none; }
+.rp-toggle-theme .rp-toggle-lune{ display:none; }
+html.rp-dark .rp-toggle-theme .rp-toggle-soleil{ display:none; }
+html.rp-dark .rp-toggle-theme .rp-toggle-lune{ display:block; }
+/* Fond de carte désormais blanc, comme la page : sans cette bordure fine, une card sans
+   ombre visible (rendu navigateur, impression, etc.) disparaîtrait complètement. Filet de
+   sécurité en plus des classes elev-*, pas un remplacement. */
+.card { border: 1px solid var(--color-divider); }
+.tag-warn { background: var(--color-warn-100); color: var(--color-warn-800); }
+/* Pastilles "référence" — même famille visuelle pour tout ce qui est un lien/code/numéro
+   attaché à une commande (numéro de série, code de produit dématérialisé, suivi colis, lien de
+   paiement) : fond plein de couleur + texte blanc par défaut (bien visible, "actionnable" tout
+   de suite), survol en couleurs inversées (fond clair, texte coloré) pour un effet de relief au
+   survol plutôt que l'inverse. Seule la couleur/icône change selon le type, gabarit identique
+   partout — pas de style ad hoc dupliqué à chaque endroit. */
+.rp-pilule-violette, .rp-pilule-rouge, .rp-pilule-jaune, .rp-pilule-orange, .rp-pilule-neutre {
+  align-self: flex-start; width: fit-content; max-width: 100%;
+}
+.rp-pilule-violette, .rp-pilule-rouge, .rp-pilule-jaune, .rp-pilule-orange {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+  padding: 7px 13px; border-radius: 999px; border: 1.5px solid; text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.rp-pilule-violette { border-color: #7C5CFC; background: #7C5CFC; color: #fff; }
+.rp-pilule-violette:hover { background: color-mix(in oklch, white 88%, #7C5CFC 12%); color: color-mix(in oklch, #7C5CFC 65%, black 35%); }
+.rp-pilule-rouge { border-color: #E24B4A; background: #E24B4A; color: #fff; font-family: ui-monospace, monospace; cursor: text; }
+.rp-pilule-rouge:hover { background: color-mix(in oklch, white 88%, #E24B4A 12%); color: color-mix(in oklch, #E24B4A 55%, black 45%); }
+/* Jaune La Poste (colis/Colissimo) et ardoise (paiement). Le jaune est proche de celui déjà
+   utilisé pour le statut "en attente" (--color-warn) — accepté volontairement ici pour le
+   rapprochement de marque avec La Poste/Colissimo, malgré la consigne générale d'éviter les
+   couleurs de statut ; texte foncé (pas blanc) pour rester lisible sur ce jaune clair. */
+/* Jaune La Poste (colis/Colissimo) — même traitement plein par défaut que les trois autres. */
+.rp-pilule-jaune { border-color: #FFCC00; background: #FFCC00; color: #4A3800; }
+.rp-pilule-jaune:hover { background: color-mix(in oklch, white 85%, #FFCC00 15%); color: #4A3800; }
+.rp-pilule-orange { border-color: #D97706; background: #D97706; color: #fff; }
+.rp-pilule-orange:hover { background: color-mix(in oklch, white 88%, #D97706 12%); color: color-mix(in oklch, #D97706 55%, black 45%); }
+/* Neutre — même gabarit que ci-dessus, pour les infos de contact (personne, téléphone, email)
+   regroupées en une seule pilule séparée par des "|", plutôt que 3 pilules .tag distinctes
+   (plus petites, dimensions différentes). Reste claire par défaut (pas de lien à activer). */
+.rp-pilule-neutre {
+  display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 600;
+  padding: 7px 13px; border-radius: 999px; border: 1.5px solid transparent;
+  background: var(--color-neutral-100); color: var(--color-neutral-800);
+}
+.tag { font-size: 11px; padding: 4px 10px; font-weight: 600; }
+a { color: var(--color-accent-700); }
+a:hover { color: var(--color-accent); }
+
+[hidden]{ display:none !important; }
+
+/* ── Disposition 1a — sidebar + kanban (Canvas.dc.html, la seule disposition du fichier) ── */
+body{ background:var(--color-bg); color:var(--color-text); overflow-x:hidden; }
+.rp-app{ display:flex; }
+.rp-aside{
+  width:76px; flex:none; background:var(--color-neutral-900); color:#ffffff;
+  padding:var(--space-6) 14px; display:flex; flex-direction:column; gap:var(--space-6);
+  min-height:100vh; position:sticky; top:0; align-self:flex-start; overflow:hidden;
+  transition:width .22s cubic-bezier(.3,.7,.3,1);
+}
+.rp-aside:hover, .rp-aside:focus-within{ width:240px; }
+/* Texte des libellés (nav, marque, pied de barre) : masqué en largeur réduite, révélé avec
+   une transition douce au survol plutôt qu'en tout-ou-rien — même timing que la barre elle-même
+   pour que tout arrive ensemble. */
+.rp-label{
+  display:inline-block; max-width:0; margin-left:0; opacity:0; overflow:hidden; white-space:nowrap;
+  transition:max-width .22s ease, opacity .15s ease, margin-left .22s ease;
+}
+.rp-aside:hover .rp-label, .rp-aside:focus-within .rp-label{ max-width:170px; margin-left:12px; opacity:1; }
+.rp-brand{ display:flex; align-items:center; padding:0 var(--space-2); }
+.rp-brand-badge{
+  width:36px; height:36px; border-radius:999px; background:var(--color-accent);
+  display:flex; align-items:center; justify-content:center; flex:none;
+}
+.rp-brand-name{ font-family:var(--font-heading); font-size:19px; }
+.rp-nav{ display:flex; flex-direction:column; gap:4px; }
+.rp-nav button{
+  all:unset; box-sizing:border-box; display:flex; align-items:center; position:relative;
+  padding:11px var(--space-3); border-radius:var(--radius-md); cursor:pointer;
+  font-weight:600; font-size:14px; color:#ffffff;
+}
+.rp-nav button svg{ width:18px; height:18px; flex:none; }
+/* Couleurs inversées au survol (au lieu d'un simple voile blanc à 8%, à peine perceptible sur
+   fond sombre) : fond clair + texte foncé, pour un vrai retour visuel. */
+.rp-nav button:hover{ background:#ffffff; color:var(--color-neutral-900); }
+.rp-nav button.rp-actif{ background:var(--color-accent); }
+.rp-nav button.rp-actif:hover{ background:var(--color-accent-600); color:#ffffff; }
+#rp-copier-lien-portail:hover{ background:#ffffff; color:var(--color-neutral-900); }
+.rp-main{ flex:1; min-width:0; max-width:100%; padding:var(--space-8) var(--space-6); max-height:100vh; overflow-y:auto; overflow-x:hidden; }
+
+/* ── Pastille d'état (chargement / succès / erreur) ── */
+.rp-etat{
+  position:fixed; bottom:20px; right:20px; z-index:70;
+  display:flex; align-items:center; gap:12px;
+  padding:14px 24px; border-radius:999px; font-size:19.5px; font-weight:600;
+  box-shadow:var(--shadow-md); background:var(--color-neutral-900); color:#fff;
+  opacity:0; transform:translateY(6px); transition:opacity .18s, transform .18s; pointer-events:none;
+}
+.rp-etat.rp-etat-visible{ opacity:1; transform:translateY(0); }
+.rp-etat.rp-etat-succes{ background:var(--color-accent-2-700); }
+.rp-etat.rp-etat-erreur{ background:var(--color-accent-700); }
+.rp-spin{ width:21px; height:21px; border-radius:999px; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; flex:none; animation:rp-spin .7s linear infinite; }
+@keyframes rp-spin{ to{ transform:rotate(360deg); } }
+
+@keyframes rp-clignote{
+  0%, 100% { background: var(--color-accent-100); }
+  50% { background: transparent; }
+}
+.rp-surligne{ animation: rp-clignote 0.75s ease-in-out 3; border-radius: var(--radius-md); }
+
+/* ── Toggle (interrupteur) — remplace les cases à cocher dans les formulaires ── */
+.rp-switch{ display:inline-flex; align-items:center; gap:10px; cursor:pointer; font-size:14px; user-select:none; }
+.rp-switch input{ position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+.rp-switch .rp-switch-piste{
+  width:42px; height:24px; border-radius:999px; background:var(--color-neutral-300);
+  position:relative; flex:none; transition:background .15s;
+}
+.rp-switch .rp-switch-piste::after{
+  content:''; position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:999px;
+  background:#ffffff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .15s;
+}
+.rp-switch input:checked + .rp-switch-piste{ background:var(--color-accent-2); }
+.rp-switch input:checked + .rp-switch-piste::after{ transform:translateX(18px); }
+.rp-switch input:focus-visible + .rp-switch-piste{ outline:2px solid var(--color-accent); outline-offset:2px; }
+
+/* Petits ronds pâles animés, traversant une carte du tableau de bord dans tous les sens (même
+   principe que la bannière du portail structure) — purement décoratif, désactivé pour qui
+   préfère moins d'animations. */
+.rp-kpi-forme{ position:absolute; border-radius:999px; background:rgba(255,255,255,0.14); pointer-events:none; animation-name:rp-traverser-aleatoire; animation-timing-function:linear; animation-iteration-count:infinite; animation-direction:alternate; }
+.rp-kpi-forme.f1{ width:46px; height:46px; top:18%; left:6%; }
+.rp-kpi-forme.f2{ width:28px; height:28px; top:60%; left:10%; }
+.rp-kpi-forme.f3{ width:20px; height:20px; top:10%; left:34%; }
+.rp-kpi-forme.f4{ width:14px; height:14px; top:70%; left:66%; }
+/* Trajectoire réellement aléatoire plutôt qu'un jeu fixe de préréglages (horizontal/vertical/
+   diagonal) — les points de départ/arrivée sont calculés en JS (voir KPI_FORMES_TRAJECTOIRES,
+   app.js) et injectés en variables CSS par forme, cette même keyframe générique s'en sert. */
+@keyframes rp-traverser-aleatoire{ 0%{ transform:translate(var(--x0, 0), var(--y0, 0)); } 100%{ transform:translate(var(--x1, 0), var(--y1, 0)); } }
+@media (prefers-reduced-motion: reduce){ .rp-kpi-forme{ animation:none; } }
+
+/* ============================================================
+   Responsive mobile — règles génériques sur les classes partagées.
+   Ne couvre pas les grilles à colonnes fixes posées en style inline
+   (ex. grid-template-columns:1fr 1fr) : celles-ci sont corrigées au
+   cas par cas dans chaque page publique, car un style inline ne peut
+   pas être surchargé depuis une feuille externe sans !important.
+   ============================================================ */
+@media (max-width: 640px){
+  .card, .dialog{ padding: var(--space-5)!important; }
+  .modale-qr{ padding: var(--space-5)!important; }
+  .btn{ white-space: normal; }
+  table.tableau-appareils{ font-size: 12px; }
+}
+@media (max-width: 480px){
+  h1{ font-size: 24px!important; }
+}
+
+/* Lignes clé/valeur et lignes d'historique — même format que la page passeport.html standalone
+   (qui les définit localement), partagé ici pour que l'admin puisse reprendre exactement le
+   même rendu en un seul bloc au lieu de plusieurs cartes séparées. */
+.rp-ligne-info{ display:flex; align-items:baseline; gap:var(--space-4); padding:var(--space-3) 0; border-bottom:1px solid var(--color-divider); }
+.rp-ligne-info:last-child{ border-bottom:none; }
+.rp-ligne-info .cle{ width:160px; flex:none; font-size:12.5px; opacity:0.55; font-weight:600; }
+.rp-ligne-info .valeur{ font-size:14px; font-weight:600; overflow-wrap:anywhere; }
+.rp-ligne-historique{ display:flex; align-items:flex-start; gap:var(--space-3); padding:var(--space-3); border-radius:var(--radius-md); background:var(--color-neutral-100); }
+.rp-ligne-historique .icone{ width:34px; height:34px; border-radius:999px; flex:none; display:flex; align-items:center; justify-content:center; }
+@media (max-width: 640px){
+  .rp-ligne-info{ flex-direction:column; align-items:flex-start; gap:2px; }
+  .rp-ligne-info .cle{ width:auto; }
+}

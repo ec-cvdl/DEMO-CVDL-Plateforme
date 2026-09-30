@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script>
+const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
+</script>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commandes des structures partenaires — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="fiche-commande.css?v=1">
+<style>
+/* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
+[hidden]{ display:none!important; }
+.sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; }
+main{ max-width:1240px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
+.spinner-inline{ display:inline-block; width:14px; height:14px; animation:tourner .7s linear infinite; margin-right:8px; vertical-align:-2px; }
+@keyframes tourner{ to{ transform:rotate(360deg); } }
+html.deja-identifie #etape-code{ display:none!important; }
+html.deja-identifie #voile-verification-precoce{ display:flex; }
+#voile-verification-precoce{ display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+#voile-verification-precoce .spinner-precoce{ width:34px; height:34px; animation:tourner .8s linear infinite; }
+.btn-deconnexion-fixe{ position:fixed; top:var(--space-4); right:var(--space-4); z-index:150; display:flex; align-items:center; gap:6px; padding:9px 16px; cursor:pointer; }
+.grille-commandes-partenaires{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; margin-top:var(--space-5); }
+.carte-commande-partenaire{ padding:16px; cursor:pointer; display:flex; flex-direction:column; gap:8px; }
+.ccp-entete{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ccp-icone-produit{ width:34px; height:34px; display:flex; align-items:center; justify-content:center; flex:none; }
+.ccp-ref-bloc{ display:flex; align-items:center; gap:10px; min-width:0; }
+.ccp-structure{ opacity:0.6; }
+.tag-statut{ padding:4px 10px; white-space:nowrap; }
+.ccp-livree-le{ padding:4px 10px; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+.voile-modale-qr{ display:none; position:fixed; inset:0; z-index:500; align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto; }
+.voile-modale-qr.visible{ display:flex; }
+.modale-qr{ padding:var(--space-6); max-width:640px; width:100%; text-align:left; }
+.modale-qr h2, .modale-qr h3{ margin:0 0 4px; }
+.modale-qr p{ margin:0 0 var(--space-4); opacity:0.6; }
+.ligne-appareil-choix{ display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:8px; }
+.grille-personne-appareil{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px; }
+.tlc-suivi{ display:grid; grid-template-columns:repeat(4,1fr); position:relative; }
+.tlc-suivi-etape{ display:flex; flex-direction:column; align-items:center; gap:8px; position:relative; }
+.tlc-suivi-etape:first-child::before{ display:none; }
+.tlc-suivi-point{ width:11px; height:11px; position:relative; z-index:1; }
+.tlc-suivi-libelle{ text-align:center; opacity:0.45; position:relative; z-index:1; }
+.tlc-suivi-libelle.actuel{ opacity:1; }
+.tlc-suivi-libelle.fait{ opacity:1; }
+.pilule-mode-cs{ padding:4px 10px; display:inline-flex; align-items:center; gap:5px; }
+.pilule-date-estimee-cs{ padding:6px 12px; display:inline-flex; align-items:center; gap:6px; }
+.pilule-date-livree-cs{ padding:6px 12px; display:inline-flex; align-items:center; gap:6px; }
+.libelle-numeros-serie-cs{ opacity:0.55; display:block; margin-bottom:var(--space-2); }
+.liste-personnes-appareils-cs{ display:flex; flex-direction:column; gap:8px; }
+.ligne-personne-appareil-cs{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pied-cs{ display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; padding-top:var(--space-3); margin-top:14px; }
+.statut-paiement-cs{ padding:4px 10px; }
+.rangee-boutons-paiement-cs{ display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.lien-paiement-cs{ padding:8px 14px; display:inline-flex; align-items:center; gap:6px; }
+.badge-livree-finale-cs{ display:flex; align-items:center; gap:10px; padding:14px 16px; margin-top:16px; }
+.btn-transferer-admin-cs{ box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; width:100%; cursor:pointer; padding:14px; text-align:center; }
+.btn-transferer-admin-cs:disabled{ opacity:0.6; cursor:default; }
+@media (max-width: 640px){
+main{ padding:var(--space-6) var(--space-4); }
+.grille-personne-appareil{ grid-template-columns:1fr; }
+}
+.dc-v2{ max-width:720px !important; padding:0 !important; text-align:left !important; overflow:hidden auto; max-height:92vh; }
+.dc-v2 .dc-tete{ position:sticky; top:0; z-index:3; background:#fff; display:grid; grid-template-columns:auto minmax(0,1fr) auto; gap:14px; align-items:start; padding:20px 22px 14px; border-bottom:1.5px dashed color-mix(in srgb, var(--navy) 20%, transparent); }
+.dc-v2 .pk-modale-ill{ margin:0 !important; width:44px; height:44px; }
+.dc-v2 .dc-k{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:var(--mag); }
+.dc-v2 .dc-tete h2{ margin:2px 0 8px; font-family:var(--police-titre); font-size:22px; }
+.dc-v2 #dc-articles{ display:flex !important; flex-direction:row !important; gap:6px; flex-wrap:wrap; align-items:center; }
+.dc-v2 #dc-articles .dc-article{ display:inline-flex; gap:6px; padding:3px 10px 3px 4px !important; border:0 !important; border-radius:999px; background:var(--fond-doux); font-size:12.5px; }
+.dc-v2 #dc-articles .dc-article svg{ width:20px; height:20px; }
+.dc-v2 .dc-frise{ padding:12px 22px; border-bottom:1.5px dashed color-mix(in srgb, var(--navy) 20%, transparent); }
+.dc-v2 > .msg, .dc-v2 > #dc-badge-livree:not(:empty){ margin:16px 22px 0; }
+.dc-v2 .dc-etape{ margin:18px 22px 0; padding:18px 20px; border:var(--trait); border-radius:18px; box-shadow:5px 5px 0 var(--aplat); display:flex; flex-direction:column; gap:12px; }
+.dc-v2 .dc-etape[hidden]{ display:none; }
+.dc-v2 .dc-etape h3{ margin:0; font-family:var(--police-titre); font-size:20px; }
+.dc-v2 .dc-taches{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.dc-v2 .dc-tache{ border:1.5px solid color-mix(in srgb, var(--navy) 16%, transparent); border-radius:14px; }
+.dc-v2 .dc-tache[hidden]{ display:none; }
+.dc-v2 .dc-tache-l{ display:grid; grid-template-columns:28px minmax(0,1fr); gap:12px; align-items:center; padding:12px 14px; }
+.dc-v2 .dc-num{ width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-weight:700; font-size:12px; border:1.5px solid var(--navy); background:#fff; }
+.dc-v2 .dc-tache-t{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.dc-v2 .dc-tache-t small{ font-size:12.5px; opacity:.72; }
+.dc-v2 .dc-tache-c{ padding:0 14px 14px 54px; display:flex; flex-direction:column; gap:10px; }
+.dc-v2 .dc-tache-c:empty, .dc-v2 .dc-tache-c[hidden]{ display:none; }
+.dc-v2 .dc-tache.cours{ border-color:var(--navy); box-shadow:3px 3px 0 var(--aplat); }
+.dc-v2 .dc-tache.cours .dc-num{ background:var(--mag); color:#fff; }
+.dc-v2 .dc-tache.ok .dc-num{ background:var(--tur); color:#fff; font-size:0; }
+.dc-v2 .dc-tache.ok .dc-num::after{ content:'✓'; font-size:13px; }
+.dc-v2 .dc-tache.avenir{ opacity:.55; }
+.dc-v2 .dc-ensuite{ font-size:12.5px; opacity:.65; border-left:2px dashed color-mix(in srgb, var(--navy) 22%, transparent); padding:2px 0 2px 10px; }
+.dc-v2 .dc-ensuite[hidden]{ display:none; }
+.dc-v2 .dc-tache.apparait{ overflow:hidden; animation:dc-apparait 1s cubic-bezier(.2,.75,.2,1) both; }
+@keyframes dc-apparait{ 0%{ max-height:0; opacity:0; transform:translateY(-8px) scale(.985); margin-top:-10px; border-color:transparent; } 45%{ opacity:.35; } 100%{ max-height:500px; opacity:1; transform:none; margin-top:0; } }
+@media (prefers-reduced-motion:reduce){ .dc-v2 .dc-tache.apparait{ animation:none; } }
+html.cvdl-sans-anim .dc-v2 .dc-tache.apparait{ animation:none; }
+.dc-v2 .dc-pied{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-top:14px; border-top:1.5px dashed color-mix(in srgb, var(--navy) 20%, transparent); }
+.dc-v2 .dc-manque{ flex:1; min-width:200px; font-size:13px; font-weight:600; color:#9E1F1E; }
+.dc-v2 .dc-manque.pret{ color:#1F7A45; }
+.dc-v2 #dc-avancer-statut{ width:auto; min-width:200px; }
+.dc-v2 .dc-repli{ margin:12px 22px 0; border:1.5px solid color-mix(in srgb, var(--navy) 16%, transparent); border-radius:14px; padding:0 16px; }
+.dc-v2 .dc-repli:last-child{ margin-bottom:22px; }
+.dc-v2 .dc-repli[hidden]{ display:none; }
+.dc-v2 .dc-repli summary{ cursor:pointer; padding:13px 0; font-weight:700; font-size:14px; list-style:none; display:flex; justify-content:space-between; gap:10px; }
+.dc-v2 .dc-repli summary::-webkit-details-marker{ display:none; }
+.dc-v2 .dc-repli summary::after{ content:'▾'; opacity:.5; }
+.dc-v2 .dc-repli[open]{ padding-bottom:14px; }
+.dc-v2 .dc-repli p{ margin:0 0 10px; font-size:13.5px; opacity:.8; }
+.dc-v2 .dc-repli .pied-cs{ border:0 !important; padding:0 !important; margin:0 !important; background:none !important; }
+.dc-v2 .btn-transferer-admin-cs{ width:auto; }
+.dc-v2 .liste-personnes-appareils-cs{ display:flex; flex-direction:column; gap:6px; }
+.ccp-icone-produit{ width:34px; height:34px; display:flex; align-items:center; justify-content:center; flex:none; }
+.ccp-ref-bloc{ display:flex; align-items:center; gap:10px; min-width:0; }
+.ccp-structure{ opacity:0.6; }
+.tag-statut{ padding:4px 10px; white-space:nowrap; }
+.ccp-livree-le{ padding:4px 10px; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+.voile-modale-qr{ display:none; position:fixed; inset:0; z-index:500; align-items:flex-start; justify-content:center; padding:40px 20px; overflow-y:auto; }
+.voile-modale-qr.visible{ display:flex; }
+.modale-qr{ padding:var(--space-6); max-width:640px; width:100%; text-align:left; }
+.modale-qr h2, .modale-qr h3{ margin:0 0 4px; }
+.modale-qr p{ margin:0 0 var(--space-4); opacity:0.6; }
+.ligne-appareil-choix{ display:flex; align-items:center; gap:10px; padding:10px 12px; margin-bottom:8px; }
+.grille-personne-appareil{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:8px; }
+.tlc-suivi{ display:grid; grid-template-columns:repeat(4,1fr); position:relative; }
+.tlc-suivi-etape{ display:flex; flex-direction:column; align-items:center; gap:8px; position:relative; }
+.tlc-suivi-etape:first-child::before{ display:none; }
+.tlc-suivi-point{ width:11px; height:11px; position:relative; z-index:1; }
+.tlc-suivi-libelle{ text-align:center; opacity:0.45; position:relative; z-index:1; }
+.tlc-suivi-libelle.actuel{ opacity:1; }
+.tlc-suivi-libelle.fait{ opacity:1; }
+.pilule-mode-cs{ padding:4px 10px; display:inline-flex; align-items:center; gap:5px; }
+.pilule-date-estimee-cs{ padding:6px 12px; display:inline-flex; align-items:center; gap:6px; }
+.pilule-date-livree-cs{ padding:6px 12px; display:inline-flex; align-items:center; gap:6px; }
+.libelle-numeros-serie-cs{ opacity:0.55; display:block; margin-bottom:var(--space-2); }
+.liste-personnes-appareils-cs{ display:flex; flex-direction:column; gap:8px; }
+.ligne-personne-appareil-cs{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pied-cs{ display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap; padding-top:var(--space-3); margin-top:14px; }
+.statut-paiement-cs{ padding:4px 10px; }
+.rangee-boutons-paiement-cs{ display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.lien-paiement-cs{ padding:8px 14px; display:inline-flex; align-items:center; gap:6px; }
+.badge-livree-finale-cs{ display:flex; align-items:center; gap:10px; padding:14px 16px; margin-top:16px; }
+.btn-transferer-admin-cs{ box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:8px; width:100%; cursor:pointer; padding:14px; text-align:center; }
+.btn-transferer-admin-cs:disabled{ opacity:0.6; cursor:default; }
+@media (max-width: 640px){
+main{ padding:var(--space-6) var(--space-4); }
+.grille-personne-appareil{ grid-template-columns:1fr; }
+}
+.ccp-icone-produit{ width:44px !important; height:44px !important; display:inline-flex !important; align-items:center; justify-content:center; }
+.dc-article{ display:inline-flex; align-items:center; gap:7px; padding:4px 12px 4px 6px; }
+.dc-groupe{ margin-bottom:16px; padding:12px 14px; }
+.dc-groupe-tete{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.ligne-appareil-choix{ cursor:pointer; }
+.ligne-appareil-choix input[type="checkbox"]{ width:17px; height:17px; flex:none; }
+.dc-reste-stock{ cursor:pointer; padding:6px 0; }
+</style>
+<style>
+/* ════ Refonte « commandes partenaires » (29/09) : une consigne par étape, moins d'encadrés
+   imbriqués, rien de coupé sur mobile. ════ */
+.cp-carte .cp-tete-txt b{ overflow-wrap:anywhere; }
+.cp-avancement{ display:grid; grid-template-columns:repeat(5, 1fr); gap:4px; margin-top:2px; }
+.cp-avancement i{ height:5px; border-radius:99px; background:color-mix(in srgb, var(--navy) 12%, transparent); }
+.cp-avancement i.fait{ background:var(--tur); }
+.cp-avancement i.cours{ background:var(--mag); }
+.cp-action{ font-size:12.5px; font-weight:700; color:var(--mag); }
+.cp-pied{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.dc-v2 .dc-tete h2{ white-space:nowrap; font-size:clamp(18px, 5vw, 22px); }
+.dc-v2 .dc-k{ overflow-wrap:anywhere; }
+.dc-v2 .dc-etape{ box-shadow:none; border-width:1.5px; }
+.dc-v2 .dc-tache{ border:0; border-radius:0; border-top:1.5px dashed color-mix(in srgb, var(--navy) 16%, transparent); }
+.dc-v2 .dc-taches .dc-tache:first-child{ border-top:0; }
+.dc-v2 .dc-tache.cours{ box-shadow:none; }
+.dc-v2 .dc-tache-l{ padding:12px 0; }
+.dc-v2 .dc-tache-c{ padding:0 0 12px 40px; }
+.dc-v2 .dc-groupe{ border:0; border-top:1px solid color-mix(in srgb, var(--navy) 12%, transparent); border-radius:0; padding:12px 0 4px; margin:0; }
+.dc-v2 .dc-groupe:first-child{ border-top:0; padding-top:0; }
+.dc-v2 .dc-groupe-tete{ display:flex; align-items:center; gap:10px; }
+.dc-v2 .dc-groupe-nom{ display:flex; flex-direction:column; min-width:0; }
+.dc-v2 .dc-groupe-nom small{ font-weight:600; opacity:.65; font-size:12px; }
+.dc-v2 .ligne-appareil-choix{ margin-bottom:6px; }
+.dc-v2 .lac-txt{ flex:1; min-width:0; }
+.dc-v2 .lac-sn{ font-weight:700; font-size:13px; white-space:nowrap; }
+.dc-v2 .lac-desc{ font-size:12px; opacity:.62; overflow-wrap:anywhere; }
+.dc-v2 .dc-attr-actions{ display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+.dc-v2 .dc-compteur{ font-size:12.5px; font-weight:700; opacity:.7; margin-right:auto; }
+.dc-v2 .dc-qui{ margin:14px 22px 0; }
+.dc-v2 .dc-qui h3{ font-size:15px; margin:0 0 8px; }
+.dc-v2 .ligne-personne-appareil-cs .nom-cs{ overflow-wrap:anywhere; }
+.dc-v2 .dc-colissimo{ display:flex; gap:8px; flex-wrap:wrap; }
+.dc-v2 .dc-colissimo .input{ flex:1; min-width:180px; font-family:ui-monospace, monospace; }
+.msg-succes{ background:color-mix(in srgb, var(--tur) 12%, #fff); border-left:3px solid var(--tur); }
+@media (max-width: 640px){
+  .voile-modale-qr{ padding:0; }
+  .dc-v2{ max-height:100vh; min-height:100vh; border-radius:0 !important; }
+  .dc-v2 .dc-tete{ padding:16px 16px 12px; gap:10px; }
+  .dc-v2 .pk-modale-ill{ display:none; }
+  .dc-v2 .dc-tete{ grid-template-columns:minmax(0,1fr) auto; }
+  .dc-v2 .dc-frise{ padding:10px 12px; }
+  .dc-v2 .dc-etape, .dc-v2 .dc-repli, .dc-v2 .dc-qui{ margin-left:12px; margin-right:12px; }
+  .dc-v2 > .msg, .dc-v2 > #dc-badge-livree:not(:empty){ margin-left:12px; margin-right:12px; }
+  .dc-v2 .dc-etape{ padding:14px; }
+  .dc-v2 .dc-tache-c{ padding-left:0; }
+  .dc-v2 #dc-avancer-statut{ width:100%; }
+}
+</style>
+<script src="portail-ui.js?v=22" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
+<link rel="stylesheet" href="retours.css?v=1">
+<script src="retours.js?v=1" defer></script>
+<script src="fiche-commande.js?v=1" defer></script>
+</head>
+<body data-famille="commandes">
+<div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
+<button type="button" class="btn-deconnexion-fixe" id="btn-deconnexion-cp" hidden>
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  Déconnexion
+</button>
+
+<main id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" onclick="location.href='portail-structure.html'">
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    Portail
+  </button>
+
+  <div id="etape-code" style="max-width:460px;margin:0 auto">
+    <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
+      <span data-ill="cle" class="pk-titre-ill"></span>
+      <h1 style="margin:0">Commandes de mes structures <em>partenaires</em></h1>
+      <p style="opacity:0.6;margin:0">Identifiez-vous avec votre code structure. Réservé aux structures Interne.</p>
+      <div class="field">
+        <label for="id-code" class="sr-only">Code structure</label>
+        <input type="text" class="input" id="id-code" autocomplete="off" spellcheck="false" placeholder="Votre code structure">
+      </div>
+      <div id="retour-id-code" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary btn-block" id="btn-verifier-code">Continuer</button>
+    </div>
+  </div>
+
+  <div id="etape-liste" hidden>
+    <div style="margin-bottom:var(--space-4)">
+      <span data-ill="partenairesCmd" class="pk-titre-ill xl"></span>
+      <h1 style="margin-bottom:var(--space-2)">Commandes de mes structures <em>partenaires</em></h1>
+      <p style="opacity:0.6;margin:0">Ces commandes ne sont visibles que par vous — attribuez-leur du matériel de votre propre flotte pour les faire avancer.</p>
+    </div>
+    <nav class="cp-onglets" aria-label="Espace partenaire">
+      <a href="commandes-partenaires.html" aria-current="page" class="actif">Commandes</a>
+      <a href="structures-partenaires.html">Structures</a>
+      <a href="tarifs-partenaires.html">Tarifs</a>
+    </nav>
+    <div class="cs-barre">
+      <div class="field cs-recherche"><label for="cp-recherche" class="sr-only">Rechercher</label><input type="text" class="input" id="cp-recherche" placeholder="Rechercher une commande ou une structure…" autocomplete="off"></div>
+      <div class="cs-filtres" role="group" aria-label="Filtrer par état">
+        <button type="button" class="cs-filtre actif" data-filtre-cp="">Toutes</button>
+        <button type="button" class="cs-filtre" data-filtre-cp="attente"><span class="cs-f" data-forme="losange"></span>À traiter</button>
+        <button type="button" class="cs-filtre" data-filtre-cp="cours"><span class="cs-f" data-forme="carre"></span>En cours</button>
+        <button type="button" class="cs-filtre" data-filtre-cp="fini"><span class="cs-f" data-forme="rond"></span>Livrées / transférées</button>
+      </div>
+    </div>
+    <div id="retour-liste-commandes-partenaires"></div>
+    <div class="grille-commandes-partenaires" id="grille-commandes-partenaires"></div>
+  </div>
+</main>
+
+<div class="voile-modale-qr" id="modale-detail-commande">
+  <div class="modale-qr dc-v2" role="dialog" aria-modal="true" aria-labelledby="dc-reference">
+    <header class="dc-tete">
+      <span data-ill="partenairesCmd" class="pk-modale-ill"></span>
+      <div class="dc-tete-t"><div class="dc-k" id="dc-structure"></div><h2 id="dc-reference"></h2><div id="dc-articles"></div></div>
+      <button type="button" class="modale-fermer-rond-qr" id="dc-fermer" aria-label="Fermer">✕</button>
+    </header>
+    <div class="dc-frise" id="dc-timeline"></div>
+
+    <div id="dc-bandeau-transferee" class="msg msg-info" hidden>Cette commande a été transférée au chargé de distribution régionale — elle ne se gère plus depuis ici.</div>
+    <div id="dc-badge-livree"></div>
+
+    <section id="dc-section-avancer" class="dc-etape">
+      <div class="dc-k" id="dc-etape-num"></div>
+      <h3 id="dc-etape-titre"></h3>
+      <ol class="dc-taches">
+        <li class="dc-tache" id="dc-tache-attribution">
+          <div class="dc-tache-l"><span class="dc-num" aria-hidden="true">1</span>
+            <div class="dc-tache-t"><b>Choisir le matériel dans votre flotte</b><small id="dc-attr-detail">Les numéros de série sont enregistrés sur la commande et les appareils transférés à la structure.</small></div></div>
+          <div class="dc-tache-c" id="dc-zone-attribution">
+            <div id="dc-liste-flotte"></div>
+            <div id="dc-retour-attribution"></div>
+            <div class="dc-attr-actions"><span id="dc-compteur-selection" class="dc-compteur"></span><button type="button" class="btn btn-primary" id="dc-confirmer-attribution">Attribuer la sélection</button></div>
+          </div>
+          <div class="dc-tache-c" id="dc-personnes-appareils"></div>
+        </li>
+        <li class="dc-tache" id="dc-tache-colissimo" hidden>
+          <div class="dc-tache-l"><span class="dc-num" aria-hidden="true">1</span>
+            <div class="dc-tache-t"><b>Numéro de suivi Colissimo</b><small>La structure le retrouve dans son suivi de commande.</small></div></div>
+          <div class="dc-tache-c">
+            <div class="dc-colissimo"><input type="text" class="input" id="dc-colissimo" placeholder="Ex. 6A12345678901" autocomplete="off" spellcheck="false" maxlength="40"><button type="button" class="btn btn-secondary" id="dc-enregistrer-colissimo">Enregistrer</button></div>
+            <div id="dc-retour-colissimo"></div>
+          </div>
+        </li>
+        <li class="dc-tache" id="dc-tache-avancer">
+          <div class="dc-tache-l"><span class="dc-num" aria-hidden="true">2</span>
+            <div class="dc-tache-t"><b id="dc-avancer-titre">Valider la commande</b><small id="dc-avancer-aide">Vous faites avancer la commande vous-même, sans passer par la logistique.</small></div></div>
+        </li>
+      </ol>
+      <div class="dc-ensuite" id="dc-ensuite" hidden></div>
+      <div class="dc-pied">
+        <span class="dc-manque" id="dc-prerequis"></span>
+        <button type="button" class="btn btn-primary" id="dc-avancer-statut" hidden>Faire avancer</button>
+      </div>
+      <div id="dc-retour-statut"></div>
+    </section>
+    <section class="dc-qui" id="dc-qui" hidden><h3>Qui a reçu quoi</h3><div id="dc-qui-liste"></div></section>
+
+    <details class="dc-repli" id="dc-repli-paiement" hidden><summary id="dc-resume-paiement">Paiement</summary><div id="dc-pied-paiement"></div></details>
+
+    <details class="dc-repli" id="dc-zone-transfert">
+      <summary>Pas le matériel en stock ?</summary>
+      <p>Transférez la commande au chargé de distribution régionale : elle sera traitée par l’équipe Emmaüs Connect et ne se gérera plus depuis ici.</p>
+      <button type="button" class="btn-transferer-admin-cs" id="dc-transferer-admin">Transférer au chargé de distribution régionale…</button>
+      <div id="dc-retour-transfert"></div>
+    </details>
+  </div>
+</div>
+
+<script>
+function $(id){ return document.getElementById(id); }
+function echapper(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function poster(data){
+  return fetch(API, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(data) }).then(r => r.json());
+}
+function jsonp(params){
+  return fetch(API + '?' + new URLSearchParams(params)).then(r => r.json());
+}
+try{ if(sessionStorage.getItem('cvdl-code-structure')) document.documentElement.classList.add('deja-identifie'); }catch(e){}
+
+let codeValide = '';
+let commandesCourantes = [];
+let flotteDisponible = [];
+let commandeOuverte = null;
+/** Checklist « ce qui manque » pour l'étape suivante — calculée par le serveur (commande-etat),
+ *  avec la même règle que celle qui bloque le changement de statut. */
+async function afficherPrerequisPartenaire(c){
+  const zone = $('dc-prerequis');
+  if(!zone || !window.FicheCommande) return;
+  zone.innerHTML = '';
+  try{
+    // Composant partagé avec l'admin (fiche-commande.js) : même frise, même checklist.
+    const etat = await window.FicheCommande.charger(jsonp, { codeCreateur: codeValide, ligne: c.ligne });
+    if(!etat || commandeOuverte !== c) return;
+    $('dc-timeline').innerHTML = window.FicheCommande.frise(etat);
+    if(!etat.etapeSuivante) return;
+    const manquants = (etat.prerequis || []).filter(p => !p.ok && !p.info);
+    zone.className = 'dc-manque' + (manquants.length ? '' : ' pret');
+    zone.textContent = manquants.length ? 'Il manque : ' + manquants.map(p => p.libelle.charAt(0).toLowerCase() + p.libelle.slice(1)).join(' · ') + '.' : 'Tout est prêt.';
+    const bouton = $('dc-avancer-statut');
+    if(bouton){ bouton.disabled = !etat.peutAvancer; bouton.title = etat.peutAvancer ? '' : 'Complétez d’abord ce qui manque.'; }
+  }catch(err){ /* non bloquant : le serveur refusera de toute façon un passage incomplet */ }
+}
+
+let lignesFlotteSelectionnees = [];
+const tachesAvancerVisibles = {}; // par commande : la tâche « Passer à … » était-elle déjà affichée ?
+
+// Circuit Interne (même règle que le back, regles/circuits.js) : l'Interne valide elle-même.
+const ORDRE_STATUTS = ['Reçue', 'Validée', 'Préparée', 'En cours de livraison', 'Livrée'];
+const COULEURS_STATUT = {
+  'Reçue': { bg: '#FFF3CC', fg: '#7A5A00' }, 'Validée': { bg: 'var(--color-bleu-100)', fg: 'var(--color-bleu-700)' },
+  'Préparée': { bg: '#FBE3EC', fg: '#C2185B' }, 'En cours de livraison': { bg: '#FFF3CC', fg: '#7A5A00' },
+  'Livrée': { bg: 'var(--color-vert-100)', fg: 'var(--color-vert-700)' }, 'Annulée': { bg: '#EEF2F5', fg: '#5A6D7D' },
+};
+
+// Icônes et libellés courts — repris tels quels de suivi.html pour rester visuellement
+// cohérent partout où une commande affiche son mode de livraison / ses pilules.
+const SVG_MODE_LIVRAISON = {
+  'Colissimo': '<svg width="13" height="13" viewBox="0 0 18 18" fill="none"><path d="M2.5 5.5 9 2 15.5 5.5 9 9 2.5 5.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M2.5 5.5V12.5L9 16 15.5 12.5V5.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  'Retrait': '<svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8V4.5A1.5 1.5 0 0 1 5.5 3h7A1.5 1.5 0 0 1 14 4.5V8"/><rect x="2.5" y="8" width="13" height="7" rx="1.3"/><path d="M2.5 11.5h13"/></svg>',
+  'Livraison EC': '<svg width="13" height="13" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.5" y="6" width="9" height="7" rx="1"/><path d="M10.5 8.5h3l3 2.5v2h-6z"/><circle cx="4.5" cy="14.5" r="1.4"/><circle cx="13" cy="14.5" r="1.4"/></svg>',
+};
+const SVG_ICONE_QR = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="15" y="15" width="4" height="4" rx="0.8"/></svg>';
+const SVG_ICONE_TICKET = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M10 7.5v9" stroke-dasharray="2.2 2.2"/></svg>';
+const SVG_LIEN_EXTERNE = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
+const SVG_COCHE = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function formaterMontant(montant){
+  return new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(montant);
+}
+// Noms des bénéficiaires déclarés à la commande, dans l'ordre — pour associer un lien de
+// paiement par personne quand le paiement séparé a été choisi. Même extraction que côté admin
+// (nomsPersonnesCommande) : ne lit que le premier segment de chaque ligne (le nom), qu'elle
+// soit au format "Nom|Naissance" ou déjà simple.
+function nomsPersonnesCommande(c){
+  return String(c.personnes || '').split('\n').map(s => s.trim()).filter(Boolean).map(ligneTexte => {
+    const separateur = ligneTexte.includes('|') ? '|' : (ligneTexte.includes('—') ? '—' : null);
+    return separateur ? ligneTexte.split(separateur)[0].trim() : ligneTexte;
+  });
+}
+
+// Icône du produit principal d'une commande — repris de commande.html (même correspondance
+// mot-clé), en version autonome puisque cette page ne charge pas le catalogue produits complet.
+function svgIcone(nomIcone){
+  const icones = {
+    laptop: '<rect x="3" y="3" width="12" height="8" rx="1" stroke="currentColor" stroke-width="1.4"/><rect x="1" y="12.5" width="16" height="2" rx="1" fill="currentColor" stroke="none"/>',
+    ecran: '<rect x="2.5" y="3" width="13" height="9" rx="1" stroke="currentColor" stroke-width="1.4"/><line x1="9" y1="12.5" x2="9" y2="15" stroke="currentColor" stroke-width="1.4"/><line x1="6" y1="15" x2="12" y2="15" stroke="currentColor" stroke-width="1.4"/>',
+    tablette: '<rect x="3" y="1.5" width="12" height="15" rx="1.6" stroke="currentColor" stroke-width="1.4"/><line x1="7.5" y1="14" x2="10.5" y2="14" stroke="currentColor" stroke-width="1.4"/>',
+    telephone: '<rect x="5.5" y="1.5" width="7" height="15" rx="1.8" stroke="currentColor" stroke-width="1.4"/><line x1="8" y1="14" x2="10" y2="14" stroke="currentColor" stroke-width="1.4"/>',
+    sim: '<path d="M5 2h6l3 3v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.4"/><rect x="6" y="8" width="5" height="4.5" rx=".8" stroke="currentColor" stroke-width="1.3"/>',
+    recharge: '<rect x="1.5" y="6" width="13" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M16.5 8.2v3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 7.3 6.8 10h1.6l-.6 2.2L10 9.5H8.4z" fill="currentColor" stroke="none"/>',
+    atelier: '<circle cx="6.3" cy="5.8" r="2.1" stroke="currentColor" stroke-width="1.3"/><path d="M2 15c0-2.4 1.9-4.3 4.3-4.3S10.6 12.6 10.6 15" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="12.8" cy="6.8" r="1.6" stroke="currentColor" stroke-width="1.2"/><path d="M10.8 15c.2-1.9 1.6-3.4 3.4-3.8" stroke="currentColor" stroke-width="1.2" fill="none"/>',
+  };
+  return `<svg viewBox="0 0 18 18" width="18" height="18" fill="none">${icones[nomIcone] || icones.laptop}</svg>`;
+}
+/** Illustration produit du kit (portail-ui.js), repli sur l'icône au trait. */
+function illustrationProduitCP(nom, taille){
+  if(window.illustrationCvdl && window.cleIllustrationProduit) return window.illustrationCvdl(window.cleIllustrationProduit(nom), taille);
+  return svgIcone(iconePourProduit(nom));
+}
+function iconePourProduit(nom){
+  const n = (nom || '').toLowerCase();
+  if(/(sensibilisation|[ée]cologi|environnement|atelier|animation)/.test(n)) return 'atelier';
+  if(n.includes('smartphone') || n.includes('téléphone') || n.includes('telephone') || n.includes('mobile') || /\btouches?\b/.test(n)) return 'telephone';
+  if(n.includes('tablet')) return 'tablette';
+  if(n.includes('écran') || n.includes('ecran') || n.includes('moniteur')) return 'ecran';
+  if(/\bsim\b|carte sim/.test(n)) return 'sim';
+  if(n.includes('recharge') || n.includes('forfait')) return 'recharge';
+  return 'laptop';
+}
+// Produit "principal" d'une commande multi-lignes : celui commandé en plus grande quantité.
+function produitPrincipal(lignes){
+  if(!lignes || !lignes.length) return '';
+  return [...lignes].sort((a, b) => (parseInt(b.quantite, 10) || 0) - (parseInt(a.quantite, 10) || 0))[0].produit;
+}
+
+const LIBELLES_COURTS_TIMELINE_PARTENAIRE = { 'Reçue': 'Reçue', 'Validée': 'Validée', 'Préparée': 'Préparée', 'En cours de livraison': 'En livraison', 'Livrée': 'Livrée' };
+// Dégradé magenta → turquoise — mêmes teintes que suivi.html, juste 3 segments ici (4 étapes)
+// au lieu de 4, puisque "Validée" n'existe pas dans le parcours self-service partenaire.
+const DEGRADE_TIMELINE = ['#B3E3E4', '#66CDCF', '#00ACB0', '#00ACB0'];
+
+function construireTimelinePartenaire(statutActuel){
+  // Une commande déjà validée par un autre biais (admin) avant transfert reste malgré tout
+  // affichée comme "juste après Reçue" ici — Validée n'a pas d'étape dédiée dans ce parcours.
+  const indexActuel = ORDRE_STATUTS.indexOf(statutActuel);
+  if(indexActuel === -1) return '';
+  const etapes = ORDRE_STATUTS.map((etape, i) => {
+    const cls = i < indexActuel ? 'fait' : (i === indexActuel ? 'actuel' : '');
+    const couleurSegment = DEGRADE_TIMELINE[Math.min(i, DEGRADE_TIMELINE.length - 1)];
+    const connecteurAtteint = i <= indexActuel;
+    return `<div class="tlc-suivi-etape ${cls}" style="${connecteurAtteint ? `--couleur-segment:${couleurSegment}` : ''}">
+      <div class="tlc-suivi-point ${cls}" style="${cls ? `--couleur-segment:${couleurSegment}` : ''}"></div>
+      <div class="tlc-suivi-libelle ${cls}">${echapper(LIBELLES_COURTS_TIMELINE_PARTENAIRE[etape] || etape)}</div>
+    </div>`;
+  }).join('');
+  return `<div class="tlc-suivi">${etapes}</div>`;
+}
+
+async function verifierCode(){
+  const code = $('id-code').value.trim();
+  if(!code){ $('retour-id-code').innerHTML = '<div class="msg msg-erreur">Saisissez votre code structure.</div>'; return; }
+  $('btn-verifier-code').disabled = true;
+  $('btn-verifier-code').innerHTML = '<span class="spinner-inline"></span>Vérification…';
+  $('retour-id-code').innerHTML = '';
+  try{
+    const r = await jsonp({action:'check', code});
+    if(!r.ok){
+      $('retour-id-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
+    }else if(!r.interne){
+      $('retour-id-code').innerHTML = '<div class="msg msg-erreur">Cet espace est réservé aux structures Interne.</div>';
+    }else{
+      codeValide = code;
+      try{ sessionStorage.setItem('cvdl-code-structure', code); }catch(e){}
+      $('etape-code').hidden = true;
+      $('etape-liste').hidden = false;
+      $('btn-deconnexion-cp').hidden = false;
+      await chargerCommandes();
+    }
+  }catch(e){
+    $('retour-id-code').innerHTML = '<div class="msg msg-erreur">Connexion impossible. Réessayez.</div>';
+  }
+  $('btn-verifier-code').disabled = false;
+  $('btn-verifier-code').textContent = 'Continuer';
+}
+$('btn-verifier-code').addEventListener('click', verifierCode);
+$('id-code').addEventListener('keydown', e => { if(e.key === 'Enter') verifierCode(); });
+$('btn-deconnexion-cp').addEventListener('click', () => {
+  try{ sessionStorage.removeItem('cvdl-code-structure'); }catch(e){}
+  location.reload();
+});
+
+async function chargerCommandes(){
+  $('retour-liste-commandes-partenaires').innerHTML = '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
+  try{
+    const r = await jsonp({ action: 'commandes-partenaires-lister', codeCreateur: codeValide });
+    if(!r.ok){ $('retour-liste-commandes-partenaires').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`; return; }
+    commandesCourantes = r.commandes || [];
+    $('retour-liste-commandes-partenaires').innerHTML = '';
+    if(!commandesCourantes.length){
+      $('grille-commandes-partenaires').innerHTML = '<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucune commande de vos structures partenaires pour le moment.</div>';
+      return;
+    }
+    rendreCartesPartenaires();
+  }catch(e){
+    $('retour-liste-commandes-partenaires').innerHTML = '<div class="msg msg-erreur">Chargement impossible.</div>';
+  }
+}
+
+/* Liste des commandes (maquette « Espace partenaire ») : filtres d'état + recherche. */
+let filtreCp = '', rechercheCp = '';
+function etatCp(c){
+  if(c.transfereAdmin || c.statutCommande === 'Livrée' || c.statutCommande === 'Annulée') return 'fini';
+  return c.statutCommande === 'Reçue' ? 'attente' : 'cours';
+}
+/** Ce qu'il reste à faire, en une phrase, pour la carte de la liste. */
+function prochaineActionCp(c){
+  if(c.transfereAdmin) return 'Gérée par l’équipe CVDL';
+  const deja = String(c.numerosSerie || '').split('\n').map(s => s.trim()).filter(Boolean).length;
+  const besoin = c.quantiteAvecNumeroSerie || 0;
+  switch(c.statutCommande || 'Reçue'){
+    case 'Reçue': return 'À valider';
+    case 'Validée': return besoin && deja < besoin ? `Matériel à choisir (${deja}/${besoin})` : 'À préparer';
+    case 'Préparée': return 'À remettre ou expédier';
+    case 'En cours de livraison': return 'Réception à confirmer';
+    default: return '';
+  }
+}
+/** Mini-frise d'avancement (5 étapes du circuit Interne) sur la carte. */
+function avancementCp(c){
+  const i = Math.max(0, ORDRE_STATUTS.indexOf(c.statutCommande || 'Reçue'));
+  return `<div class="cp-avancement" role="img" aria-label="Étape ${i + 1} sur ${ORDRE_STATUTS.length} : ${echapper(c.statutCommande || 'Reçue')}">${ORDRE_STATUTS.map((_, k) => `<i class="${k < i ? 'fait' : k === i ? 'cours' : ''}"></i>`).join('')}</div>`;
+}
+function rendreCartesPartenaires(){
+  const terme = rechercheCp.trim().toLowerCase();
+  const liste = commandesCourantes.filter(c => (!filtreCp || etatCp(c) === filtreCp)
+    && (!terme || [c.reference, c.nom, ...(c.lignes || []).map(l => l.produit)].join(' ').toLowerCase().includes(terme)));
+  if(!liste.length){
+    $('grille-commandes-partenaires').innerHTML = '<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucune commande ne correspond.</div>';
+    return;
+  }
+  $('grille-commandes-partenaires').innerHTML = liste.map(c => {
+    const estLivree = c.statutCommande === 'Livrée' && c.dateLivraison;
+    const etat = etatCp(c);
+    const forme = etat === 'fini' ? 'rond' : (etat === 'attente' ? 'losange' : 'carre');
+    const urgente = c.dateLivraisonSouhaitee === 'ASAP' && etat !== 'fini';
+    const articles = (c.lignes || []).map(l => `<div class="cp-art">${illustrationProduitCP(l.produit, 28)}<span><b>${parseInt(l.quantite, 10) || 0} ×</b> ${echapper(l.produit)}</span></div>`).join('');
+    return `
+      <div class="carte-commande-partenaire cp-carte cp-${etat}${c.transfereAdmin ? ' transferee' : ''}" data-ouvrir-commande="${echapper(c.reference)}" role="button" tabindex="0">
+        <div class="cp-tete">
+          <span class="cp-ill">${illustrationProduitCP(produitPrincipal(c.lignes), 44)}</span>
+          <div class="cp-tete-txt"><div class="cvdl-surtitre">${echapper(c.reference)}</div><b>${echapper(c.nom)}</b></div>
+          <span class="cp-etat">${urgente ? '<span class="cs-urgent">Urgent</span>' : ''}<span class="tag" data-forme="${forme}">${echapper(c.transfereAdmin ? 'Transférée' : (c.statutCommande || 'Reçue'))}</span></span>
+        </div>
+        <div class="cp-articles">${articles}</div>
+        ${etat !== 'fini' ? avancementCp(c) : ''}
+        <div class="cp-pied">${estLivree ? `<span class="pk-pill pk-ok">Livrée le ${echapper(c.dateLivraison)}</span>` : `<span class="cp-action">${echapper(prochaineActionCp(c))}</span>`}<span class="cp-gerer">${etat === 'fini' ? 'Voir' : 'Gérer'} →</span></div>
+      </div>`;
+  }).join('');
+  document.querySelectorAll('[data-ouvrir-commande]').forEach(el => {
+    el.addEventListener('click', () => ouvrirDetailCommande(el.dataset.ouvrirCommande));
+    el.addEventListener('keydown', e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); ouvrirDetailCommande(el.dataset.ouvrirCommande); } });
+  });
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-filtre-cp]');
+  if(!f) return;
+  filtreCp = f.dataset.filtreCp;
+  document.querySelectorAll('[data-filtre-cp]').forEach(b => b.classList.toggle('actif', b === f));
+  rendreCartesPartenaires();
+});
+$('cp-recherche').addEventListener('input', () => { rechercheCp = $('cp-recherche').value; rendreCartesPartenaires(); });
+
+async function ouvrirDetailCommande(reference){
+  const c = commandesCourantes.find(x => x.reference === reference);
+  if(!c) return;
+  commandeOuverte = c;
+  lignesFlotteSelectionnees = [];
+  const fenetre = document.querySelector('.dc-v2'); if(fenetre) fenetre.scrollTop = 0;
+  $('dc-reference').textContent = c.reference;
+  $('dc-structure').textContent = c.nom;
+
+  const estAnnulee = c.statutCommande === 'Annulée';
+  const svgHorloge = '<svg width="13" height="13" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.4"/><path d="M9 5v4l3 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  // Une seule pilule de date, même logique que le suivi bénéficiaire : la livraison effective
+  // une fois livrée, sinon la date cible confirmée (Colissimo, Retrait ou Livraison EC), sinon
+  // la date initialement souhaitée.
+  let piluleDate = '';
+  if(!estAnnulee){
+    if(c.statutCommande === 'Livrée' && c.dateLivraison){
+      piluleDate = `<span class="pilule-date-livree-cs">${svgHorloge}Livrée le ${echapper(c.dateLivraison)}</span>`;
+    }else if(c.dateLivraisonCible && (c.modeLivraison === 'Colissimo' || c.modeLivraison === 'Retrait' || c.modeLivraison === 'Livraison EC')){
+      piluleDate = `<span class="pilule-date-estimee-cs">${svgHorloge}${c.modeLivraison === 'Retrait' ? 'Retrait à partir du' : 'Livraison estimée le'} ${echapper(c.dateLivraisonCible)}</span>`;
+    }else if(c.dateLivraisonSouhaitee && c.dateLivraisonSouhaitee !== 'ASAP'){
+      piluleDate = `<span class="pilule-date-estimee-cs">${svgHorloge}Livraison estimée le ${echapper(c.dateLivraisonSouhaitee)}</span>`;
+    }
+  }
+  const piluleMode = (!estAnnulee && c.modeLivraison)
+    ? `<span class="pilule-mode-cs">${SVG_MODE_LIVRAISON[c.modeLivraison] || ''}${echapper(c.modeLivraison === 'Livraison EC' ? 'Livraison Emmaüs Connect' : c.modeLivraison)}</span>` : '';
+  $('dc-articles').innerHTML = (c.lignes || []).map(l => `<span class="dc-article">${illustrationProduitCP(l.produit, 26)}<b>${parseInt(l.quantite,10)}×</b> ${echapper(l.produit)}</span>`).join('') + piluleMode + piluleDate;
+
+  $('dc-timeline').innerHTML = estAnnulee
+    ? `<span class="tag-statut" style="background:${COULEURS_STATUT['Annulée'].bg};color:${COULEURS_STATUT['Annulée'].fg}">Commande annulée</span>`
+    : construireTimelinePartenaire(c.statutCommande);
+
+  const numerosDejaLa = String(c.numerosSerie || '').split('\n').map(s => s.trim()).filter(Boolean);
+
+  // "Qui a reçu quoi" — retrouve le bénéficiaire de chaque appareil déjà attribué, pour ne pas
+  // avoir à recouper à la main la liste des numéros et celle des bénéficiaires déclarés.
+  // Numéro/code devant le nom : c'est lui qu'on scanne/recherche en premier sur le terrain.
+  const parPersonne = commandeOuverte.personnesAvecAppareil || [];
+  $('dc-personnes-appareils').innerHTML = '';
+  $('dc-qui').hidden = !parPersonne.length;
+  $('dc-qui-liste').innerHTML = parPersonne.length ? `<div class="liste-personnes-appareils-cs">
+      ${parPersonne.map(p => `<div class="ligne-personne-appareil-cs">
+        ${c.dematerialisee
+          ? window.piluleSerieCvdl(p.numeroSerie, { code: true })
+          : window.piluleSerieCvdl(p.numeroSerie, { query: codeValide ? '&code=' + encodeURIComponent(codeValide) : '' })}
+        — <span class="nom-cs">${p.nomComplet ? echapper(p.nomComplet) : 'Personne accompagnée non renseignée'}</span>
+      </div>`).join('')}
+    </div>` : '';
+
+  // Pied de paiement — montant, statut, lien de règlement, et sa gestion : cette page concerne
+  // des structures BO partenaires, pas exemptées de paiement comme les Internes/ESN, donc ces
+  // infos existent bien pour elles. L'Interne peut ici éditer le(s) lien(s) et marquer le
+  // paiement reçu elle-même, plutôt que de dépendre entièrement de l'admin pour ça.
+  // Un lien par bénéficiaire si le paiement séparé a été choisi à la commande (≥2 personnes) —
+  // sans repère, rien n'indiquerait quel lien collé sur quelle ligne revient à quel bénéficiaire.
+  const nomsBeneficiairesPaiement = nomsPersonnesCommande(c);
+  const paiementSepareMultiple = c.paiementSepare && nomsBeneficiairesPaiement.length > 1;
+  const liensActuelsPaiement = String(c.lienPaiement || '').split('\n');
+  $('dc-pied-paiement').innerHTML = (!estAnnulee && c.montantEstime != null) ? `<div class="pied-cs" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div style="display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap">
+        <div class="montant-cs">${formaterMontant(c.montantFacture != null ? c.montantFacture : c.montantEstime)}</div>
+        <div class="statut-paiement-cs ${c.statutPaiement === 'Payé' ? 'paye' : 'non-paye'}">${echapper(c.statutPaiement || 'Non payé')}</div>
+        <div class="rangee-boutons-paiement-cs">
+          <button type="button" class="btn btn-secondary" id="dc-toggle-paiement" data-nouveau-statut="${c.statutPaiement === 'Payé' ? 'Non payé' : 'Payé'}">Marquer ${c.statutPaiement === 'Payé' ? 'non payée' : 'payée'}</button>
+        </div>
+      </div>
+      ${paiementSepareMultiple ? `
+      <div>
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;font-weight:700;display:block;margin-bottom:4px">Un lien de paiement par personne accompagnée</label>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${nomsBeneficiairesPaiement.map((nom, i) => `
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="flex:0 0 130px;font-size:12.5px;font-weight:600;opacity:0.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${echapper(nom)}">${echapper(nom || `Personne accompagnée ${i + 1}`)}</span>
+            <input type="text" class="input" data-lien-paiement-personne="${i}" placeholder="https://…" value="${echapper(liensActuelsPaiement[i] || '')}" style="flex:1">
+            ${liensActuelsPaiement[i] && c.statutPaiement !== 'Payé' ? `<a class="lien-paiement-cs" href="${echapper(API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference) + '&index=' + i)}" target="_blank" rel="noopener" title="Ouvrir ce lien de paiement">${SVG_LIEN_EXTERNE}</a>` : ''}
+          </div>`).join('')}
+        </div>
+        <button type="button" class="btn btn-ghost" id="dc-enregistrer-lien-paiement" style="margin-top:8px">Enregistrer les liens</button>
+      </div>` : `
+      <div>
+        <label for="dc-lien-paiement" style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;opacity:0.55;font-weight:700;display:block;margin-bottom:4px">Lien de paiement</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="text" class="input" id="dc-lien-paiement" placeholder="https://…" value="${echapper(c.lienPaiement || '')}" style="flex:1;min-width:200px">
+          <button type="button" class="btn btn-ghost" id="dc-enregistrer-lien-paiement">Enregistrer</button>
+          ${c.lienPaiement && c.statutPaiement !== 'Payé' ? `<a class="lien-paiement-cs" href="${echapper(API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference))}" target="_blank" rel="noopener">Régler cette commande${SVG_LIEN_EXTERNE}</a>` : ''}
+        </div>
+      </div>`}
+      <div id="dc-retour-paiement"></div>
+    </div>` : '';
+  $('dc-repli-paiement').hidden = !$('dc-pied-paiement').innerHTML.trim();
+  if(!estAnnulee && c.montantEstime != null) $('dc-resume-paiement').textContent = `Paiement · ${formaterMontant(c.montantFacture != null ? c.montantFacture : c.montantEstime)} · ${c.statutPaiement || 'Non payé'}`;
+  if($('dc-toggle-paiement')){
+    $('dc-toggle-paiement').addEventListener('click', async () => {
+      const nouveauStatut = $('dc-toggle-paiement').dataset.nouveauStatut;
+      $('dc-toggle-paiement').disabled = true;
+      try{
+        const r = await poster({ action: 'commande-partenaire-update', codeCreateur: codeValide, ligne: c.ligne, champ: 'statutPaiement', valeur: nouveauStatut });
+        if(r.ok){ await chargerCommandes(); ouvrirDetailCommande(c.reference); }
+        else{ $('dc-retour-paiement').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Échec de la mise à jour.')}</div>`; $('dc-toggle-paiement').disabled = false; }
+      }catch(e){
+        $('dc-retour-paiement').innerHTML = `<div class="msg msg-erreur">Erreur technique : ${echapper(e && e.message || String(e))}</div>`;
+        $('dc-toggle-paiement').disabled = false;
+      }
+    });
+  }
+  if($('dc-enregistrer-lien-paiement')){
+    $('dc-enregistrer-lien-paiement').addEventListener('click', async () => {
+      // Un lien par bénéficiaire (dans l'ordre) si paiement séparé, sinon un seul champ.
+      const valeur = paiementSepareMultiple
+        ? Array.from(document.querySelectorAll('[data-lien-paiement-personne]'))
+            .sort((a, b) => parseInt(a.dataset.lienPaiementPersonne, 10) - parseInt(b.dataset.lienPaiementPersonne, 10))
+            .map(input => input.value.trim()).join('\n')
+        : $('dc-lien-paiement').value.trim();
+      $('dc-enregistrer-lien-paiement').disabled = true;
+      try{
+        const r = await poster({ action: 'commande-partenaire-update', codeCreateur: codeValide, ligne: c.ligne, champ: 'lienPaiement', valeur });
+        if(r.ok){ await chargerCommandes(); ouvrirDetailCommande(c.reference); }
+        else{ $('dc-retour-paiement').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || "Échec de l'enregistrement.")}</div>`; $('dc-enregistrer-lien-paiement').disabled = false; }
+      }catch(e){
+        $('dc-retour-paiement').innerHTML = `<div class="msg msg-erreur">Erreur technique : ${echapper(e && e.message || String(e))}</div>`;
+        $('dc-enregistrer-lien-paiement').disabled = false;
+      }
+    });
+  }
+
+  // Badge final bien visible si livrée — plus explicite que la petite pilule déjà présente en
+  // haut à côté des articles.
+  $('dc-badge-livree').innerHTML = (c.statutCommande === 'Livrée' && c.dateLivraison)
+    ? `<div class="badge-livree-finale-cs">Commande livrée le ${echapper(c.dateLivraison)}</div>` : '';
+
+  // Une fois tous les numéros de série nécessaires déjà attribués, plus rien à faire ici — la
+  // zone de sélection ne doit plus réapparaître vide à chaque ouverture (ça donnait l'impression
+  // à tort qu'il fallait tout re-sélectionner). `quantiteAvecNumeroSerie` compte déjà les produits
+  // qui n'en nécessitent pas (cartes SIM, recharges…), donc 0 y est un cas valide et complet.
+  const attributionComplete = numerosDejaLa.length >= (c.quantiteAvecNumeroSerie || 0);
+
+  // Transférée : plus aucune action possible depuis cette interface, juste consultable.
+  $('dc-bandeau-transferee').hidden = !c.transfereAdmin;
+  $('dc-zone-attribution').hidden = !!c.transfereAdmin || attributionComplete || c.statutCommande !== 'Validée';
+  // Transfert possible seulement avant la préparation (même règle que le back).
+  $('dc-zone-transfert').hidden = !!c.transfereAdmin || !['Reçue', 'Validée'].includes(c.statutCommande || 'Reçue');
+  // Une fois la commande livrée (terminale pour ce parcours self-service), plus rien à faire
+  // avancer — la section entière disparaît plutôt que de laisser un titre sans bouton en dessous.
+  $('dc-section-avancer').hidden = !!c.transfereAdmin || c.statutCommande === 'Livrée';
+  if(c.transfereAdmin){ $('modale-detail-commande').classList.add('visible'); return; }
+
+  const idx = ORDRE_STATUTS.indexOf(c.statutCommande);
+  const prochain = idx >= 0 && idx < ORDRE_STATUTS.length - 1 ? ORDRE_STATUTS[idx + 1] : null;
+  const boutonAvancer = $('dc-avancer-statut');
+  // Une consigne par étape (circuit Interne : Reçue → Validée → Préparée → En livraison → Livrée).
+  const TITRES = { 'Reçue': 'Valider la demande', 'Validée': 'Préparer le matériel', 'Préparée': 'Remettre ou expédier', 'En cours de livraison': 'Confirmer la remise' };
+  const AIDES = {
+    'Reçue': 'Vérifiez la demande de la structure partenaire puis validez-la. Le matériel se choisit à l’étape suivante.',
+    'Validée': 'Choisissez les appareils dans votre flotte : ils sont transférés à la structure et leurs numéros enregistrés sur la commande.',
+    'Préparée': 'Le matériel est prêt : passez en livraison quand il part (ou quand la structure vient le chercher).',
+    'En cours de livraison': 'Confirmez quand la structure a bien reçu le matériel.',
+  };
+  $('dc-etape-titre').textContent = TITRES[c.statutCommande] || 'Faire avancer la commande';
+  $('dc-etape-num').textContent = 'Étape en cours · ' + (c.statutCommande === 'En cours de livraison' ? 'En livraison' : (c.statutCommande || 'Reçue'));
+  $('dc-avancer-titre').textContent = prochain ? `Passer à « ${prochain === 'En cours de livraison' ? 'En livraison' : prochain} »` : 'Commande terminée';
+  const besoinAppareils = (c.quantiteAvecNumeroSerie || 0) > 0;
+  // Le choix du matériel n'apparaît qu'à partir de « Validée » (avant : la validation ne pouvait
+  // pas se faire tant que tout n'était pas attribué, alors que rien ne l'exige). Il reste visible
+  // (coché) une fois fait, jusqu'à la préparation.
+  const etapeMateriel = besoinAppareils && ['Validée'].includes(c.statutCommande);
+  $('dc-tache-attribution').hidden = !etapeMateriel;
+  $('dc-tache-attribution').className = 'dc-tache ' + (attributionComplete ? 'ok' : 'cours');
+  $('dc-tache-avancer').hidden = !prochain;
+  $('dc-tache-avancer').className = 'dc-tache ' + (etapeMateriel && !attributionComplete ? 'avenir' : 'cours');
+  $('dc-ensuite').hidden = true;
+  $('dc-tache-avancer').querySelector('.dc-num').textContent = etapeMateriel ? '2' : '1';
+  $('dc-avancer-aide').textContent = AIDES[c.statutCommande] || 'Vous faites avancer la commande vous-même, sans passer par la logistique.';
+  // Colissimo : le numéro de suivi est exigé pour passer « En livraison » — il n'y avait aucun
+  // champ pour le saisir ici, la commande restait bloquée à « Préparée ».
+  const etapeColissimo = c.modeLivraison === 'Colissimo' && c.statutCommande === 'Préparée';
+  $('dc-tache-colissimo').hidden = !etapeColissimo;
+  $('dc-tache-colissimo').className = 'dc-tache ' + (c.colissimo ? 'ok' : 'cours');
+  $('dc-colissimo').value = c.colissimo || '';
+  $('dc-retour-colissimo').innerHTML = '';
+  if(etapeColissimo){ $('dc-tache-avancer').querySelector('.dc-num').textContent = '2'; if(!c.colissimo) $('dc-tache-avancer').className = 'dc-tache avenir'; }
+  $('dc-attr-detail').textContent = attributionComplete
+    ? `${numerosDejaLa.length} appareil${numerosDejaLa.length > 1 ? 's' : ''} attribué${numerosDejaLa.length > 1 ? 's' : ''}.`
+    : `${numerosDejaLa.length} / ${c.quantiteAvecNumeroSerie} attribué${numerosDejaLa.length > 1 ? 's' : ''} — les numéros sont enregistrés sur la commande et les appareils transférés à la structure.`;
+  if(prochain){
+    boutonAvancer.hidden = false;
+    boutonAvancer.disabled = false;
+    boutonAvancer.textContent = `Passer à « ${prochain === 'En cours de livraison' ? 'En livraison' : prochain} »`;
+    boutonAvancer.dataset.prochain = prochain;
+  }else{
+    boutonAvancer.hidden = true;
+  }
+  afficherPrerequisPartenaire(c);
+  $('dc-retour-statut').innerHTML = '';
+  $('dc-retour-attribution').innerHTML = '';
+  $('dc-retour-transfert').innerHTML = '';
+
+  if(attributionComplete || c.statutCommande !== 'Validée'){
+    $('modale-detail-commande').classList.add('visible');
+    return;
+  }
+
+  $('dc-liste-flotte').innerHTML = '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
+  $('modale-detail-commande').classList.add('visible');
+
+  try{
+    const r = await jsonp({ action: 'flotte-lister', code: codeValide });
+    flotteDisponible = (r.ok ? r.appareils : []).filter(a => a.statut === 'En stock' && !a.verrouille);
+    if(!flotteDisponible.length){
+      $('dc-liste-flotte').innerHTML = '<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucun appareil disponible en stock dans votre flotte pour le moment.</div>';
+      return;
+    }
+    // Une section par produit demandé — plutôt qu'une seule liste de toute la flotte mélangée,
+    // pour répondre précisément à "combien de X, à qui, avec quoi de disponible pour X". Les
+    // appareils dont le produit correspond exactement remontent en premier ("correspondance"),
+    // le reste du stock reste accessible en dépliant, pour les cas où le libellé ne correspond
+    // pas exactement (catégorie tec.tech proche mais nom de produit différent).
+    const personnesParProduit = {};
+    (c.personnesParLigne || []).forEach(p => { (personnesParProduit[p.produit] ||= []).push(p); });
+
+    // Suivi de quelle personne (index dans personnesParProduit[produit]) est déjà rattachée à
+    // quel appareil sélectionné — par groupe de produit — pour ne jamais proposer deux fois le
+    // même bénéficiaire sur deux appareils différents du même produit.
+    const personnesUtiliseesParProduit = {};
+
+    function optionsPersonnes(produit, ligneCourante){
+      const liste = personnesParProduit[produit] || [];
+      const utilisees = personnesUtiliseesParProduit[produit] || {};
+      return liste.map((p, idx) => {
+        const prisAilleurs = utilisees[idx] !== undefined && utilisees[idx] !== ligneCourante;
+        const libelle = p.nomComplet ? echapper(p.nomComplet) : `Personne accompagnée ${idx + 1} (nom non renseigné)`;
+        const dateAffichee = p.dateNaissance ? ` — ${echapper(p.dateNaissance)}` : '';
+        return `<option value="${idx}" ${prisAilleurs ? 'disabled' : ''}>${libelle}${dateAffichee}</option>`;
+      }).join('');
+    }
+
+    // Regénère les options de tous les menus déroulants du groupe (garde la valeur choisie sur
+    // chacun) — appelé à chaque changement de sélection pour tenir les "disabled" à jour partout.
+    function rafraichirSelectsProduit(groupeIdx){
+      document.querySelectorAll(`[data-personne-select][data-groupe-idx="${groupeIdx}"]`).forEach(sel => {
+        const ligneCourante = parseInt(sel.dataset.personneSelect, 10);
+        const produit = sel.dataset.produit;
+        const valeurActuelle = sel.value;
+        sel.innerHTML = `<option value="">Choisir une personne accompagnée…</option>${optionsPersonnes(produit, ligneCourante)}<option value="autre">Autre / saisir manuellement…</option>`;
+        sel.value = valeurActuelle;
+      });
+    }
+
+    $('dc-liste-flotte').innerHTML = (c.lignes || []).map((l, groupeIdx) => {
+      const quantite = parseInt(l.quantite, 10) || 0;
+      const personnesCeProduit = personnesParProduit[l.produit] || [];
+      const correspondants = flotteDisponible.filter(a => a.produit === l.produit);
+      const autres = flotteDisponible.filter(a => a.produit !== l.produit);
+      const ligneAppareil = a => `
+        <div class="ligne-appareil-choix" data-ligne-flotte="${a.ligne}" data-groupe-idx="${groupeIdx}">
+          <input type="checkbox" data-case-flotte="${a.ligne}" data-produit-flotte="${echapper(l.produit)}" data-quantite-max="${quantite}" data-groupe-idx="${groupeIdx}">
+          ${illustrationProduitCP(a.produit || l.produit, 30)}
+          <div class="lac-txt">
+            <div class="lac-sn mono">${echapper(a.numeroSerie)}</div>
+            <div class="lac-desc">${[a.produit, a.marque, a.modele, a.categorie].filter(Boolean).map(echapper).join(' · ')}</div>
+          </div>
+        </div>`;
+      return `
+      <div class="dc-groupe">
+        <div class="dc-groupe-tete">${illustrationProduitCP(l.produit, 34)}<span class="dc-groupe-nom"><b>${echapper(l.produit)}</b><small>${quantite} demandé${quantite > 1 ? 's' : ''} · ${correspondants.length} en stock</small></span></div>
+        ${personnesCeProduit.some(p => p.nomComplet) ? `<div style="font-size:12px;opacity:0.6;margin-bottom:8px">Personnes accompagnées renseignées à la commande : ${personnesCeProduit.map(p => p.nomComplet ? echapper(p.nomComplet) : '—').join(', ')}</div>` : ''}
+        ${correspondants.length ? correspondants.map(ligneAppareil).join('') : '<p style="font-size:12px;opacity:0.55;margin:4px 0">Aucun appareil "' + echapper(l.produit) + '" en stock — dépliez le reste du stock ci-dessous si un autre modèle peut convenir.</p>'}
+        ${autres.length ? `
+        <details style="margin-top:6px">
+          <summary class="dc-reste-stock">Voir le reste du stock (${autres.length})</summary>
+          <div style="margin-top:6px">${autres.map(ligneAppareil).join('')}</div>
+        </details>` : ''}
+      </div>`;
+    }).join('');
+
+    majCompteurSelection();
+    document.querySelectorAll('[data-case-flotte]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const ligne = parseInt(cb.dataset.caseFlotte, 10);
+        const produit = cb.dataset.produitFlotte;
+        const groupeIdx = cb.dataset.groupeIdx;
+        const quantiteMax = parseInt(cb.dataset.quantiteMax, 10) || 0;
+        const conteneur = cb.closest('.ligne-appareil-choix');
+        const dejaPourCeProduit = lignesFlotteSelectionnees.filter(x => x.produit === produit).length;
+        if(cb.checked){
+          if(dejaPourCeProduit >= quantiteMax){
+            cb.checked = false;
+            $('dc-retour-attribution').innerHTML = `<div class="msg msg-erreur">Déjà ${quantiteMax} appareil(s) sélectionné(s) pour "${echapper(produit)}".</div>`;
+            return;
+          }
+          lignesFlotteSelectionnees.push({ ligne, produit });
+          conteneur.classList.add('selectionnee');
+          majCompteurSelection();
+
+          // Choix par défaut : le premier bénéficiaire du produit pas encore pris par un autre
+          // appareil coché — l'Interne n'a rien à faire s'il coche dans l'ordre, et peut corriger
+          // via le menu déroulant sinon (ou choisir "Autre" pour saisir à la main).
+          const listePersonnes = personnesParProduit[produit] || [];
+          const utilisees = personnesUtiliseesParProduit[produit] || (personnesUtiliseesParProduit[produit] = {});
+          const indexParDefaut = listePersonnes.findIndex((p, idx) => utilisees[idx] === undefined);
+          if(indexParDefaut !== -1) utilisees[indexParDefaut] = ligne;
+
+          const zonePersonne = document.createElement('div');
+          zonePersonne.dataset.personnePour = ligne;
+          zonePersonne.innerHTML = `
+            <select class="input" data-personne-select="${ligne}" data-groupe-idx="${groupeIdx}" data-produit="${echapper(produit)}" style="margin-top:6px">
+              <option value="">Choisir une personne accompagnée…</option>
+              ${optionsPersonnes(produit, ligne)}
+              <option value="autre">Autre / saisir manuellement…</option>
+            </select>
+            <div class="grille-personne-appareil" data-personne-manuel="${ligne}" hidden style="margin-top:6px">
+              <input type="text" class="input" placeholder="Prénom" data-personne-prenom="${ligne}">
+              <input type="text" class="input" placeholder="NOM" style="text-transform:uppercase" data-personne-nom="${ligne}">
+              <input type="text" class="input" placeholder="Date de naissance (jj/mm/aaaa)" data-personne-naissance="${ligne}">
+            </div>`;
+          conteneur.after(zonePersonne);
+
+          const select = zonePersonne.querySelector('[data-personne-select]');
+          const zoneManuelle = zonePersonne.querySelector('[data-personne-manuel]');
+          if(indexParDefaut !== -1){
+            select.value = String(indexParDefaut);
+          }else{
+            // Plus aucun bénéficiaire disponible pour ce produit : on passe directement en
+            // saisie manuelle plutôt que de laisser un menu vide sans rien de sélectionné.
+            select.value = 'autre';
+            zoneManuelle.hidden = false;
+          }
+          select.addEventListener('change', () => {
+            Object.keys(utilisees).forEach(idx => { if(utilisees[idx] === ligne) delete utilisees[idx]; });
+            zoneManuelle.hidden = select.value !== 'autre';
+            if(select.value !== '' && select.value !== 'autre') utilisees[select.value] = ligne;
+            rafraichirSelectsProduit(groupeIdx);
+          });
+          rafraichirSelectsProduit(groupeIdx);
+        }else{
+          lignesFlotteSelectionnees = lignesFlotteSelectionnees.filter(x => x.ligne !== ligne);
+          conteneur.classList.remove('selectionnee');
+          majCompteurSelection();
+          const utilisees = personnesUtiliseesParProduit[produit] || {};
+          Object.keys(utilisees).forEach(idx => { if(utilisees[idx] === ligne) delete utilisees[idx]; });
+          const zonePersonne = document.querySelector(`[data-personne-pour="${ligne}"]`);
+          if(zonePersonne) zonePersonne.remove();
+          rafraichirSelectsProduit(groupeIdx);
+        }
+      });
+    });
+  }catch(e){
+    $('dc-liste-flotte').innerHTML = '<div class="msg msg-erreur">Impossible de charger votre flotte.</div>';
+  }
+}
+function majCompteurSelection(){
+  const c = commandeOuverte; if(!c) return;
+  const deja = String(c.numerosSerie || '').split('\n').map(s => s.trim()).filter(Boolean).length;
+  const reste = Math.max(0, (c.quantiteAvecNumeroSerie || 0) - deja);
+  const n = lignesFlotteSelectionnees.length;
+  $('dc-compteur-selection').textContent = `${n} sélectionné${n > 1 ? 's' : ''} sur ${reste} à attribuer`;
+  $('dc-confirmer-attribution').disabled = !n;
+}
+$('dc-fermer').addEventListener('click', () => $('modale-detail-commande').classList.remove('visible'));
+$('modale-detail-commande').addEventListener('click', e => { if(e.target.id === 'modale-detail-commande') $('modale-detail-commande').classList.remove('visible'); });
+
+$('dc-transferer-admin').addEventListener('click', async () => {
+  if(!commandeOuverte) return;
+  if(!await confirmerCvdl(`Transférer ${commandeOuverte.reference} au chargé de distribution régionale ? Cette commande ne se gérera plus depuis votre espace — action définitive pour elle uniquement, les autres commandes de cette structure continueront d'arriver chez vous normalement.`)) return;
+  $('dc-transferer-admin').disabled = true;
+  $('dc-retour-transfert').innerHTML = '';
+  try{
+    const r = await poster({ action: 'commande-partenaire-transferer-admin', codeCreateur: codeValide, ligne: commandeOuverte.ligne });
+    if(r.ok){
+      $('modale-detail-commande').classList.remove('visible');
+      await chargerCommandes();
+    }else{
+      $('dc-retour-transfert').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Transfert impossible.')}</div>`;
+    }
+  }catch(e){
+    $('dc-retour-transfert').innerHTML = '<div class="msg msg-erreur">Transfert impossible.</div>';
+  }
+  $('dc-transferer-admin').disabled = false;
+});
+
+$('dc-confirmer-attribution').addEventListener('click', async () => {
+  if(!lignesFlotteSelectionnees.length){
+    $('dc-retour-attribution').innerHTML = '<div class="msg msg-erreur">Sélectionnez au moins un appareil.</div>';
+    return;
+  }
+  $('dc-confirmer-attribution').disabled = true;
+  $('dc-retour-attribution').innerHTML = '';
+  try{
+    // Reconstruit les bénéficiaires déclarés sur la commande, par produit, pour retrouver l'objet
+    // complet {nomComplet, dateNaissance} correspondant à l'index choisi dans chaque menu déroulant.
+    // Fait partie du try englobant : la moindre erreur ici (avant même l'envoi de la requête)
+    // doit remonter à l'écran plutôt que de bloquer silencieusement sans rien afficher.
+    const personnesParProduitCommande = {};
+    (commandeOuverte.personnesParLigne || []).forEach(p => { (personnesParProduitCommande[p.produit] ||= []).push(p); });
+
+    const personnes = lignesFlotteSelectionnees.map(({ ligne, produit }) => {
+      const select = document.querySelector(`[data-personne-select="${ligne}"]`);
+      const valeurSelect = select ? select.value : 'autre';
+      if(valeurSelect !== '' && valeurSelect !== 'autre'){
+        const p = (personnesParProduitCommande[produit] || [])[parseInt(valeurSelect, 10)];
+        return { nomComplet: p ? p.nomComplet : '', dateNaissance: p ? p.dateNaissance : '' };
+      }
+      const prenom = document.querySelector(`[data-personne-prenom="${ligne}"]`)?.value.trim() || '';
+      const nom = document.querySelector(`[data-personne-nom="${ligne}"]`)?.value.trim() || '';
+      const dateNaissance = document.querySelector(`[data-personne-naissance="${ligne}"]`)?.value.trim() || '';
+      return { nomComplet: [prenom, nom].filter(Boolean).join(' '), dateNaissance };
+    });
+
+    const r = await poster({
+      action: 'commande-partenaire-attribuer-flotte', codeCreateur: codeValide,
+      ligneCommande: commandeOuverte.ligne, lignesFlotte: lignesFlotteSelectionnees.map(x => x.ligne), personnes,
+    });
+    if(r.ok){
+      const ref = commandeOuverte.reference;
+      await chargerCommandes();
+      await ouvrirDetailCommande(ref);
+      $('dc-retour-statut').innerHTML = `<div class="msg msg-succes">${r.numerosSeries.length} appareil${r.numerosSeries.length > 1 ? 's' : ''} attribué${r.numerosSeries.length > 1 ? 's' : ''}.</div>`;
+    }else{
+      $('dc-retour-attribution').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Attribution impossible.')}</div>`;
+    }
+  }catch(e){
+    // Le détail de l'erreur est affiché (pas juste loggé) pour pouvoir le remonter facilement
+    // en cas de bug, plutôt que de laisser l'écran silencieux sans aucune trace exploitable.
+    console.error('Attribution flotte — erreur :', e);
+    $('dc-retour-attribution').innerHTML = `<div class="msg msg-erreur">Attribution impossible — erreur technique : ${echapper(e && e.message || String(e))}</div>`;
+  }
+  $('dc-confirmer-attribution').disabled = false;
+});
+
+$('dc-enregistrer-colissimo').addEventListener('click', async () => {
+  if(!commandeOuverte) return;
+  const valeur = $('dc-colissimo').value.trim().replace(/\s+/g, '');
+  if(!/^[A-Za-z0-9]{8,30}$/.test(valeur)){ $('dc-retour-colissimo').innerHTML = '<div class="msg msg-erreur">Numéro de suivi invalide (lettres et chiffres, 8 à 30 caractères).</div>'; return; }
+  $('dc-enregistrer-colissimo').disabled = true;
+  try{
+    const r = await poster({ action: 'commande-partenaire-update', codeCreateur: codeValide, ligne: commandeOuverte.ligne, champ: 'colissimo', valeur });
+    if(r.ok){ const ref = commandeOuverte.reference; await chargerCommandes(); await ouvrirDetailCommande(ref); $('dc-retour-statut').innerHTML = '<div class="msg msg-succes">Numéro de suivi enregistré.</div>'; }
+    else $('dc-retour-colissimo').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Enregistrement impossible.')}</div>`;
+  }catch(e){ $('dc-retour-colissimo').innerHTML = '<div class="msg msg-erreur">Enregistrement impossible.</div>'; }
+  $('dc-enregistrer-colissimo').disabled = false;
+});
+$('dc-avancer-statut').addEventListener('click', async function(){
+  const prochain = this.dataset.prochain;
+  if(!prochain || !commandeOuverte) return;
+  this.disabled = true;
+  $('dc-retour-statut').innerHTML = '';
+  try{
+    const r = await poster({ action: 'commande-partenaire-update', codeCreateur: codeValide, ligne: commandeOuverte.ligne, champ: 'statutCommande', valeur: prochain });
+    if(r.ok){
+      const ref = commandeOuverte.reference;
+      await chargerCommandes();
+      await ouvrirDetailCommande(ref);
+      $('dc-retour-statut').innerHTML = `<div class="msg msg-succes">Commande passée à « ${echapper(prochain === 'En cours de livraison' ? 'En livraison' : prochain)} ».</div>`;
+    }else{
+      $('dc-retour-statut').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Impossible.')}</div>`;
+    }
+  }catch(e){
+    $('dc-retour-statut').innerHTML = '<div class="msg msg-erreur">Impossible.</div>';
+  }
+  this.disabled = false;
+});
+
+try{
+  const codeMemorise = sessionStorage.getItem('cvdl-code-structure');
+  if(codeMemorise){
+    $('id-code').value = codeMemorise;
+    verifierCode().finally(() => {
+      document.documentElement.classList.remove('deja-identifie');
+      const v = $('voile-verification-precoce'); if(v) v.style.display = 'none';
+    });
+  }
+}catch(e){}
+
+// Un clic n'importe où sur la ligne d'un appareil coche / décoche sa case.
+document.addEventListener('click', e => {
+  const ligne = e.target.closest('.ligne-appareil-choix');
+  if(!ligne || e.target.closest('input, select, a, button, label')) return;
+  const cb = ligne.querySelector('[data-case-flotte]');
+  if(cb){ cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles:true })); }
+});
+</script>
+</body>
+</html>

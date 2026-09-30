@@ -1,0 +1,122 @@
+/* ════════════════════════════════════════════════════════════════════════════════════
+   theme-noel.css — thème de Noël de l'admin (classe .rp-noel, bouton dans la barre latérale,
+   logique dans theme-noel.js). Se combine avec le mode clair ou sombre.
+   · Couleurs : les jetons magenta/rose deviennent rouge, les turquoise deviennent vert sapin
+     (mêmes clartés, donc mêmes contrastes que le thème normal) ;
+   · Décor : guirlande lumineuse, bonnet sur le logo, neige légère (coupée si le système
+     demande moins d'animations), fond de page légèrement crème en clair.
+   ════════════════════════════════════════════════════════════════════════════════════ */
+
+html.rp-noel{
+  --th-ac-004f5cff:#1d4a2c;
+  --th-ac-00acb0ff:#4a9f65;
+  --th-ac-6d0b2bff:#690107;
+  --th-ac-e62460ff:#d32f2d;
+  --th-bd-00acb0ff:#4a9f65;
+  --th-bd-e62460ff:#d32f2d;
+  --th-bd-ffb3b344:rgba(251,182,173,0.267);
+  --th-bg-00777aff:#316e44;
+  --th-bg-00acb01f:rgba(74,159,101,0.122);
+  --th-bg-00acb033:rgba(74,159,101,0.2);
+  --th-bg-00acb08c:rgba(74,159,101,0.55);
+  --th-bg-00acb0ff:#4a9f65;
+  --th-bg-9fe0e1ff:#b1e0bc;
+  --th-bg-c2185bff:#ba0815;
+  --th-bg-e6246099:rgba(211,47,45,0.6);
+  --th-bg-e62460ff:#d32f2d;
+  --th-bg-ff7aa633:rgba(246,109,98,0.2);
+  --th-om-00acb0ff:#4a9f65;
+  --th-om-e62460ff:#d32f2d;
+  --th-tx-006e71ff:#2d663f;
+  --th-tx-00777aff:#316e44;
+  --th-tx-00787bff:#316f45;
+  --th-tx-007c80ff:#337348;
+  --th-tx-00acb0ff:#4a9f65;
+  --th-tx-b0164aff:#aa000f;
+  --th-tx-b01c4aff:#a90a14;
+  --th-tx-b3174aff:#ac0010;
+  --th-tx-c2185bff:#ba0815;
+  --th-tx-e62460ff:#d32f2d;
+  --th-tx-ffb3b3ff:#fbb6ad;
+  --th-tx-ffc2d6ff:#fcc7c0;
+}
+html.rp-dark.rp-noel{
+  --th-ac-004f5cff:#1d4a2c;
+  --th-ac-00acb0ff:#4a9f65;
+  --th-ac-6d0b2bff:#690107;
+  --th-ac-e62460ff:#d32f2d;
+  --th-bd-00acb0ff:#4a9f65;
+  --th-bd-e62460ff:#d32f2d;
+  --th-bd-ffb3b344:rgba(251,182,173,0.267);
+  --th-bg-00777aff:#316e44;
+  --th-bg-00acb01f:rgba(74,159,101,0.122);
+  --th-bg-00acb033:rgba(74,159,101,0.2);
+  --th-bg-00acb08c:rgba(74,159,101,0.55);
+  --th-bg-00acb0ff:#4a9f65;
+  --th-bg-9fe0e1ff:#173620;
+  --th-bg-c2185bff:#ba0815;
+  --th-bg-e6246099:rgba(211,47,45,0.6);
+  --th-bg-e62460ff:#d32f2d;
+  --th-bg-ff7aa633:rgba(246,109,98,0.2);
+  --th-om-00acb0ff:#4a9f65;
+  --th-om-e62460ff:#d32f2d;
+  --th-tx-006e71ff:#93cea2;
+  --th-tx-00777aff:#90cfa1;
+  --th-tx-00787bff:#90d0a1;
+  --th-tx-007c80ff:#8ed0a0;
+  --th-tx-00acb0ff:#7fd497;
+  --th-tx-b0164aff:#fea297;
+  --th-tx-b01c4aff:#fea297;
+  --th-tx-b3174aff:#fea297;
+  --th-tx-c2185bff:#fea297;
+  --th-tx-e62460ff:#fda297;
+  --th-tx-ffb3b3ff:#fbb6ad;
+  --th-tx-ffc2d6ff:#fcc7c0;
+}
+
+/* ── Fond : crème chaleureux en clair, nuit bleue inchangée en sombre ── */
+html.rp-noel:not(.rp-dark){ --th-bg-f6f8faff:#fbf6ee; --th-bg-f3f6f8ff:#f7efe3; }
+html.rp-noel:not(.rp-dark) body{ background:#fbf6ee; }
+html.rp-noel .rp-titre-sur{ color:#b3122e; }
+html.rp-dark.rp-noel .rp-titre-sur{ color:#ff8a7a; }
+
+/* ── Bonnet sur le logo ── */
+html.rp-noel .rp-brand-badge{ position:relative; overflow:visible; }
+html.rp-noel .rp-brand-badge::after{
+  content:""; position:absolute; top:-7px; right:-11px; width:30px; height:26px; transform:rotate(20deg); pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 30'%3E%3Cpath d='M4 22 C8 8 18 2 27 6 C24 10 24 16 26 22 Z' fill='%23c8102e' stroke='%23002743' stroke-width='1.5' stroke-linejoin='round'/%3E%3Crect x='2' y='20' width='27' height='7' rx='3.5' fill='%23fff' stroke='%23002743' stroke-width='1.5'/%3E%3Ccircle cx='28' cy='6' r='4' fill='%23fff' stroke='%23002743' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+
+/* ── Décor (guirlande + neige), jamais cliquable ── */
+.noel-decor{ position:fixed; inset:0; pointer-events:none; z-index:40; overflow:hidden; }
+.noel-guirlande{ position:absolute; top:0; left:var(--noel-gauche, 0px); right:0; height:30px; }
+.noel-fil{ position:absolute; top:4px; left:0; width:100%; height:14px; fill:none; stroke:#1f3b2d; stroke-width:.35; opacity:.75; }
+html.rp-dark .noel-fil{ stroke:#9fb3a6; opacity:.5; }
+.noel-ampoule{ position:absolute; width:9px; height:13px; margin-left:-4.5px; border-radius:50% 50% 50% 50% / 60% 60% 40% 40%; animation:noel-scintille 2.2s ease-in-out infinite; }
+.noel-ampoule::before{ content:""; position:absolute; top:-3px; left:2.5px; width:4px; height:4px; border-radius:1px; background:#5b6b62; }
+.noel-ampoule.r{ background:#e2263a; box-shadow:0 0 8px 2px rgba(226,38,58,.55); }
+.noel-ampoule.o{ background:#f4b93a; box-shadow:0 0 8px 2px rgba(244,185,58,.55); }
+.noel-ampoule.v{ background:#2fa865; box-shadow:0 0 8px 2px rgba(47,168,101,.55); }
+.noel-ampoule.b{ background:#3a8ee8; box-shadow:0 0 8px 2px rgba(58,142,232,.55); }
+@keyframes noel-scintille{ 0%, 100%{ opacity:1; filter:brightness(1.1); } 50%{ opacity:.45; filter:brightness(.8); box-shadow:none; } }
+.noel-neige{ position:absolute; inset:0; }
+.noel-flocon{ position:absolute; top:-12px; border-radius:50%; background:#fff; box-shadow:0 0 3px rgba(0,39,67,.25);
+  animation-name:noel-chute, noel-balance; animation-timing-function:linear, ease-in-out; animation-iteration-count:infinite, infinite; animation-direction:normal, alternate; }
+html:not(.rp-dark) .noel-flocon{ background:#dfe9f2; box-shadow:0 0 2px rgba(0,39,67,.35); }
+@keyframes noel-chute{ to{ transform:translateY(105vh); } }
+@keyframes noel-balance{ from{ margin-left:-14px; } to{ margin-left:14px; } }
+@media (prefers-reduced-motion: reduce){ .noel-ampoule{ animation:none; } .noel-neige{ display:none; } }
+/* Les fenêtres (modales, notifications) passent au-dessus du décor. */
+html.rp-noel .dialog-backdrop, html.rp-noel #rp-cloche-panel{ z-index:60; }
+/* La guirlande ne masque pas le haut de la page. */
+html.rp-noel .rp-main{ padding-top:calc(var(--space-6, 24px) + 14px); }
+
+/* ── Bouton « Thème de Noël » (même gabarit que « Mode sombre ») ── */
+.rp-toggle-noel{ all:unset; box-sizing:border-box; display:flex; align-items:center; width:100%; padding:11px var(--space-3, 12px); border-radius:var(--radius-md, 12px); cursor:pointer; font-weight:600; font-size:14px; color:rgba(255,255,255,.75); margin-top:4px; }
+.rp-toggle-noel:hover{ background:#fff; color:#002743; }
+.rp-toggle-noel:focus-visible{ outline:2px solid #00ACB0; outline-offset:2px; }
+.rp-toggle-noel svg{ width:18px; height:18px; flex:none; }
+html.rp-unifie .rp-toggle-noel{ color:var(--th-tx-002743ff, #002743) !important; }
+html.rp-unifie .rp-toggle-noel:hover{ background:var(--th-bg-ffffffff, #fff) !important; }
+.rp-toggle-noel[aria-pressed="true"] svg{ color:#1b8a4c; }
+html.rp-dark .rp-toggle-noel[aria-pressed="true"] svg{ color:#5fd08f; }
