@@ -266,17 +266,30 @@
     document.body.appendChild(calque);
     return calque;
   }
+  /** Vrai si l'élément est réellement visible à l'écran, pas caché sous une fenêtre (modale,
+   *  fiche, voile…) : on teste ce qui se trouve au premier plan en quelques points. */
+  function degage(el){
+    const r = el.getBoundingClientRect();
+    const points = [[r.left + r.width / 2, r.top + r.height / 2], [r.left + 6, r.top + 6], [r.right - 6, r.top + 6]];
+    return points.some(([x, y]) => {
+      if(x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) return false;
+      const h = document.elementFromPoint(x, y);
+      return !!h && (h === el || el.contains(h) || h.contains(el));
+    });
+  }
   function majPastilles(){
     rafPlanifie = false;
     if(!actif() || tuto){ if(calque) calque.innerHTML = ''; return; }
     const e = ecranCourant();
     const c = assurerCalque();
     const voulues = [];
+    c.style.visibility = 'hidden'; // nos pastilles ne doivent pas fausser le test du premier plan
     (e && e.aides || []).forEach(([sel, titre, texte], i) => {
       const el = trouver(sel);
       if(!el || el.closest('.xp-carte, #cvdl-bandeau-demo')) return;
       const r = el.getBoundingClientRect();
       if(r.bottom < 0 || r.top > innerHeight) return;
+      if(!degage(el)) return; // sous une modale ou une fenêtre : pas de pastille
       voulues.push({ i, titre, texte, x: Math.min(innerWidth - 26, r.right - 8), y: Math.max(4, r.top - 10) });
     });
     const existantes = new Map([...c.children].map(b => [b.dataset.i, b]));
@@ -293,6 +306,7 @@
       b.style.transform = `translate(${Math.round(v.x)}px, ${Math.round(v.y)}px)`;
     });
     existantes.forEach(b => b.remove());
+    c.style.visibility = '';
   }
   const planifier = () => { if(!rafPlanifie){ rafPlanifie = true; requestAnimationFrame(majPastilles); } };
 
@@ -488,6 +502,8 @@
     else if(bulleAide) fermerAide();
     else if(panneau) fermerPanneau();
   }, true);
+  // Après un clic (ouverture / fermeture d'une fenêtre animée), on revérifie une fois l'animation finie.
+  document.addEventListener('click', () => { setTimeout(planifier, 350); setTimeout(planifier, 900); });
   addEventListener('scroll', planifier, true);
   addEventListener('resize', planifier);
   addEventListener('hashchange', () => { setTimeout(() => { if(!tuto) montrerCarte(false); planifier(); }, 700); });

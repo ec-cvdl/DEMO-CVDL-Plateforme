@@ -480,7 +480,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   // Mode Explications : styles + script chargés uniquement en démo.
   const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'explications.css?v=1';
   document.head.appendChild(css);
-  const js = document.createElement('script'); js.src = 'explications.js?v=1'; js.defer = true;
+  const js = document.createElement('script'); js.src = 'explications.js?v=2'; js.defer = true;
   js.onload = () => majBandeau();
   document.head.appendChild(js);
 
