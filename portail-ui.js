@@ -464,11 +464,16 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   window.cvdlEquiperModales = equiper;
 })();
 
-/* ── Bandeau « Mode démo » ──
-   Actif quand demo.html a posé le repère cvdl-mode-demo (8 h), ou sur un site de démo dédié
-   (dossier « …demo… ») : toutes les pages parlent alors à la fonction de démonstration. Le
-   bandeau le rappelle partout, porte l'interrupteur « Explications » (tutoriels et pastilles
-   d'aide, explications.js — chargé seulement en démo), le retour au choix du profil et la sortie. */
+/* ── Barre « Mode démo » ──
+   Active quand demo.html a posé le repère cvdl-mode-demo (8 h), ou sur un site de démo dédié
+   (dossier « …demo… ») : toutes les pages parlent alors à la fonction de démonstration.
+   · Barre pleine largeur en bas de l'écran, TOUJOURS visible, qui fait partie de la page : la
+     place est réservée (marge en bas de page) et toute fenêtre fixe (modale, fiche, voile,
+     menu latéral, boutons flottants) est remontée d'autant — rien ne passe dessous, et la barre
+     n'apparaît jamais dans une modale.
+   · Contenu : rappel « données fictives », interrupteur « Explications » (explications.js, chargé
+     seulement en démo), « Tutoriels », « Changer de profil », « Quitter », et « Replier » (barre
+     fine ; l'état est mémorisé). */
 (function(){
   let actif = false;
   // Site de démo dédié (publié dans un dossier « …demo… », ex. ec-cvdl.github.io/cvdl-demo/) : toujours en démo.
@@ -476,11 +481,43 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   const siteDemo = /demo/i.test(dossier) && !/\.html$/i.test(dossier);
   try{ const d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); actif = siteDemo || !!(d && d.jusqua > Date.now()); }catch(e){ actif = siteDemo; }
   if(!actif || /demo\.html$/.test(location.pathname)) return;
-  document.documentElement.classList.add('cvdl-demo');
+  const html = document.documentElement;
+  html.classList.add('cvdl-demo');
+  const lireLocal = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+  const ecrireLocal = (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} };
+
+  // Styles de la barre : injectés tout de suite (pas d'attente d'une feuille externe).
+  const style = document.createElement('style');
+  style.textContent = `
+    html.cvdl-demo body{ padding-bottom:var(--demo-h, 0px) !important; }
+    #cvdl-bandeau-demo{ position:fixed; left:0; right:0; bottom:0; z-index:2147483000; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px;
+      padding:7px 12px; background:#002743; color:#fff; font:600 13px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; box-shadow:0 -3px 14px rgba(0,0,0,.18); }
+    #cvdl-bandeau-demo .bd-marque{ display:inline-flex; align-items:center; gap:8px; white-space:nowrap; margin-right:4px; }
+    #cvdl-bandeau-demo .bd-point{ width:8px; height:8px; border-radius:50%; background:#00ACB0; flex:none; }
+    #cvdl-bandeau-demo .bd-actions{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; }
+    #cvdl-bandeau-demo .bd-profil{ color:#002743; background:#fff; border-radius:999px; padding:5px 10px; text-decoration:none; white-space:nowrap; }
+    #cvdl-bandeau-demo .bd-quitter{ color:#fff; opacity:.8; padding:5px 6px; text-decoration:underline; white-space:nowrap; }
+    #cvdl-bandeau-demo .bd-replier{ margin-left:auto; border:1px solid rgba(255,255,255,.35); background:none; color:#fff; border-radius:999px; padding:4px 10px; font:600 12.5px system-ui, sans-serif; cursor:pointer; white-space:nowrap; }
+    #cvdl-bandeau-demo .bd-replier:hover, #cvdl-bandeau-demo .bd-replier:focus-visible{ background:rgba(255,255,255,.12); outline:none; }
+    #cvdl-bandeau-demo.replie{ padding:3px 12px; font-size:12px; }
+    #cvdl-bandeau-demo.replie .bd-actions{ display:none; }
+    #cvdl-bandeau-demo.replie .bd-replier{ padding:2px 10px; }
+    @media (max-width:640px){
+      #cvdl-bandeau-demo{ flex-wrap:nowrap; padding:6px 8px; gap:6px; }
+      #cvdl-bandeau-demo .bd-long{ display:none; }
+      #cvdl-bandeau-demo .bd-actions{ flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; min-width:0; flex:1; }
+      #cvdl-bandeau-demo .bd-actions::-webkit-scrollbar{ display:none; }
+      #cvdl-bandeau-demo .bd-replier{ font-size:0; padding:4px 8px; flex:none; }
+      #cvdl-bandeau-demo .bd-replier::after{ content:"▾"; font-size:13px; }
+      #cvdl-bandeau-demo.replie .bd-replier::after{ content:"▴ Outils"; font-size:12px; }
+    }
+  `;
+  document.head.appendChild(style);
+
   // Mode Explications : styles + script chargés uniquement en démo.
-  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'explications.css?v=1';
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'explications.css?v=2';
   document.head.appendChild(css);
-  const js = document.createElement('script'); js.src = 'explications.js?v=3'; js.defer = true;
+  const js = document.createElement('script'); js.src = 'explications.js?v=4'; js.defer = true;
   js.onload = () => majBandeau();
   document.head.appendChild(js);
 
@@ -494,46 +531,73 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
     inter.title = on ? 'Masquer les explications' : 'Afficher les explications et les tutoriels';
     b.querySelector('.xp-tutos').hidden = !on;
   }
+
+  /* ── Place réservée : aucune fenêtre fixe ne passe sous la barre ── */
+  let hauteur = 0;
+  function reserver(){
+    const b = document.getElementById('cvdl-bandeau-demo');
+    if(!b) return;
+    const h = Math.ceil(b.getBoundingClientRect().height);
+    if(h !== hauteur){ hauteur = h; html.style.setProperty('--demo-h', h + 'px'); }
+    const vh = innerHeight;
+    for(const el of document.body.querySelectorAll('*')){
+      if(el === b || b.contains(el) || el.closest('.xp-calque, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide, .xp-projecteur')) continue;
+      // Valeurs d'origine mémorisées une fois : on peut réappliquer sans cumuler.
+      if(el.dataset.demoBas === undefined && el.dataset.demoMaxh === undefined){
+        const cs = getComputedStyle(el);
+        if(cs.position !== 'fixed' || cs.display === 'none') continue;
+        const r = el.getBoundingClientRect();
+        if(r.bottom < vh - 2 && r.height < vh * 0.5) continue; // ne touche pas le bas de l'écran
+        if(cs.bottom !== 'auto') el.dataset.demoBas = parseFloat(cs.bottom) || 0;   // ancré en bas (voiles, boutons flottants)
+        else el.dataset.demoMaxh = Math.max(0, r.top);                                // ancré en haut, pleine hauteur (menu latéral)
+      }
+      if(el.dataset.demoBas !== undefined) el.style.setProperty('bottom', (parseFloat(el.dataset.demoBas) + hauteur) + 'px', 'important');
+      else el.style.setProperty('max-height', `calc(100vh - ${parseFloat(el.dataset.demoMaxh) + hauteur}px)`, 'important');
+    }
+    document.documentElement.classList.toggle('cvdl-demo-modale', modaleOuverte());
+  }
+  const SEL_MODALES = '.dialog-backdrop, .rp-drawer-backdrop, .voile-modale-qr.visible, .cvdl-pp-voile, .vg-voile, .idr-voile, dialog[open], [aria-modal="true"]';
+  function modaleOuverte(){
+    const zone = document.getElementById('rp-modal-zone'); // admin : fenêtres rendues dans cette zone
+    if(zone && [...zone.children].some(e => e.getBoundingClientRect().width > 0)) return true;
+    return [...document.querySelectorAll(SEL_MODALES)].some(e => !e.closest('#cvdl-bandeau-demo, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide') && e.getBoundingClientRect().width > 0);
+  }
+
   function poser(){
     if(document.getElementById('cvdl-bandeau-demo')) return;
     const b = document.createElement('div');
     b.id = 'cvdl-bandeau-demo';
     b.setAttribute('role', 'region');
     b.setAttribute('aria-label', 'Mode démo');
-    b.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:2147483000;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;'
-      + 'background:#002743;color:#fff;border-radius:22px;padding:6px 8px 6px 14px;font:600 13px/1.2 system-ui,sans-serif;'
-      + 'box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:calc(100vw - 24px)';
-    b.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:#00ACB0;flex:none"></span>Démo · données fictives</span>'
+    b.innerHTML = '<span class="bd-marque"><span class="bd-point"></span>Démo<span class="bd-long"> · données fictives</span></span>'
+      + '<span class="bd-actions">'
       + '<button type="button" class="xp-inter" aria-pressed="true"><i aria-hidden="true"></i>Explications</button>'
       + '<button type="button" class="xp-tutos">Tutoriels</button>'
-      + '<a href="demo.html" style="color:#002743;background:#fff;border-radius:999px;padding:5px 10px;text-decoration:none;white-space:nowrap">Changer de profil</a>'
-      + (siteDemo ? '' : '<a href="demo.html?quitter=1" style="color:#fff;opacity:.8;padding:5px 6px;text-decoration:underline;white-space:nowrap">Quitter</a>');
+      + '<a class="bd-profil" href="demo.html">Changer de profil</a>'
+      + (siteDemo ? '' : '<a class="bd-quitter" href="demo.html?quitter=1">Quitter</a>')
+      + '</span>'
+      + '<button type="button" class="bd-replier" aria-expanded="true">Replier ▾</button>';
+    const replier = (oui) => {
+      b.classList.toggle('replie', oui);
+      const r = b.querySelector('.bd-replier');
+      r.setAttribute('aria-expanded', String(!oui));
+      r.textContent = oui ? 'Afficher la barre ▴' : 'Replier ▾';
+      r.title = oui ? 'Afficher les outils de la démo' : 'Réduire la barre de démo';
+      ecrireLocal('cvdl-demo-barre-repliee', oui ? '1' : '0');
+      requestAnimationFrame(reserver);
+    };
+    b.querySelector('.bd-replier').addEventListener('click', () => replier(!b.classList.contains('replie')));
     b.querySelector('.xp-inter').addEventListener('click', () => { const X = window.CvdlExplications; if(X){ X.definirActif(!X.actif()); majBandeau(); } });
     b.querySelector('.xp-tutos').addEventListener('click', () => { const X = window.CvdlExplications; if(X) X.ouvrirPanneau(); });
     document.body.appendChild(b);
+    replier(lireLocal('cvdl-demo-barre-repliee') === '1');
     majBandeau();
-    // Une fenêtre (modale, fiche, assistant, visite guidée) est ouverte : le bandeau s'efface pour
-    // ne pas se poser sur elle, et revient dès qu'elle est fermée.
-    b.style.transition = 'opacity .2s, transform .2s';
     let attente = 0;
-    const verifier = () => {
-      attente = 0;
-      const ouverte = modaleOuverte();
-      b.style.opacity = ouverte ? '0' : '';
-      b.style.transform = ouverte ? 'translateY(12px)' : '';
-      b.style.pointerEvents = ouverte ? 'none' : '';
-      b.setAttribute('aria-hidden', ouverte ? 'true' : 'false');
-      document.documentElement.classList.toggle('cvdl-demo-modale', ouverte);
-    };
-    new MutationObserver(() => { if(!attente) attente = setTimeout(verifier, 80); })
-      .observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'style', 'open'] });
-    verifier();
-  }
-  const SEL_MODALES = '.dialog-backdrop, .rp-drawer-backdrop, .voile-modale-qr.visible, .cvdl-pp-voile, .vg-voile, dialog[open], [aria-modal="true"]';
-  function modaleOuverte(){
-    const zone = document.getElementById('rp-modal-zone'); // admin : fenêtres rendues dans cette zone
-    if(zone && [...zone.children].some(e => e.getBoundingClientRect().width > 0)) return true;
-    return [...document.querySelectorAll(SEL_MODALES)].some(e => !e.closest('#cvdl-bandeau-demo, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide') && e.getBoundingClientRect().width > 0);
+    const planifier = () => { if(!attente) attente = setTimeout(() => { attente = 0; reserver(); }, 60); };
+    new MutationObserver(planifier).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'open'] });
+    addEventListener('resize', planifier);
+    if(window.ResizeObserver) new ResizeObserver(planifier).observe(b);
+    reserver();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser); else poser();
 })();
