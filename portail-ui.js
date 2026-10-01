@@ -465,9 +465,10 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
 })();
 
 /* ── Bandeau « Mode démo » ──
-   Actif quand demo.html a posé le repère cvdl-mode-demo (8 h) : toutes les pages parlent alors à
-   la fonction de démonstration (données fictives). Le bandeau le rappelle partout, avec un retour
-   au choix du profil et une sortie qui efface le repère et les accès de démonstration. */
+   Actif quand demo.html a posé le repère cvdl-mode-demo (8 h), ou sur un site de démo dédié
+   (dossier « …demo… ») : toutes les pages parlent alors à la fonction de démonstration. Le
+   bandeau le rappelle partout, porte l'interrupteur « Explications » (tutoriels et pastilles
+   d'aide, explications.js — chargé seulement en démo), le retour au choix du profil et la sortie. */
 (function(){
   let actif = false;
   // Site de démo dédié (publié dans un dossier « …demo… », ex. ec-cvdl.github.io/cvdl-demo/) : toujours en démo.
@@ -476,19 +477,41 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   try{ const d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); actif = siteDemo || !!(d && d.jusqua > Date.now()); }catch(e){ actif = siteDemo; }
   if(!actif || /demo\.html$/.test(location.pathname)) return;
   document.documentElement.classList.add('cvdl-demo');
+  // Mode Explications : styles + script chargés uniquement en démo.
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'explications.css?v=1';
+  document.head.appendChild(css);
+  const js = document.createElement('script'); js.src = 'explications.js?v=1'; js.defer = true;
+  js.onload = () => majBandeau();
+  document.head.appendChild(js);
+
+  function majBandeau(){
+    const b = document.getElementById('cvdl-bandeau-demo');
+    const X = window.CvdlExplications;
+    if(!b || !X) return;
+    const on = X.actif();
+    const inter = b.querySelector('.xp-inter');
+    inter.setAttribute('aria-pressed', String(on));
+    inter.title = on ? 'Masquer les explications' : 'Afficher les explications et les tutoriels';
+    b.querySelector('.xp-tutos').hidden = !on;
+  }
   function poser(){
     if(document.getElementById('cvdl-bandeau-demo')) return;
     const b = document.createElement('div');
     b.id = 'cvdl-bandeau-demo';
-    b.setAttribute('role', 'status');
-    b.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:2147483000;display:flex;align-items:center;gap:10px;'
-      + 'background:#002743;color:#fff;border-radius:999px;padding:7px 8px 7px 14px;font:600 13px/1.2 system-ui,sans-serif;'
+    b.setAttribute('role', 'region');
+    b.setAttribute('aria-label', 'Mode démo');
+    b.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:2147483000;display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;'
+      + 'background:#002743;color:#fff;border-radius:22px;padding:6px 8px 6px 14px;font:600 13px/1.2 system-ui,sans-serif;'
       + 'box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:calc(100vw - 24px)';
-    b.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#00ACB0;flex:none"></span>'
-      + '<span>Mode démo · données fictives</span>'
+    b.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:50%;background:#00ACB0;flex:none"></span>Démo · données fictives</span>'
+      + '<button type="button" class="xp-inter" aria-pressed="true"><i aria-hidden="true"></i>Explications</button>'
+      + '<button type="button" class="xp-tutos">Tutoriels</button>'
       + '<a href="demo.html" style="color:#002743;background:#fff;border-radius:999px;padding:5px 10px;text-decoration:none;white-space:nowrap">Changer de profil</a>'
       + (siteDemo ? '' : '<a href="demo.html?quitter=1" style="color:#fff;opacity:.8;padding:5px 6px;text-decoration:underline;white-space:nowrap">Quitter</a>');
+    b.querySelector('.xp-inter').addEventListener('click', () => { const X = window.CvdlExplications; if(X){ X.definirActif(!X.actif()); majBandeau(); } });
+    b.querySelector('.xp-tutos').addEventListener('click', () => { const X = window.CvdlExplications; if(X) X.ouvrirPanneau(); });
     document.body.appendChild(b);
+    majBandeau();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser); else poser();
 })();
