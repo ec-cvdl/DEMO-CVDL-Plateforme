@@ -9,108 +9,84 @@
 <link rel="stylesheet" href="cvdl-ui.css?v=32">
 <style>
 [hidden]{ display:none!important; }
-.conteneur{ width:100%; max-width:1080px; margin-top:1.5vh; }
-.demo-section{ margin:6px 0 30px; }
-.demo-section h2{ font-size:19px; margin:0 0 4px; }
-.demo-section > p{ margin:0 0 16px; font-size:14px; opacity:.75; }
-.ps-choix.demo-3{ grid-template-columns:repeat(3, minmax(0,1fr)); }
-.ps-choix-carte{ min-height:180px; cursor:pointer; font:inherit; text-align:left; }
-.ps-choix-carte[aria-busy="true"]{ opacity:.6; pointer-events:none; }
-.demo-grille{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:14px; }
-.demo-struct{ display:flex; flex-direction:column; gap:6px; padding:14px 16px; background:#fff; border:var(--trait); border-radius:var(--r-m); box-shadow:3px 3px 0 var(--aplat);
-  color:var(--navy); cursor:pointer; text-align:left; font:inherit; transition:transform .15s, box-shadow .15s; }
-.demo-struct:hover{ transform:translate(-2px,-2px); box-shadow:5px 5px 0 var(--aplat); }
-.demo-struct b{ font-family:var(--police-titre); font-size:15.5px; line-height:1.2; }
-.demo-struct small{ font-size:12.5px; opacity:.7; }
-.demo-type{ align-self:flex-start; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:999px; background:var(--fond-doux); }
-.demo-type.interne{ background:color-mix(in srgb, var(--mag) 14%, #fff); }
-.demo-type.rn{ background:color-mix(in srgb, var(--tur) 16%, #fff); }
-.demo-type.bo{ background:color-mix(in srgb, var(--jaune) 30%, #fff); }
-.demo-type.esn{ background:color-mix(in srgb, var(--navy) 12%, #fff); }
-.demo-type.projets{ background:color-mix(in srgb, var(--vert) 16%, #fff); }
-.demo-indice{ display:flex; flex-wrap:wrap; gap:8px 16px; margin-top:4px; font-size:13px; }
-.demo-indice code{ font-family:var(--mono); background:var(--fond-doux); padding:2px 6px; border-radius:6px; user-select:all; }
-.demo-bas{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:18px 20px; background:var(--fond-doux); border-radius:var(--r-l); margin-bottom:40px; }
-.demo-bas .texte{ flex:1; min-width:220px; font-size:13.5px; }
-.demo-bas .texte b{ display:block; font-family:var(--police-titre); font-size:16px; }
-.demo-chiffres{ display:flex; flex-wrap:wrap; gap:8px; margin:-8px 0 26px; }
-.demo-chiffres span{ font-size:13px; font-weight:600; padding:6px 12px; border-radius:999px; background:#fff; border:var(--trait-doux); }
-.msg-demo{ margin:0 0 20px; }
-@media (max-width:1000px){ .ps-choix.demo-3{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
-@media (max-width:560px){ .ps-choix.demo-3{ grid-template-columns:1fr; } }
+.demo-page{ width:100%; max-width:640px; margin:4vh auto 0; display:flex; flex-direction:column; gap:22px; }
+.demo-tete{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.demo-titre h1{ margin:0; font-size:clamp(30px, 6vw, 40px); line-height:1.05; }
+.demo-titre p{ margin:10px 0 0; font-size:15.5px; opacity:.75; line-height:1.5; }
+
+/* Sélecteur de vue (menu déroulant maison, clavier compris) */
+.demo-choix{ position:relative; }
+.demo-choix-lab{ display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; margin-bottom:8px; opacity:.7; }
+.demo-bouton{ width:100%; display:flex; align-items:center; gap:14px; padding:14px 16px; min-height:76px; text-align:left; font:inherit; color:var(--navy); cursor:pointer;
+  background:#fff; border:var(--trait); border-radius:var(--r-l); box-shadow:4px 4px 0 var(--aplat); transition:transform .15s, box-shadow .15s; }
+.demo-bouton:hover{ transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--aplat); }
+.demo-bouton:focus-visible{ outline:2px solid var(--tur); outline-offset:3px; }
+.demo-bouton .ill{ width:44px; height:44px; }
+.demo-bouton-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.demo-bouton-txt b{ font-family:var(--police-titre); font-size:18px; line-height:1.2; }
+.demo-bouton-txt span{ font-size:13.5px; opacity:.7; }
+.demo-bouton-txt .vide{ font-family:var(--police-titre); font-size:18px; opacity:.55; }
+.demo-chevron{ flex:none; transition:transform .2s; }
+.demo-choix.ouvert .demo-chevron{ transform:rotate(180deg); }
+
+.demo-liste{ position:absolute; z-index:20; left:0; right:0; top:calc(100% + 8px); max-height:min(62vh, 520px); overflow:auto; padding:8px;
+  background:#fff; border:var(--trait); border-radius:var(--r-l); box-shadow:6px 6px 0 var(--aplat); }
+.demo-groupe{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; opacity:.55; padding:10px 10px 4px; }
+.demo-option{ display:flex; align-items:center; gap:12px; padding:9px 10px; border-radius:12px; cursor:pointer; }
+.demo-option .ill{ width:34px; height:34px; }
+.demo-option b{ display:block; font-size:15px; }
+.demo-option small{ display:block; font-size:12.5px; opacity:.7; }
+.demo-option[aria-selected="true"], .demo-option.actif{ background:var(--fond-doux); }
+.demo-option[aria-selected="true"] b::after{ content:" ✓"; color:var(--tur); }
+
+/* Fiche de la vue choisie */
+.demo-fiche{ display:flex; flex-direction:column; gap:14px; padding:20px; background:var(--fond-doux); border-radius:var(--r-l); }
+.demo-fiche p{ margin:0; font-size:14.5px; line-height:1.55; }
+.demo-fiche ul{ margin:0; padding-left:18px; font-size:14px; line-height:1.6; }
+.demo-indice{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:13.5px; }
+.demo-indice code{ font-family:var(--mono); background:#fff; border:var(--trait-doux); padding:2px 8px; border-radius:8px; user-select:all; }
+.demo-entrer{ align-self:flex-start; display:inline-flex; align-items:center; gap:8px; }
+.demo-entrer[aria-busy="true"]{ opacity:.6; pointer-events:none; }
+
+.demo-pied{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; font-size:12.5px; opacity:.75; padding-bottom:40px; }
+.demo-pied button{ font:inherit; background:none; border:0; padding:0; color:inherit; text-decoration:underline; cursor:pointer; }
+.demo-pied .sep{ opacity:.4; }
 </style>
 <script src="portail-ui.js?v=22" defer></script>
 </head>
 <body data-famille="accueil">
-<div class="conteneur" id="contenu-principal">
-  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
-  <div class="ps-titre">
-    <span data-ill="cle" class="ill xl"></span>
-    <div>
-      <div class="cvdl-surtitre">Plateforme de démonstration</div>
-      <h1>Choisissez un <em>profil</em></h1>
-      <p>Tout est fictif (structures, personnes, numéros de série) et aucun e-mail n’est envoyé. Vous pouvez tout modifier : les données repartent à neuf à chaque réinitialisation.</p>
-    </div>
+<main class="demo-page" id="contenu-principal">
+  <div class="demo-tete">
+    <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
   </div>
-  <div id="msg" class="msg-demo"></div>
-  <div class="demo-chiffres" id="chiffres"></div>
-
-  <section class="demo-section">
-    <h2>Équipe CVDL</h2>
-    <p>L’administration complète, la comptabilité et l’outil du support SAV, sans connexion Google.</p>
-    <div class="ps-choix demo-3">
-      <button type="button" class="ps-choix-carte" data-profil="admin" style="--ps-c:var(--mag)">
-        <span data-ill="structures" class="ill xl"></span>
-        <span class="ps-choix-txt"><b>Administration</b><span id="nom-admin">Commandes, SAV, flottes, facturation, programmes, statistiques, réglages.</span></span>
-        <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </button>
-      <button type="button" class="ps-choix-carte" data-profil="support" style="--ps-c:var(--rouge)">
-        <span data-ill="suiviSav" class="ill xl"></span>
-        <span class="ps-choix-txt"><b>Support SAV</b><span id="nom-support">Tickets, fil d’échanges avec les structures et les personnes, bons Colissimo.</span></span>
-        <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </button>
-      <button type="button" class="ps-choix-carte" data-profil="compta" style="--ps-c:var(--tur)">
-        <span data-ill="tarifs" class="ill xl"></span>
-        <span class="ps-choix-txt"><b>Comptabilité</b><span id="nom-compta">Finances : facturé, encaissé, territoires, impayés et relances ; devis et factures.</span></span>
-        <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </button>
-      <button type="button" class="ps-choix-carte" data-profil="interne" style="--ps-c:var(--mag)">
-        <span data-ill="structure" class="ill xl"></span>
-        <span class="ps-choix-txt"><b>Responsable de territoire</b><span id="nom-interne">Espace d’une structure Interne : équipe, partenaires, flotte, projets.</span></span>
-        <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </button>
-      <button type="button" class="ps-choix-carte" data-profil="conseiller" style="--ps-c:var(--tur)">
-        <span data-ill="personne" class="ill xl"></span>
-        <span class="ps-choix-txt"><b>Conseiller numérique</b><span id="nom-conseiller">Membre de l’équipe d’une Interne : flotte et ventes, attestations, projets en lecture.</span></span>
-        <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </button>
-      <a class="ps-choix-carte" href="portail-beneficiaire.html" style="--ps-c:var(--rouge)">
-        <span data-ill="panne" class="ill xl"></span>
-        <span class="ps-choix-txt"><b>Personne accompagnée</b><span>Déclarer une panne ou suivre sa réparation, sans code.</span>
-          <span class="demo-indice" id="indice-sav"></span></span>
-        <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </a>
-      <a class="ps-choix-carte" href="portail.html" style="--ps-c:var(--mag)">
-        <span data-ill="cle" class="ill xl"></span>
-        <span class="ps-choix-txt"><b>Accueil public</b><span>Le site tel que le voit une structure qui arrive avec son code.</span>
-          <span class="demo-indice">Code à saisir&nbsp;: <code id="code-exemple">MLNI2026</code></span></span>
-        <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-      </a>
-    </div>
-  </section>
-
-  <section class="demo-section">
-    <h2>Structures partenaires</h2>
-    <p>Un exemple de chaque type : les règles (paiement, devis, flotte, circuit de validation) changent selon le type.</p>
-    <div class="demo-grille" id="structures"></div>
-  </section>
-
-  <div class="demo-bas">
-    <div class="texte"><b>Données de démonstration</b><span id="genere">—</span></div>
-    <button type="button" class="btn btn-secondary" id="btn-reinit">Réinitialiser les données</button>
-    <button type="button" class="btn btn-ghost" id="btn-quitter">Quitter la démo</button>
+  <div class="demo-titre">
+    <div class="cvdl-surtitre">Plateforme de démonstration</div>
+    <h1>Explorez CVDL <em>de l’intérieur</em></h1>
+    <p>Choisissez une vue : vous entrez directement, sans mot de passe. Tout est fictif et aucun e-mail n’est envoyé.</p>
   </div>
-</div>
+
+  <div id="msg"></div>
+
+  <div class="demo-choix" id="choix">
+    <span class="demo-choix-lab" id="lab-choix">Je veux voir la plateforme en tant que…</span>
+    <button type="button" class="demo-bouton" id="bouton-choix" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="lab-choix bouton-choix">
+      <span class="ill" data-ill="cle" id="choix-ill"></span>
+      <span class="demo-bouton-txt" id="choix-txt"><span class="vide">Choisir une vue</span></span>
+      <svg class="demo-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="demo-liste" id="liste" role="listbox" aria-labelledby="lab-choix" tabindex="-1" hidden></div>
+  </div>
+
+  <section class="demo-fiche" id="fiche" hidden aria-live="polite"></section>
+
+  <div class="demo-pied">
+    <span id="genere">Chargement de la démo…</span>
+    <span class="sep">·</span>
+    <button type="button" id="btn-reinit">Réinitialiser les données</button>
+    <span class="sep" id="sep-quitter">·</span>
+    <button type="button" id="btn-quitter">Quitter la démo</button>
+  </div>
+</main>
 
 <script>
 (function(){
@@ -123,11 +99,12 @@
   const viderSession = () => CLES_SESSION.forEach((k) => { try{ sessionStorage.removeItem(k); }catch(e){} });
   const appel = (donnees) => fetch(API_DEMO, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(donnees) }).then((r) => r.json());
   const message = (texte, type) => { $('msg').innerHTML = texte ? `<div class="msg msg-${type || 'erreur'}">${echapper(texte)}</div>` : ''; };
+  const illustrer = (el) => { if(window.portailIllustrations) window.portailIllustrations(el); };
 
-  // Site de démo dédié (dossier « …demo… ») : on y reste, pas de bouton « Quitter ».
+  // Site de démo dédié (dossier « …demo… ») : on y reste, pas de « Quitter ».
   const dossier = location.pathname.split('/')[1] || '';
   const siteDemo = /demo/i.test(dossier) && !/\.html$/i.test(dossier);
-  if(siteDemo) $('btn-quitter').hidden = true;
+  if(siteDemo){ $('btn-quitter').hidden = true; $('sep-quitter').hidden = true; }
   if(new URLSearchParams(location.search).get('quitter') && !siteDemo){
     try{ localStorage.removeItem('cvdl-mode-demo'); }catch(e){}
     viderSession();
@@ -139,68 +116,170 @@
     message('Le stockage du navigateur est bloqué : impossible d’activer le mode démo (navigation privée stricte ?).');
   }
 
-  const LIBELLES = { interne: 'Interne', rn: 'Vente solidaire', bo: 'Bon d’orientation', esn: 'ESN', projets: 'Projet', '': 'Sans type' };
+  /* ── Les vues proposées ──
+     profil : action demo-connexion ; type : structure d'exemple choisie dans la liste du serveur. */
+  const VUES = [
+    { groupe: 'Équipe CVDL', id: 'admin', profil: 'admin', ill: 'tableau', titre: 'Administration', role: 'Chargé·e de distribution',
+      texte: 'Le poste de pilotage : toutes les commandes, de la réception à la livraison, les structures, le stock, les programmes de distribution et les statistiques.',
+      points: ['Valider, préparer et livrer une commande', 'Suivre un programme de distribution et son financeur', 'Ouvrir la fiche 360° d’une structure'] },
+    { groupe: 'Équipe CVDL', id: 'compta', profil: 'compta', ill: 'tarifs', titre: 'Finances', role: 'Comptabilité',
+      texte: 'Facturé, encaissé, impayés par ancienneté et par territoire, relances par e-mail, devis et factures.',
+      points: ['Filtrer par territoire ou type de structure', 'Relancer une facture en retard', 'Exporter les factures en CSV'] },
+    { groupe: 'Équipe CVDL', id: 'support', profil: 'support', ill: 'suiviSav', titre: 'Gestion SAV', role: 'Chargé·e de logistique',
+      texte: 'Les demandes de réparation : diagnostic, statuts, échanges avec les structures et les personnes, bons de retour.',
+      points: ['Répondre dans le fil d’un SAV', 'Faire avancer un ticket', 'Demander une adresse de retour'] },
+    { groupe: 'Structures', id: 'interne', type: 'interne', code: 'ECLYON26', ill: 'structure', titre: 'Structure Interne', role: 'Responsable de territoire',
+      texte: 'Un territoire Emmaüs Connect : sa flotte, son équipe, ses structures partenaires et leurs commandes, ses projets de distribution.',
+      points: ['Attribuer des appareils à un partenaire', 'Rattacher des remises à un projet', 'Gérer l’équipe (accès Google)'] },
+    { groupe: 'Structures', id: 'conseiller', profil: 'conseiller', ill: 'personne', titre: 'Structure Interne', role: 'Conseiller·ère numérique',
+      texte: 'Un membre de l’équipe d’une Interne : il remet le matériel et édite les attestations ; le reste est réservé au responsable.',
+      points: ['Remettre un appareil à une personne', 'Éditer une attestation', 'Consulter les projets'] },
+    { groupe: 'Structures', id: 'esn', type: 'esn', code: 'ESNRN26', ill: 'flotte', titre: 'Structure ESN', role: 'Responsable ESN',
+      texte: 'Un reconditionneur partenaire : commandes en volume, sans paiement, flotte suivie dans son propre tableau.',
+      points: ['Commander en volume', 'Suivre sa flotte', 'Déclarer une panne'] },
+    { groupe: 'Structures', id: 'projets', type: 'projets', code: 'PSC69', ill: 'distribution', titre: 'Structure Projets', role: 'Grande distribution',
+      texte: 'Un projet financé : grosses commandes avec devis et factures, prix masqués, flotte centralisée dans la plateforme.',
+      points: ['Commander pour un projet', 'Suivre devis et factures', 'Consulter le rapport d’impact'] },
+    { groupe: 'Structures', id: 'bo', type: 'bo', code: 'BOGERL26', ill: 'partenairesCmd', titre: 'Structure partenaire', role: 'Bon d’orientation',
+      texte: 'Une association partenaire d’une Interne : elle commande pour des personnes nommées, paie sur place, et l’Interne valide.',
+      points: ['Commander pour une personne', 'Suivre la validation par l’Interne', 'Voir les appareils attribués'] },
+    { groupe: 'Structures', id: 'rn', type: 'rn', code: 'MLNI2026', ill: 'commander', titre: 'Vente solidaire', role: 'RNum (Mission Locale, CCAS…)',
+      texte: 'Une structure qui achète au tarif solidaire : virement, devis et factures, tarif de convention, flotte dans son propre tableau.',
+      points: ['Passer une commande au tarif négocié', 'Suivre sa livraison', 'Déclarer une panne'] },
+    { groupe: 'Structures', id: 'depot', type: 'depot', code: 'DVTRAME26', ill: 'stock', titre: 'Dépôt-vente', role: 'Ressourcerie',
+      texte: 'Du matériel confié en dépôt : la structure déclare ses ventes, chaque vente est facturée.',
+      points: ['Déclarer une vente', 'Voir le stock restant'] },
+    { groupe: 'Public', id: 'personne', lien: 'portail-beneficiaire.html', ill: 'panne', titre: 'Personne accompagnée', role: 'Sans code',
+      texte: 'Une personne qui a reçu un appareil : dépannage guidé, déclaration de panne, suivi de sa réparation.',
+      points: [] },
+  ];
   let profils = {};
+  let choisie = null;
+  let actif = -1;
+
+  function libelleVue(v){ return `<b>${echapper(v.titre)}</b><span>${echapper(v.role)}</span>`; }
+
+  function construireListe(){
+    let groupe = '';
+    $('liste').innerHTML = VUES.map((v, i) => {
+      const tete = v.groupe !== groupe ? `<div class="demo-groupe" role="presentation">${echapper(groupe = v.groupe)}</div>` : '';
+      return `${tete}<div class="demo-option" role="option" id="opt-${v.id}" data-i="${i}" aria-selected="${choisie === v}">
+        <span class="ill" data-ill="${v.ill}"></span><span><b>${echapper(v.titre)}</b><small>${echapper(v.role)}</small></span></div>`;
+    }).join('');
+    illustrer($('liste'));
+  }
+
+  function ouvrir(o){
+    $('liste').hidden = !o;
+    $('choix').classList.toggle('ouvert', o);
+    $('bouton-choix').setAttribute('aria-expanded', String(o));
+    if(o){ actif = Math.max(0, VUES.indexOf(choisie)); surligner(); $('liste').focus(); }
+  }
+  function surligner(){
+    $('liste').querySelectorAll('.demo-option').forEach((el) => el.classList.toggle('actif', Number(el.dataset.i) === actif));
+    const el = $('liste').querySelector(`[data-i="${actif}"]`);
+    if(el){ el.scrollIntoView({ block: 'nearest' }); $('liste').setAttribute('aria-activedescendant', el.id); }
+  }
+
+  function structurePour(v){
+    if(v.type === 'interne' && profils.interne) return { code: profils.interne.code, nom: profils.interne.nom }; // Interne avec équipe (Lyon)
+    const liste = profils.structures || [];
+    const trouvee = liste.find((s) => s.code === v.code)
+      || (v.type === 'depot' ? liste.find((s) => s.depotVente) : liste.find((s) => s.type === v.type && !s.depotVente && (v.type !== 'bo' || s.partenaireDe)));
+    return trouvee || (v.code ? { code: v.code, nom: '' } : null);
+  }
+
+  function choisir(i){
+    choisie = VUES[i];
+    ouvrir(false);
+    $('bouton-choix').focus();
+    const ill = document.createElement('span'); // nouvel élément : l'illustration se dessine une seule fois par élément
+    ill.className = 'ill'; ill.id = 'choix-ill'; ill.dataset.ill = choisie.ill;
+    $('choix-ill').replaceWith(ill); illustrer($('bouton-choix'));
+    $('choix-txt').innerHTML = libelleVue(choisie);
+    construireListe();
+    const v = choisie;
+    let detail = '';
+    if(v.id === 'admin' && profils.admin && profils.admin.nom) detail = `Vous êtes ${profils.admin.nom}.`;
+    if(v.id === 'compta' && profils.compta && profils.compta.nom) detail = `Vous êtes ${profils.compta.nom}.`;
+    if(v.id === 'support' && profils.support && profils.support.nom) detail = `Vous êtes ${profils.support.nom}.`;
+    if(v.id === 'interne' && profils.interne) detail = `${profils.interne.nom} — vous êtes ${profils.interne.responsable}.`;
+    if(v.id === 'conseiller' && profils.conseiller) detail = `${profils.conseiller.nom} — vous êtes ${profils.conseiller.personne}.`;
+    if(v.type && v.type !== 'interne'){ const s = structurePour(v); if(s && s.nom) detail = s.nom + (s.partenaireDe ? `, partenaire de ${s.partenaireDe}` : '') + '.'; }
+    const indice = v.id === 'personne' && profils.numeroSerieSav
+      ? `<div class="demo-indice"><span>N° de série&nbsp;: <code>${echapper(profils.numeroSerieSav)}</code></span><span>Référence de suivi&nbsp;: <code>${echapper(profils.referenceSav)}</code></span></div>` : '';
+    $('fiche').innerHTML = `
+      <p>${echapper(v.texte)}${detail ? ` <b>${echapper(detail)}</b>` : ''}</p>
+      ${v.points.length ? `<ul>${v.points.map((p) => `<li>${echapper(p)}</li>`).join('')}</ul>` : ''}
+      ${indice}
+      <button type="button" class="btn btn-primary demo-entrer" id="btn-entrer">Entrer dans la démo
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`;
+    $('fiche').hidden = false;
+    message('');
+  }
+
+  async function entrer(){
+    const v = choisie;
+    if(!v) return;
+    if(v.lien){ viderSession(); location.href = v.lien; return; }
+    const b = $('btn-entrer');
+    b.setAttribute('aria-busy', 'true');
+    try{
+      const s = v.type ? structurePour(v) : null;
+      const r = await appel({ action: 'demo-connexion', profil: v.profil || 'structure', code: s ? s.code : '' });
+      if(!r || !r.ok) throw new Error(r && r.erreur === 'Profil inconnu.' ? 'Le serveur de démo n’est pas à jour : redéployez-le (npm run deploy:demo).' : ((r && r.erreur) || 'Accès refusé'));
+      viderSession();
+      Object.entries(r.stockage || {}).forEach(([k, val]) => { try{ sessionStorage.setItem(k, val); }catch(e){} });
+      location.href = r.page;
+    }catch(e){
+      b.removeAttribute('aria-busy');
+      message(e.message === 'Failed to fetch' ? 'La plateforme de démonstration ne répond pas pour le moment.' : (e.message || 'Connexion impossible.'));
+    }
+  }
 
   async function charger(){
     try{
       const r = await appel({ action: 'demo-infos' });
-      if(!r || !r.ok) throw new Error((r && r.erreur) || 'Réponse inattendue');
+      if(!r || !r.ok) throw new Error();
       profils = r.profils || {};
       const res = r.resume || {};
-      $('chiffres').innerHTML = [[res.structures, 'structures'], [res.commandes, 'commandes'], [res.factures, 'factures'], [res.devis, 'devis'], [res.sav, 'tickets SAV'], [(res.flotteInterne || 0), 'appareils suivis']]
-        .map(([n, l]) => `<span>${echapper(n)} ${l}</span>`).join('');
-      $('genere').textContent = r.genereLe ? `Générées le ${new Date(r.genereLe).toLocaleString('fr-FR')}. Les modifications faites pendant la démo sont conservées jusqu’à la prochaine réinitialisation.` : '';
-      if(profils.admin && profils.admin.nom) $('nom-admin').textContent = `Connecté·e comme ${profils.admin.nom}. Commandes, SAV, flottes, facturation, programmes, statistiques.`;
-      if(profils.support && profils.support.nom) $('nom-support').textContent = `Connecté·e comme ${profils.support.nom}. Tickets, fil d’échanges, bons Colissimo.`;
-      if(profils.compta && profils.compta.nom) $('nom-compta').textContent = `Connecté·e comme ${profils.compta.nom}. Facturé, encaissé, territoires, impayés et relances.`;
-      if(profils.interne) $('nom-interne').textContent = `${profils.interne.nom} — ${profils.interne.responsable}. Équipe, partenaires, flotte, projets.`;
-      if(profils.conseiller) $('nom-conseiller').textContent = `${profils.conseiller.personne}, ${profils.conseiller.nom}. Flotte, ventes, attestations ; le reste est réservé au responsable.`;
-      if(profils.numeroSerieSav) $('indice-sav').innerHTML = `N° de série&nbsp;: <code>${echapper(profils.numeroSerieSav)}</code> Suivi&nbsp;: <code>${echapper(profils.referenceSav)}</code>`;
-      $('structures').innerHTML = (profils.structures || []).map((s) => `
-        <button type="button" class="demo-struct" data-profil="structure" data-code="${echapper(s.code)}">
-          <span class="demo-type ${echapper(s.type)}">${echapper(LIBELLES[s.type] || s.type)}${s.depotVente ? ' · dépôt-vente' : ''}</span>
-          <b>${echapper(s.nom)}</b>
-          <small>${s.partenaireDe ? 'Partenaire de ' + echapper(s.partenaireDe) + ' · ' : ''}code ${echapper(s.code)}</small>
-        </button>`).join('');
+      $('genere').textContent = `${res.structures || 0} structures, ${res.commandes || 0} commandes, ${res.sav || 0} SAV — données du ${new Date(r.genereLe).toLocaleDateString('fr-FR')}`;
+      if(choisie) choisir(VUES.indexOf(choisie));
     }catch(e){
+      $('genere').textContent = 'Démo indisponible pour le moment.';
       message('La plateforme de démonstration ne répond pas pour le moment. Réessayez dans un instant.');
     }
   }
 
-  async function entrer(bouton){
-    const profil = bouton.dataset.profil;
-    const code = profil === 'interne' ? (profils.interne && profils.interne.code) : bouton.dataset.code;
-    bouton.setAttribute('aria-busy', 'true');
-    message('');
-    try{
-      const r = await appel({ action: 'demo-connexion', profil: profil === 'interne' ? 'structure' : profil, code });
-      if(!r || !r.ok) throw new Error((r && r.erreur) || 'Accès refusé');
-      viderSession();
-      Object.entries(r.stockage || {}).forEach(([k, v]) => { try{ sessionStorage.setItem(k, v); }catch(e){} });
-      location.href = r.page;
-    }catch(e){
-      bouton.removeAttribute('aria-busy');
-      message(e.message || 'Connexion impossible.');
-    }
-  }
-
+  /* ── Interactions ── */
+  $('bouton-choix').addEventListener('click', () => ouvrir($('liste').hidden));
+  $('bouton-choix').addEventListener('keydown', (e) => { if(['ArrowDown', 'ArrowUp'].includes(e.key)){ e.preventDefault(); ouvrir(true); } });
+  $('liste').addEventListener('click', (e) => { const o = e.target.closest('.demo-option'); if(o) choisir(Number(o.dataset.i)); });
+  $('liste').addEventListener('mousemove', (e) => { const o = e.target.closest('.demo-option'); if(o && Number(o.dataset.i) !== actif){ actif = Number(o.dataset.i); surligner(); } });
+  $('liste').addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowDown'){ e.preventDefault(); actif = Math.min(VUES.length - 1, actif + 1); surligner(); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); actif = Math.max(0, actif - 1); surligner(); }
+    else if(e.key === 'Home'){ e.preventDefault(); actif = 0; surligner(); }
+    else if(e.key === 'End'){ e.preventDefault(); actif = VUES.length - 1; surligner(); }
+    else if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choisir(actif); }
+    else if(e.key === 'Escape' || e.key === 'Tab'){ ouvrir(false); if(e.key === 'Escape') $('bouton-choix').focus(); }
+  });
   document.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-profil]');
-    if(b) entrer(b);
+    if(!$('liste').hidden && !e.target.closest('#choix')) ouvrir(false);
+    if(e.target.closest('#btn-entrer')) entrer();
   });
   $('btn-reinit').addEventListener('click', async () => {
     if(!confirm('Remettre toutes les données de démonstration à zéro ? Les modifications faites pendant la démo seront perdues.')) return;
-    $('btn-reinit').disabled = true;
     try{
       const r = await appel({ action: 'demo-reinitialiser' });
       if(!r || !r.ok) throw new Error();
       message('Données réinitialisées.', 'succes');
       await charger();
     }catch(e){ message('Réinitialisation impossible pour le moment.'); }
-    $('btn-reinit').disabled = false;
   });
   $('btn-quitter').addEventListener('click', () => { location.href = 'demo.html?quitter=1'; });
+
+  construireListe();
   charger();
 })();
 </script>
