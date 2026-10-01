@@ -480,7 +480,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   // Mode Explications : styles + script chargés uniquement en démo.
   const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'explications.css?v=1';
   document.head.appendChild(css);
-  const js = document.createElement('script'); js.src = 'explications.js?v=2'; js.defer = true;
+  const js = document.createElement('script'); js.src = 'explications.js?v=3'; js.defer = true;
   js.onload = () => majBandeau();
   document.head.appendChild(js);
 
@@ -512,6 +512,28 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
     b.querySelector('.xp-tutos').addEventListener('click', () => { const X = window.CvdlExplications; if(X) X.ouvrirPanneau(); });
     document.body.appendChild(b);
     majBandeau();
+    // Une fenêtre (modale, fiche, assistant, visite guidée) est ouverte : le bandeau s'efface pour
+    // ne pas se poser sur elle, et revient dès qu'elle est fermée.
+    b.style.transition = 'opacity .2s, transform .2s';
+    let attente = 0;
+    const verifier = () => {
+      attente = 0;
+      const ouverte = modaleOuverte();
+      b.style.opacity = ouverte ? '0' : '';
+      b.style.transform = ouverte ? 'translateY(12px)' : '';
+      b.style.pointerEvents = ouverte ? 'none' : '';
+      b.setAttribute('aria-hidden', ouverte ? 'true' : 'false');
+      document.documentElement.classList.toggle('cvdl-demo-modale', ouverte);
+    };
+    new MutationObserver(() => { if(!attente) attente = setTimeout(verifier, 80); })
+      .observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'style', 'open'] });
+    verifier();
+  }
+  const SEL_MODALES = '.dialog-backdrop, .rp-drawer-backdrop, .voile-modale-qr.visible, .cvdl-pp-voile, .vg-voile, dialog[open], [aria-modal="true"]';
+  function modaleOuverte(){
+    const zone = document.getElementById('rp-modal-zone'); // admin : fenêtres rendues dans cette zone
+    if(zone && [...zone.children].some(e => e.getBoundingClientRect().width > 0)) return true;
+    return [...document.querySelectorAll(SEL_MODALES)].some(e => !e.closest('#cvdl-bandeau-demo, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide') && e.getBoundingClientRect().width > 0);
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser); else poser();
 })();

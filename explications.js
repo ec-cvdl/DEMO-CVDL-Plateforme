@@ -279,6 +279,7 @@
   }
   function majPastilles(){
     rafPlanifie = false;
+    if(carte) carte.hidden = document.documentElement.classList.contains('cvdl-demo-modale');
     if(!actif() || tuto){ if(calque) calque.innerHTML = ''; return; }
     const e = ecranCourant();
     const c = assurerCalque();
