@@ -46,6 +46,11 @@ const frDate = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.sli
 const frCourt = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '');
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
+/* Le pilotage concerne le projet réel : la page lit toujours le back de production, même
+   depuis le site démo (lecture seule là-bas : le jeton de l'admin démo n'est pas valable en prod). */
+const API_PROJET = API.replace(/-demo$/, '');
+const SITE_DEMO = API_PROJET !== API;
+
 /* ── État ── */
 const P = {
   couloirs: [],
@@ -64,7 +69,7 @@ const P = {
   voirMasquees: false,
 };
 try {
-  P.jeton = sessionStorage.getItem('cvdl-admin-jeton') || '';
+  P.jeton = SITE_DEMO ? '' : sessionStorage.getItem('cvdl-admin-jeton') || '';
   P.zoom = localStorage.getItem('cvdl-projet-zoom') || 'mois';
   P.pleineLargeur = localStorage.getItem('cvdl-projet-largeur') === 'pleine';
 } catch (e) {}
@@ -74,7 +79,11 @@ async function appel(action, donnees = {}) {
   const entetes = { 'Content-Type': 'text/plain;charset=utf-8' };
   if (P.jeton && action !== 'projet') entetes['X-CVDL-Admin'] = encodeURIComponent(P.jeton);
   try {
-    const r = await fetch(API, { method: 'POST', headers: entetes, body: JSON.stringify({ action, ...donnees }) });
+    const r = await fetch(API_PROJET, {
+      method: 'POST',
+      headers: entetes,
+      body: JSON.stringify({ action, ...donnees }),
+    });
     return await r.json();
   } catch (e) {
     return { ok: false, erreur: 'Serveur injoignable.' };
@@ -111,8 +120,12 @@ async function charger() {
 async function chargerChangelog() {
   try {
     const r = await fetch('CHANGELOG-CVDL.md', { cache: 'no-cache' });
-    P.changelog = r.ok ? lireChangelog(await r.text()) : [];
+    const texte = r.ok ? await r.text() : '';
+    // Un hébergeur qui ne sert pas le fichier brut (ex. GitHub Pages avec Jekyll) renvoie du HTML.
+    P.changelogIntrouvable = !/^#\s/m.test(texte);
+    P.changelog = P.changelogIntrouvable ? [] : lireChangelog(texte);
   } catch (e) {
+    P.changelogIntrouvable = true;
     P.changelog = [];
   }
 }
@@ -379,7 +392,9 @@ function renderTete() {
   if (P.peutModifier)
     z.innerHTML = `<button type="button" class="pj-edition" id="pj-bascule-edition" aria-pressed="${P.edition}">Mode édition <i></i></button>`;
   else
-    z.innerHTML = `<a class="btn btn-ghost" href="admin.html?retour=projet" title="Réservé à l'équipe CVDL">Connexion équipe</a>`;
+    z.innerHTML = SITE_DEMO
+      ? '<span class="pj-sous">Données réelles du projet · modification depuis l’admin de production</span>'
+      : `<a class="btn btn-ghost" href="admin.html?retour=projet" title="Réservé à l'équipe CVDL">Connexion équipe</a>`;
 }
 
 function renderKpis() {
@@ -1062,7 +1077,10 @@ function renderJournal() {
     if (j && j.date === e.date) j.entrees.push(e);
     else jours.push({ date: e.date, entrees: [e] });
   }
-  if (!jours.length) html += '<p class="pj-vide">Aucune entrée ne correspond.</p>';
+  if (P.changelogIntrouvable)
+    html +=
+      '<p class="pj-vide">Le fichier CHANGELOG-CVDL.md n’a pas pu être lu sur ce site : vérifier qu’il est bien publié (fichier <code>.nojekyll</code> présent à la racine sur GitHub Pages).</p>';
+  else if (!jours.length) html += '<p class="pj-vide">Aucune entrée ne correspond.</p>';
   const premier = jours[0] && jours[0].entrees[0];
   jours.slice(0, P.joursAffiches).forEach((j) => {
     const groupes = [];
