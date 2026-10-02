@@ -2,14 +2,13 @@
 <html lang="fr">
 <head>
 <script>
-const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
+const API = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api';
 </script>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Signaler une panne — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=32">
-<link rel="stylesheet" href="depannage.css?v=1">
+<link rel="stylesheet" href="cvdl-ui.css?v=30">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -50,11 +49,8 @@ main{ padding:var(--space-6) var(--space-4); }
 .tableau-materiel-sav-scroll tbody tr{ cursor:pointer; }
 .icone-symptome.ill-symptome{ width:60px !important; height:60px !important; padding:0 !important; display:flex; align-items:center; justify-content:center; }
 </style>
-<script src="portail-ui.js?v=24"></script>
-<script src="cvdl-ui.js?v=11"></script>
-<link rel="stylesheet" href="retours.css?v=1">
-<script src="retours.js?v=1" defer></script>
-<script src="depannage.js?v=1"></script>
+<script src="portail-ui.js?v=22"></script>
+<script src="cvdl-ui.js?v=10"></script>
 </head>
 <body data-famille="sav">
 <main id="contenu-principal">
@@ -156,14 +152,6 @@ main{ padding:var(--space-6) var(--space-4); }
         <button type="button" class="btn-retour" data-retour><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>Retour</button>
         <button type="button" class="btn btn-primary" style="margin-left:auto" id="btn-symptome-continuer" disabled>Continuer</button>
       </div>
-    </div>
-  </section>
-
-  <!-- Étape : dépannage (arbre de décision rattaché au symptôme — seulement s'il en existe un) -->
-  <section class="etape dp-zone" data-etape="depannage" hidden>
-    <div class="etape-carte">
-      <div class="dp-intro"><span data-ill="aide" class="ill s"></span><span><b>Avant de nous écrire, essayons ensemble.</b> Quelques vérifications rapides règlent souvent le problème — sinon, vous déclarez le SAV juste après.</span></div>
-      <div id="zone-depannage"></div>
     </div>
   </section>
 
@@ -372,7 +360,7 @@ const etat = {
 function majProgression(){
   const i = etapes.indexOf(etapes[indexEtape]);
   $('compte-etapes').textContent = `${i + 1}/${etapes.length}`;
-  const NOMS_ETAPES_SAV = { depannage: 'Dépannage', identification: 'Appareil', symptome: 'Problème', materiel: 'Appareil', details: 'Précisions', envoi: 'Envoi', nom: 'Personne', personne: 'Personne', contact: 'Contact' };
+  const NOMS_ETAPES_SAV = { identification: 'Appareil', symptome: 'Problème', materiel: 'Appareil', details: 'Précisions', envoi: 'Envoi', nom: 'Personne', personne: 'Personne', contact: 'Contact' };
   $('progression').innerHTML = etapes.map(function(cle, idx){
     const cls = idx < i ? 'fait' : (idx === i ? 'cours' : 'avenir');
     return (idx ? '<span class="cm-lien"></span>' : '') + '<div class="cm-etape ' + cls + '"' + (cls === 'cours' ? ' aria-current="step"' : '') + '><span class="cm-pt">' + (cls === 'fait' ? '✓' : (idx + 1)) + '</span><b>' + (NOMS_ETAPES_SAV[cle] || '') + '</b></div>';
@@ -430,7 +418,6 @@ function envoyerAnalytique(termine){
 window.addEventListener('beforeunload', function(){
   if(!analytique.aCommence) return;
   if(document.querySelector('.confirmation') && !document.querySelector('.confirmation').hidden) return;
-  if(etat.depannageResolu) return; // réglé grâce au dépannage : pas un abandon
   envoyerAnalytique(false);
 });
 
@@ -540,39 +527,7 @@ function afficherSymptomes(symptomes){
     });
   });
 }
-/* Dépannage : si un arbre publié est rattaché au symptôme choisi, une étape « Dépannage » est
-   insérée juste après (depannage.js). Réglé → rien n'est envoyé ; sinon on continue la demande. */
-let parcoursDepannage = null, vueDepannage = null;
-$('btn-symptome-continuer').addEventListener('click', async function(){
-  const bouton = this;
-  bouton.disabled = true;
-  let arbre = null;
-  try{ arbre = window.CvdlDepannage ? await CvdlDepannage.pourSymptome(API, etat.symptome) : null; }catch(e){ arbre = null; }
-  bouton.disabled = false;
-  const i = etapes.indexOf('depannage');
-  if(i !== -1) etapes.splice(i, 1);
-  parcoursDepannage = null;
-  if(!arbre){ suivant(); return; }
-  etapes.splice(etapes.indexOf('symptome') + 1, 0, 'depannage');
-  if(vueDepannage) vueDepannage.detruire();
-  const infos = { arbre: arbre.identifiant, symptome: etat.symptome, origine: 'beneficiaire', code: etat.code || '' };
-  vueDepannage = CvdlDepannage.monter($('zone-depannage'), arbre, {
-    symptome: etat.symptome, urlFin: 'portail-beneficiaire.html', onRetour: precedent,
-    onResolu: function(chemin){
-      etat.depannageResolu = true;
-      $$('.dp-intro').forEach(function(el){ el.hidden = true; });
-      CvdlDepannage.enregistrerParcours(API, Object.assign({ issue: 'resolu', chemin: chemin }, infos));
-    },
-    onSav: async function(chemin){
-      etat.depannageResolu = false;
-      const r = await CvdlDepannage.enregistrerParcours(API, Object.assign({ issue: 'sav', chemin: chemin }, infos));
-      parcoursDepannage = (r && r.ok) ? r.parcours : null;
-      suivant();
-    }
-  });
-  $$('.dp-intro').forEach(function(el){ el.hidden = false; });
-  suivant();
-});
+$('btn-symptome-continuer').addEventListener('click', suivant);
 $('btn-symptome-suivant').addEventListener('click', function(){
   etat.commentaire = $('commentaire-sav').value.trim();
   etat.lienVideo = $('lien-video-sav').value.trim();
@@ -656,7 +611,6 @@ $('btn-envoyer-sav').addEventListener('click', async function(){
       numeroSerie: etat.numeroSerie,
       symptome: etat.symptome,
       commentaire: etat.commentaire,
-      parcoursDepannage: parcoursDepannage,
       lienVideo: etat.lienVideo,
       fichiers: fichiers
     };
@@ -673,8 +627,6 @@ $('btn-envoyer-sav').addEventListener('click', async function(){
       $$('.etape').forEach(function(s){ s.hidden = true; });
       $('progression').innerHTML = '';
       document.querySelector('.confirmation').hidden = false;
-      // Avis rapide (retours.js) : une seule question, une fois la demande envoyée.
-      if(window.CvdlRetours) CvdlRetours.demanderAvis(document.querySelector('.confirmation .card'), { parcours: 'sav-beneficiaire', reference: r.reference, question: 'Déclarer cette panne, c’était simple ?' });
       window.scrollTo({top:0, behavior:'smooth'});
       voile.hidden = true;
       return;
@@ -690,7 +642,6 @@ $('btn-envoyer-sav').addEventListener('click', async function(){
 
 /* Démarrage */
 chargerSymptomes();
-if(window.CvdlDepannage) CvdlDepannage.charger(API); // arbres préchargés : aucune attente après le symptôme
 allerA('identification');
 </script>
 </body>

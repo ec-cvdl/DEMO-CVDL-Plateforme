@@ -5,7 +5,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Commander du matériel — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="cvdl-ui.css?v=30">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -66,32 +66,6 @@ main{ padding:var(--space-6) var(--space-4); }
 .stepper-quantite{ margin-left:auto; display:inline-flex; align-items:center; overflow:hidden; }
 .stepper-quantite button{ cursor:pointer; width:36px; height:36px; display:flex; align-items:center; justify-content:center; }
 .stepper-quantite .valeur-quantite{ min-width:40px; width:auto; }
-.stepper-quantite button:disabled{ opacity:.3; cursor:not-allowed; background:transparent !important; color:inherit !important; }
-.qte-nom{ display:flex; flex-direction:column; gap:2px; min-width:0; }
-.qte-note{ font-size:12px; font-weight:700; color:#8A5A00; }
-.qte-note.discret{ font-weight:500; color:inherit; opacity:.55; }
-.qte-note.ko{ color:#B01C4A; }
-.ligne-quantite.qte-ko{ outline:2px solid #E62460; outline-offset:-2px; border-radius:14px; }
-/* Mode stock bas : panneau « Attention » bien visible (étape Matériel) + compteur (Quantités) */
-.alerte-stock-bas{ display:flex; gap:18px; align-items:flex-start; margin-bottom:var(--space-5); padding:20px 22px; border-radius:18px;
-  background:repeating-linear-gradient(-45deg, #FFF3C4 0 14px, #FFEDB0 14px 28px); border:2px solid #002743; box-shadow:4px 4px 0 #002743; color:#002743; }
-.alerte-stock-bas .asb-ico{ flex:none; width:58px; height:58px; border-radius:16px; background:#FECC38; border:2px solid #002743; display:inline-flex; align-items:center; justify-content:center; }
-.alerte-stock-bas .asb-sur{ font-size:11.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#8A5A00; }
-.alerte-stock-bas h2{ margin:2px 0 4px; font-size:22px; line-height:1.2; }
-.alerte-stock-bas p{ margin:0; font-size:14.5px; }
-.alerte-stock-bas ul{ margin:10px 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px; }
-.alerte-stock-bas li{ padding:6px 12px; border-radius:999px; background:#fff; border:1.5px solid #002743; font-size:14px; }
-.alerte-stock-bas .asb-message{ margin-top:10px; padding-top:10px; border-top:1.5px dashed color-mix(in srgb, #002743 35%, transparent); font-weight:600; }
-.qte-compteur{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 14px; border-radius:14px; background:#FFF3C4; border:1.5px solid #C98A00; margin-bottom:var(--space-2); }
-.qte-compteur .asb-mini{ width:34px; height:34px; border-radius:10px; background:#FECC38; display:inline-flex; align-items:center; justify-content:center; flex:none; color:#002743; }
-.qte-compteur-txt{ display:flex; flex-direction:column; flex:1; min-width:180px; }
-.qte-compteur-txt small{ opacity:.75; }
-.qte-jauge{ flex:0 0 160px; height:10px; border-radius:999px; background:#fff; border:1.5px solid #002743; overflow:hidden; }
-.qte-jauge i{ display:block; height:100%; background:#00ACB0; transition:width .2s; }
-.qte-compteur.plein .qte-jauge i{ background:#C98A00; }
-.qte-compteur.ko{ background:#FDE3EA; border-color:#E62460; }
-.qte-compteur.ko .qte-jauge i{ background:#E62460; }
-@media (max-width:640px){ .alerte-stock-bas{ flex-direction:column; gap:10px; padding:16px; } .alerte-stock-bas .asb-ico{ width:46px; height:46px; } .qte-jauge{ flex-basis:100%; } }
 .encart-recap{ display:grid; gap:8px; padding:14px 16px; }
 .carte-moyen-paiement{ box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; padding:16px 10px; text-align:center; }
 /* Choix du moyen de paiement : même repère que la sélection d'un produit (case cochée turquoise
@@ -117,43 +91,15 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
 .barre-etapes{ gap:10px; }
 .btn-retour-portail{ padding:7px 10px; }
 }
-/* Personne prescriptrice : menu déroulant illustré (pastilles d'initiales, charte CVDL) */
-.pc{ position:relative; }
-.pc-btn{ all:unset; box-sizing:border-box; width:100%; display:flex; align-items:center; gap:12px; padding:10px 14px 10px 10px; border:var(--trait); border-radius:16px; background:#fff; cursor:pointer; box-shadow:4px 4px 0 var(--aplat); transition:transform .12s, box-shadow .12s; }
-.pc-btn:hover{ transform:translate(-1px,-1px); box-shadow:5px 5px 0 var(--aplat); }
-.pc-btn:focus-visible{ outline:2.5px solid var(--tur); outline-offset:2px; }
-.pc-btn[aria-expanded="true"]{ border-color:var(--tur); box-shadow:none; transform:none; }
-/* Pastille d'initiales : disque teinté plein, trait bleu nuit, léger aplat décalé ; initiales
-   centrées (grille + interligne 1). */
-.pc-av{ position:relative; flex:none; box-sizing:border-box; width:40px; height:40px; border-radius:50%; border:1.5px solid var(--navy);
-  background:var(--c, color-mix(in srgb, var(--tur) 45%, #fff)); box-shadow:2px 2px 0 var(--aplat);
-  display:grid; place-items:center; font:700 14px/1 var(--police-titre); letter-spacing:.02em; color:var(--navy); text-align:center; }
-.pc-txt{ flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.25; }
-.pc-txt b{ font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pc-txt small{ font-size:12.5px; opacity:.65; }
-.pc-chev{ flex:none; opacity:.7; transition:transform .15s; }
-.pc-btn[aria-expanded="true"] .pc-chev{ transform:rotate(180deg); }
-.pc-liste{ position:absolute; left:0; right:0; top:calc(100% + 8px); z-index:20; max-height:320px; overflow-y:auto; padding:6px; border:var(--trait); border-radius:16px; background:#fff; box-shadow:5px 5px 0 var(--aplat); display:flex; flex-direction:column; gap:2px; }
-.pc-liste[hidden]{ display:none; }
-.pc-liste:focus{ outline:none; }
-.pc-liste:focus-visible{ box-shadow:5px 5px 0 var(--aplat), 0 0 0 3px color-mix(in srgb, var(--tur) 40%, transparent); }
-.pc-opt{ display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:12px; cursor:pointer; }
-.pc-opt:hover, .pc-opt.actif{ background:color-mix(in srgb, var(--tur) 10%, #fff); }
-.pc-opt[aria-selected="true"]{ background:color-mix(in srgb, var(--tur) 14%, #fff); box-shadow:inset 0 0 0 1.5px var(--navy); }
-.pc-opt .pc-av{ width:34px; height:34px; font-size:12.5px; }
-.pc-coche{ margin-left:auto; flex:none; width:22px; height:22px; border-radius:50%; background:var(--tur); border:1.5px solid var(--navy); display:flex; align-items:center; justify-content:center; }
-.pc-sep{ border-top:1.5px dashed color-mix(in srgb, var(--navy) 20%, transparent); margin:4px 6px; }
-.pc-autre .pc-av{ border-style:dashed; font-size:18px; background:#fff; box-shadow:none; }
-.pc-autre b{ color:color-mix(in srgb, var(--acc) 75%, var(--navy)); }
-.presc-nouveau{ display:flex; gap:10px; align-items:center; }
-.presc-nouveau .input{ flex:1; }
+/* Personne prescriptrice */
+.presc-carte{ display:flex; gap:14px; align-items:flex-start; padding:12px 14px; border:1.5px solid color-mix(in srgb, #002743 18%, transparent); border-radius:14px; background:var(--color-surface, #fff); }
+.presc-ill{ flex:none; width:44px; height:44px; }
+.presc-corps{ flex:1; min-width:0; }
 .presc-lien{ display:inline-block; margin-top:8px; padding:0; border:0; background:none; color:var(--color-accent-700, #C4144F); font-weight:700; font-size:13.5px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
 .presc-lien:focus-visible{ outline:2px solid currentColor; outline-offset:2px; border-radius:4px; }
 </style>
-<script src="portail-ui.js?v=24"></script>
-<script src="cvdl-ui.js?v=11"></script>
-<link rel="stylesheet" href="retours.css?v=1">
-<script src="retours.js?v=1" defer></script>
+<script src="portail-ui.js?v=22"></script>
+<script src="cvdl-ui.js?v=10"></script>
 </head>
 <body data-famille="commandes">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -194,7 +140,6 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
         <span data-ill="commander" class="pk-titre-ill xl"></span>
         <h1>Quel matériel souhaitez-vous <em>commander</em> ?</h1>
         <p style="opacity:0.6;margin:0 0 var(--space-6);text-align:center">Choisissez un ou plusieurs produits à ajouter.</p>
-        <div id="bandeau-limites-commande" hidden></div>
         <div class="card elev-lg" style="padding:var(--space-8) var(--space-6)">
           <div class="grille-produits-commande" id="grille-produits"><div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div></div>
         </div>
@@ -218,9 +163,7 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
         <h1 id="titre-etape-quantites">Quelles <em>quantités</em>, et est-ce urgent ?</h1>
         <p style="opacity:0.6;margin:0 0 var(--space-6);text-align:center">Ajustez les quantités pour chaque produit sélectionné.</p>
         <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
-          <div id="limites-quantites" hidden></div>
           <div id="zone-quantites" style="display:grid;gap:var(--space-3)"></div>
-          <div id="retour-quantites" aria-live="polite"></div>
           <label class="case-toggle" hidden id="bloc-urgent" style="margin-top:var(--space-4)">
             <span style="display:flex;align-items:center;gap:8px"><svg class="icone-eclair" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>Commande urgente<span style="opacity:0.6">— à cocher seulement si le besoin est immédiat</span></span>
             <span class="rp-interrupteur"><input type="checkbox" id="toggle-urgent" aria-label="Commande urgente"><span class="rp-interrupteur-piste"></span></span>
@@ -318,17 +261,18 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
         <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-6)">
           <div class="field presc">
             <label for="champ-prescripteur" id="presc-label">Personne prescriptrice</label>
-            <div id="presc-liste" class="pc">
-              <button type="button" class="pc-btn" id="champ-prescripteur" aria-haspopup="listbox" aria-expanded="false" aria-controls="presc-options" aria-labelledby="presc-label presc-choix" aria-describedby="presc-aide">
-                <span id="presc-choix" class="pc-choix"></span>
-                <svg class="pc-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-              </button>
-              <div class="pc-liste" id="presc-options" role="listbox" aria-labelledby="presc-label" tabindex="-1" hidden></div>
-            </div>
-            <div id="presc-nouveau" hidden>
-              <div class="presc-nouveau"><span class="pc-av" style="--c:color-mix(in srgb, #FECC38 55%, #fff)" aria-hidden="true">+</span>
-                <input type="text" class="input" id="champ-responsable" placeholder="Prénom NOM" autocomplete="name" maxlength="120" aria-labelledby="presc-label" aria-describedby="presc-aide"></div>
-              <button type="button" class="presc-lien" id="presc-retour" hidden>← Choisir dans la liste</button>
+            <div class="presc-carte">
+              <span data-ill="personne" class="ill presc-ill" aria-hidden="true"></span>
+              <div class="presc-corps">
+                <div id="presc-liste">
+                  <select class="input" id="champ-prescripteur" aria-describedby="presc-aide"></select>
+                  <button type="button" class="presc-lien" id="presc-autre">Ce n’est pas moi — ajouter une autre personne</button>
+                </div>
+                <div id="presc-nouveau" hidden>
+                  <input type="text" class="input" id="champ-responsable" placeholder="Prénom NOM" autocomplete="name" maxlength="120" aria-labelledby="presc-label" aria-describedby="presc-aide">
+                  <button type="button" class="presc-lien" id="presc-retour" hidden>← Choisir dans la liste</button>
+                </div>
+              </div>
             </div>
             <div id="presc-aide" style="opacity:0.55;margin-top:6px">La personne de votre structure qui oriente et suit cette demande. Un nouveau nom est retenu pour vos prochaines commandes.</div>
           </div>
@@ -410,7 +354,7 @@ try{ if(sessionStorage.getItem('cvdl-code-structure')) document.documentElement.
 </script>
 <script>
 const $ = id => document.getElementById(id);
-const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
+const API = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api';
 
 function jsonp(params){ return fetch(API + '?' + new URLSearchParams(params)).then(r => r.json()); }
 function poster(data){
@@ -442,7 +386,7 @@ function posterAvecProgressionCommande(data, onProgression){
 function echapper(s){
   const d = document.createElement('div');
   d.textContent = String(s == null ? '' : s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return d.innerHTML;
 }
 function isoVersDateFr(iso){
   if(!iso) return '';
@@ -467,64 +411,7 @@ const etat = {
 /** Règles du formulaire : lues dans la politique de commande calculée par le serveur
  *  (regles/politique.js) — le formulaire ne décide plus lui-même ce qu'un type a le droit de
  *  faire. Repli sur les anciennes cases si le serveur n'envoie pas encore de politique. */
-/* Limites en cours affichées au-dessus du catalogue : « mode stock bas » (toutes les structures)
-   et « stock restreint » (structure en dépôt-vente). Le serveur les applique de toute façon. */
-function afficherLimitesCommande(v){
-  etat.modeStockBas = v.modeStockBas || null;
-  const blocs = [];
-  const msb = v.modeStockBas;
-  if(msb){
-    const limites = [
-      msb.maxParCommande ? `<li><b>${msb.maxParCommande} article${msb.maxParCommande > 1 ? 's' : ''} au maximum</b> par commande</li>` : '',
-      msb.maxParProduit ? `<li><b>${msb.maxParProduit} au maximum</b> pour un même produit</li>` : '',
-    ].filter(Boolean).join('');
-    blocs.push(`<div class="alerte-stock-bas" role="alert">
-      <span class="asb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
-      <div class="asb-txt">
-        <div class="asb-sur">Attention</div>
-        <h2>Stock bas en ce moment</h2>
-        <p>Les quantités sont limitées pour que chaque structure puisse être servie.</p>
-        ${limites ? `<ul>${limites}</ul>` : ''}
-        ${msb.message ? `<p class="asb-message">${echapper(msb.message)}</p>` : ''}
-      </div>
-    </div>`);
-  }
-  const sr = v.stockRestreint;
-  if(sr && sr.plafond !== null && sr.plafond !== undefined){
-    blocs.push(`<div class="msg" style="margin-bottom:var(--space-4);background:var(--color-warn-100);font-weight:500"><span>${sr.restant > 0 ? `<b>Stock restreint :</b> vous pouvez encore commander ${sr.restant} appareil${sr.restant > 1 ? 's' : ''} (${sr.occupe} déjà en dépôt ou en commande sur ${sr.plafond}).`
-      : `<b>Stock restreint :</b> le plafond de matériel en dépôt est atteint (${sr.plafond}). Déclarez vos ventes dans « Ma flotte » pour pouvoir commander à nouveau.`}</span></div>`);
-  }
-  const zone = $('bandeau-limites-commande');
-  zone.hidden = !blocs.length;
-  zone.innerHTML = blocs.join('');
-}
-/* ── Quantités : maximum par produit (fiche produit / réglage par défaut, stock, mode stock
-   bas, stock restreint — déjà combinés par le serveur dans quantiteMax) et total par commande
-   (mode stock bas). Bloqué ici, à l'étape Quantités, et plus seulement à l'envoi. ── */
-function maxPourProduit(nom){
-  const p = (etat.produits || []).find(x => x.nom === nom) || {};
-  let m = parseInt(p.quantiteMax, 10) > 0 ? parseInt(p.quantiteMax, 10) : Infinity;
-  const stock = parseInt(p.stock, 10);
-  if(Number.isFinite(stock) && stock > 0) m = Math.min(m, stock);
-  return m;
-}
-function maxParCommande(){
-  const m = etat.modeStockBas && parseInt(etat.modeStockBas.maxParCommande, 10);
-  return m > 0 ? m : Infinity;
-}
-function totalSelection(){ return Object.values(etat.selection).reduce((t, q) => t + (parseInt(q, 10) || 0), 0); }
-/** Message d'erreur si la sélection dépasse une limite, sinon ''. */
-function erreurQuantites(){
-  const max = maxParCommande(), total = totalSelection();
-  if(total > max) return `Stock bas : ${max} article${max > 1 ? 's' : ''} au maximum par commande pour le moment (vous en demandez ${total}). Retirez-en ${total - max}.`;
-  for(const nom of Object.keys(etat.selection)){
-    const m = maxPourProduit(nom);
-    if(etat.selection[nom] > m) return `« ${nom} » : ${m} au maximum par commande pour le moment.`;
-  }
-  return '';
-}
 function appliquerPolitique(v){
-  try{ afficherLimitesCommande(v); }catch(e){ /* non bloquant */ }
   const pol = v.politique;
   if(pol){
     etat.typeStructure = pol.type;
@@ -553,81 +440,38 @@ function appliquerPolitique(v){
     etat.autoriseUrgent = !!v.dateSouhaitee;
   }
 }
-/* ── Personne prescriptrice : menu déroulant illustré (noms connus de la structure : responsable
-   habituel + prescripteurs de ses commandes, avec leur nombre de commandes), ou « Quelqu'un
-   d'autre » pour saisir un nouveau nom (retenu ensuite avec la commande). Clavier : ↑ ↓,
-   Entrée, Échap, Début/Fin. ── */
-const COULEURS_PRESC = ['color-mix(in srgb, #00ACB0 45%, #fff)', 'color-mix(in srgb, #E62460 35%, #fff)', 'color-mix(in srgb, #FECC38 55%, #fff)'];
-let prescListe = [], prescIndex = 0, prescActif = 0;
-function initialesPresc(nom){
-  const mots = String(nom || '').trim().split(/\s+/).filter(Boolean);
-  return ((mots[0] || '?')[0] + (mots.length > 1 ? mots[mots.length - 1][0] : '')).toUpperCase();
-}
-function detailPresc(p){
-  const date = String(p.derniere || '').replace(/\/(\d{4})$/, (m, a) => a === String(new Date().getFullYear()) ? '' : m);
-  const cmd = p.commandes ? `${p.commandes} commande${p.commandes > 1 ? 's' : ''}${date ? (p.commandes > 1 ? ` · la dernière le ${date}` : ` · le ${date}`) : ''}` : '';
-  return [p.habituel ? 'Responsable de la structure' : '', cmd].filter(Boolean).join(' · ') || 'Déjà indiqué pour votre structure';
-}
-function avatarPresc(p, i){ return `<span class="pc-av" style="--c:${COULEURS_PRESC[i % COULEURS_PRESC.length]}" aria-hidden="true">${echapper(initialesPresc(p.nom))}</span>`; }
-function preparerPrescripteurs(noms, details){
-  const parNom = {}; (details || []).forEach(d => { parNom[d.nom] = d; });
-  prescListe = (noms || []).filter(Boolean).map(n => parNom[n] || { nom: n });
-  prescIndex = 0;
-  rendrePrescripteurs();
-  modePrescripteur(prescListe.length ? 'liste' : 'nouveau', prescListe.length > 0);
-}
-function rendrePrescripteurs(){
-  const p = prescListe[prescIndex];
-  $('presc-choix').outerHTML = p ? `<span id="presc-choix" class="pc-choix" style="display:contents">${avatarPresc(p, prescIndex)}<span class="pc-txt"><b>${echapper(p.nom)}</b><small>${echapper(detailPresc(p))}</small></span></span>` : '<span id="presc-choix"></span>';
-  $('presc-options').innerHTML = prescListe.map((q, i) => `<div class="pc-opt${i === prescActif ? ' actif' : ''}" role="option" id="presc-opt-${i}" data-presc="${i}" aria-selected="${i === prescIndex}">
-      ${avatarPresc(q, i)}<span class="pc-txt"><b>${echapper(q.nom)}</b><small>${echapper(detailPresc(q))}</small></span>
-      ${i === prescIndex ? '<span class="pc-coche" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>' : ''}
-    </div>`).join('')
-    + `<div class="pc-sep" role="presentation"></div><div class="pc-opt pc-autre${prescActif === prescListe.length ? ' actif' : ''}" role="option" id="presc-opt-${prescListe.length}" data-presc="autre" aria-selected="false"><span class="pc-av" aria-hidden="true">+</span><span class="pc-txt"><b>Quelqu’un d’autre…</b><small>Saisir un nouveau nom, retenu pour vos prochaines commandes</small></span></div>`;
-  $('presc-options').setAttribute('aria-activedescendant', 'presc-opt-' + prescActif);
-}
-function ouvrirPresc(ouvrir){
-  $('presc-options').hidden = !ouvrir;
-  $('champ-prescripteur').setAttribute('aria-expanded', String(ouvrir));
-  if(ouvrir){ prescActif = prescIndex; rendrePrescripteurs(); $('presc-options').focus(); const el = $('presc-opt-' + prescActif); if(el) el.scrollIntoView({ block: 'nearest' }); }
-}
-function choisirPresc(i){
-  if(i === 'autre' || i >= prescListe.length){ ouvrirPresc(false); modePrescripteur('nouveau', true); $('champ-responsable').focus(); return; }
-  prescIndex = i; ouvrirPresc(false); rendrePrescripteurs(); $('champ-prescripteur').focus();
+/* ── Personne prescriptrice : liste des noms connus de la structure (menu déroulant), ou
+   « Ce n'est pas moi » pour en saisir un autre (retenu ensuite avec la commande). ── */
+const PRESC_AUTRE = '__autre__';
+function preparerPrescripteurs(noms){
+  const sel = $('champ-prescripteur');
+  const liste = (noms || []).filter(Boolean);
+  sel.innerHTML = liste.map(n => `<option value="${echapper(n)}">${echapper(n)}</option>`).join('')
+    + `<option value="${PRESC_AUTRE}">+ Quelqu’un d’autre…</option>`;
+  modePrescripteur(liste.length ? 'liste' : 'nouveau', liste.length > 0);
 }
 function modePrescripteur(mode, retourPossible){
   const nouveau = mode === 'nouveau';
   $('presc-liste').hidden = nouveau;
   $('presc-nouveau').hidden = !nouveau;
   if(retourPossible !== undefined) $('presc-retour').hidden = !retourPossible;
-  if(nouveau) $('champ-responsable').value = '';
+  if(nouveau){
+    $('champ-responsable').value = '';
+    const sel = $('champ-prescripteur');
+    if(sel.value === PRESC_AUTRE && sel.options.length > 1) sel.selectedIndex = 0;
+  }
 }
 function prescripteurChoisi(){
   if(!$('presc-nouveau').hidden) return $('champ-responsable').value.trim();
-  const p = prescListe[prescIndex];
-  return p ? p.nom.trim() : '';
+  const v = $('champ-prescripteur').value;
+  return v === PRESC_AUTRE ? '' : v.trim();
 }
 document.addEventListener('click', e => {
-  if(e.target.closest('#champ-prescripteur')){ ouvrirPresc($('presc-options').hidden); return; }
-  const opt = e.target.closest('[data-presc]');
-  if(opt){ choisirPresc(opt.dataset.presc === 'autre' ? 'autre' : +opt.dataset.presc); return; }
-  if(!e.target.closest('#presc-liste') && !$('presc-options').hidden) ouvrirPresc(false);
+  if(e.target.closest('#presc-autre')){ modePrescripteur('nouveau', true); $('champ-responsable').focus(); }
   if(e.target.closest('#presc-retour')){ modePrescripteur('liste'); $('champ-prescripteur').focus(); }
 });
-document.addEventListener('keydown', e => {
-  const liste = $('presc-options');
-  if(e.target.id === 'champ-prescripteur' && ['ArrowDown', 'ArrowUp'].includes(e.key)){ e.preventDefault(); ouvrirPresc(true); return; }
-  if(liste.hidden || !liste.contains(document.activeElement)) return;
-  const max = prescListe.length; // dernier = « Quelqu'un d'autre »
-  if(e.key === 'ArrowDown'){ e.preventDefault(); prescActif = Math.min(max, prescActif + 1); }
-  else if(e.key === 'ArrowUp'){ e.preventDefault(); prescActif = Math.max(0, prescActif - 1); }
-  else if(e.key === 'Home'){ e.preventDefault(); prescActif = 0; }
-  else if(e.key === 'End'){ e.preventDefault(); prescActif = max; }
-  else if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choisirPresc(prescActif === max ? 'autre' : prescActif); return; }
-  else if(e.key === 'Escape' || e.key === 'Tab'){ ouvrirPresc(false); if(e.key === 'Escape'){ e.preventDefault(); $('champ-prescripteur').focus(); } return; }
-  else return;
-  rendrePrescripteurs();
-  const el = $('presc-opt-' + prescActif); if(el) el.scrollIntoView({ block: 'nearest' });
+document.addEventListener('change', e => {
+  if(e.target.id === 'champ-prescripteur' && e.target.value === PRESC_AUTRE){ modePrescripteur('nouveau', true); $('champ-responsable').focus(); }
 });
 
 function etapesActives(){
@@ -687,7 +531,6 @@ function majBoutonSuivant(){
   if(cle === '0') btn.disabled = false;
   else if(cle === '1') btn.disabled = Object.keys(etat.selection).length === 0;
   else if(cle === 'paiement') btn.disabled = !$('zone-paiement').hidden && !etat.moyenPaiement;
-  else if(cle === 'quantites') btn.disabled = !!erreurQuantites();
   else btn.disabled = false;
   majRecapLateral();
 }
@@ -703,21 +546,10 @@ $('btn-suivant').addEventListener('click', async () => {
   if(cle === '0'){ await verifierCode(); return; }
   if(cle === '1'){
     if(!Object.keys(etat.selection).length) return;
-    // Plus de produits choisis que d'articles autorisés : chacun compte au moins pour 1.
-    const nbChoisis = Object.keys(etat.selection).length, maxCmd = maxParCommande();
-    if(nbChoisis > maxCmd){
-      const zone = $('retour-selection') || (() => { const d = document.createElement('div'); d.id = 'retour-selection'; d.setAttribute('aria-live', 'polite'); $('grille-produits').closest('.card').after(d); return d; })();
-      zone.innerHTML = `<div class="msg msg-erreur" style="margin-top:var(--space-3)">Stock bas : ${maxCmd} article${maxCmd > 1 ? 's' : ''} au maximum par commande. Vous avez choisi ${nbChoisis} produits : retirez-en ${nbChoisis - maxCmd}.</div>`;
-      zone.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      return;
-    }
-    if($('retour-selection')) $('retour-selection').innerHTML = '';
     construireEtapeQuantites();
     indexEtapeActuelle++; afficherEtape(); return;
   }
   if(cle === 'quantites'){
-    const err = erreurQuantites();
-    if(err){ construireEtapeQuantites(); $('retour-quantites').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
     construireZonePersonnesBo();
     construireRecap();
     indexEtapeActuelle++; afficherEtape(); return;
@@ -760,7 +592,7 @@ async function verifierCode(){
     etat.nomStructure = v.nom;
     appliquerPolitique(v);
     etat.produits = (r.catalogue && r.catalogue.produits) || [];
-    preparerPrescripteurs(v.prescripteurs || (v.responsableHabituel ? [v.responsableHabituel] : []), v.prescripteursDetails);
+    preparerPrescripteurs(v.prescripteurs || (v.responsableHabituel ? [v.responsableHabituel] : []));
     try{ sessionStorage.setItem('cvdl-code-structure', code); }catch(e){}
     construireGrilleProduits();
     indexEtapeActuelle = etapesActives().indexOf('1');
@@ -874,45 +706,20 @@ $('grille-produits').addEventListener('click', e => {
 function construireEtapeQuantites(){
   const zone = $('zone-quantites');
   const noms = Object.keys(etat.selection);
-  const maxCmd = maxParCommande(), total = totalSelection();
-  const resteCmd = maxCmd - total;
-  zone.innerHTML = noms.length ? noms.map(nom => {
-    const q = etat.selection[nom], m = maxPourProduit(nom);
-    const plusBloque = q >= m || resteCmd <= 0;
-    const trop = q > m;
-    const note = trop ? `<span class="qte-note ko">${m} au maximum</span>`
-      : q >= m && Number.isFinite(m) ? `<span class="qte-note">Maximum atteint (${m})</span>`
-      : resteCmd <= 0 && Number.isFinite(maxCmd) ? '<span class="qte-note">Limite de la commande atteinte</span>'
-      : Number.isFinite(m) ? `<span class="qte-note discret">jusqu’à ${m}</span>` : '';
-    return `
-    <div class="ligne-quantite${trop ? ' qte-ko' : ''}">
+  zone.innerHTML = noms.length ? noms.map(nom => `
+    <div class="ligne-quantite">
       <span class="icone-quantite">${illustrationProduitCommande(nom, ((etat.produits || []).find(x => x.nom === nom) || {}).icone, 42)}</span>
-      <span class="qte-nom"><span style="font-weight:700;font-size:14px">${echapper(nom)}</span>${note}</span>
+      <span style="font-weight:700;font-size:14px">${echapper(nom)}</span>
       <div class="stepper-quantite">
         <button type="button" data-dec="${echapper(nom)}" aria-label="Retirer une unité">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>
         </button>
-        <span class="valeur-quantite">${q}</span>
-        <button type="button" data-inc="${echapper(nom)}" aria-label="Ajouter une unité" ${plusBloque ? 'disabled' : ''}>
+        <span class="valeur-quantite">${etat.selection[nom]}</span>
+        <button type="button" data-inc="${echapper(nom)}" aria-label="Ajouter une unité">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       </div>
-    </div>`;
-  }).join('') : '<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucun produit sélectionné à l\'étape précédente.</div>';
-
-  // Compteur « x / max articles » quand le mode stock bas limite la commande.
-  const lim = $('limites-quantites');
-  lim.hidden = !Number.isFinite(maxCmd) || !noms.length;
-  if(!lim.hidden){
-    const pct = Math.min(100, Math.round(total / maxCmd * 100));
-    lim.innerHTML = `<div class="qte-compteur${total > maxCmd ? ' ko' : total === maxCmd ? ' plein' : ''}">
-      <span class="asb-mini" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></svg></span>
-      <span class="qte-compteur-txt"><b>Stock bas : ${total} / ${maxCmd} article${maxCmd > 1 ? 's' : ''}</b><small>${total > maxCmd ? `Retirez ${total - maxCmd} article${total - maxCmd > 1 ? 's' : ''} pour continuer.` : total === maxCmd ? 'Vous avez atteint le maximum pour cette commande.' : `Encore ${maxCmd - total} possible${maxCmd - total > 1 ? 's' : ''}.`}</small></span>
-      <span class="qte-jauge"><i style="width:${pct}%"></i></span>
-    </div>`;
-  }
-  const err = erreurQuantites();
-  $('retour-quantites').innerHTML = err ? `<div class="msg msg-erreur" style="margin-top:var(--space-3)">${echapper(err)}</div>` : '';
+    </div>`).join('') : '<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucun produit sélectionné à l\'étape précédente.</div>';
 
   $('titre-etape-quantites').innerHTML = etat.autoriseUrgent
     ? 'Quelles <em>quantités</em>, et est-ce urgent ?'
@@ -920,17 +727,11 @@ function construireEtapeQuantites(){
   $('bloc-urgent').hidden = !etat.autoriseUrgent;
   $('toggle-urgent').checked = etat.urgent;
   $('bloc-urgent').classList.toggle('urgent-actif', etat.urgent);
-  if(typeof majBoutonSuivant === 'function' && etapesActives()[indexEtapeActuelle] === 'quantites') majBoutonSuivant();
 }
 $('zone-quantites').addEventListener('click', e => {
   const inc = e.target.closest('[data-inc]');
   const dec = e.target.closest('[data-dec]');
-  if(inc){
-    const nom = inc.dataset.inc;
-    const q = etat.selection[nom] || 1;
-    if(q >= maxPourProduit(nom) || totalSelection() >= maxParCommande()) return;
-    etat.selection[nom] = q + 1; construireEtapeQuantites(); construireRecap();
-  }
+  if(inc){ etat.selection[inc.dataset.inc] = Math.min(5, (etat.selection[inc.dataset.inc] || 1) + 1); construireEtapeQuantites(); construireRecap(); }
   if(dec){
     const nom = dec.dataset.dec;
     if(etat.selection[nom] > 1) etat.selection[nom]--;
@@ -1233,8 +1034,6 @@ async function envoyerCommande(){
         $('lien-suivre-commande').href = tutoVu ? `suivi.html?ref=${ref}` : `portail-structure.html?tuto=commande&ref=${ref}`;
       })();
       $('confirmation-2fa').hidden = etat.moyenPaiement !== 'Paiement en ligne (CB)';
-      // Avis rapide (retours.js) : une seule question, une fois la commande envoyée.
-      if(window.CvdlRetours) CvdlRetours.demanderAvis(document.querySelector('#ecran-confirmation .card'), { parcours: 'commande', reference: r.reference, question: 'Passer cette commande, c’était simple ?' });
     }else{
       $('retour-envoi').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Envoi impossible.')}</div>`;
       $('btn-envoyer-commande').disabled = false;

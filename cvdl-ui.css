@@ -106,8 +106,6 @@ body > .btn-deconnexion-fixe{ position:fixed; top:14px; right:16px; z-index:61; 
 .cvdl-titre{ display:flex; align-items:flex-end; gap:18px; margin:0 0 28px; text-align:left; }
 .cvdl-titre .pk-titre-ill{ width:72px !important; height:72px !important; margin:0 !important; flex:none; }
 .cvdl-titre-txt{ min-width:0; }
-/* Titre sans sous-titre : l'illustration se centre sur le titre (sinon, alignée en bas, elle paraît flotter au-dessus). */
-.cvdl-titre:not(:has(.cvdl-titre-txt p)){ align-items:center; }
 .cvdl-titre-txt h1, .cvdl-titre-txt h2{ margin:0 !important; text-align:left !important; font-size:clamp(26px, 3.2vw, 36px) !important; }
 .cvdl-titre-txt p{ margin:6px 0 0 !important; text-align:left !important; opacity:.75; font-size:15px !important; }
 .cvdl-surtitre, .pk-lab, .card-kicker, .kicker, .pv-lab, .pv-une-k{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; }
@@ -855,8 +853,6 @@ html body[data-famille] .barre-etapes .progression{ display:flex; align-items:ce
 .cm-etape.avenir .cm-pt{ border-style:dashed; } .cm-etape.avenir b{ opacity:.6; }
 .cm-lien{ flex:1; min-width:16px; border-top:var(--pointille); }
 @media (max-width:760px){ .cm-etape:not(.cours) b{ display:none; } }
-/* Téléphone : jusqu'à 6 étapes (SAV avec dépannage) tiennent sans défilement horizontal. */
-@media (max-width:480px){ html body[data-famille] .pk-barre-etapes .progression{ gap:4px; } .cm-lien{ min-width:3px; } .cm-etape{ gap:5px; } .cm-etape b{ font-size:12.5px; } .cm-pt{ width:26px; height:26px; font-size:12px; } }
 /* Colonne principale + récapitulatif collant */
 .cm-grille{ display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:28px; align-items:start; }
 .cm-grille:has(.cm-recap[hidden]){ grid-template-columns:minmax(0,1fr); }

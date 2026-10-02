@@ -24,11 +24,9 @@ function urlSure(u){
   if(!/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^\/\//.test(v)) return v; // relatif (même site)
   return '#';
 }
-const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
-// L'adresse de l'API est fixe : plus aucune substitution libre depuis le localStorage (un script
-// malveillant aurait pu y rediriger tous les appels, mot de passe compris). Seule exception : le
-// mode démo (demo.html) bascule vers la fonction jumelle « cvdl-api-demo », adresse elle aussi
-// écrite en dur ici, jamais lue du stockage — et le bandeau « Mode démo » le signale partout.
+const API = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api';
+// L'adresse de l'API est fixe : plus aucune substitution possible depuis le localStorage
+// (un script malveillant aurait pu y rediriger tous les appels, mot de passe compris).
 function urlApiActive(){ return API; }
 /** Le mot de passe admin ne voyage plus dans l'URL (journaux, historique) mais dans l'en-tête
  *  X-CVDL-Admin (encodé : un en-tête HTTP n'accepte pas tous les caractères). */
@@ -572,31 +570,6 @@ const state = {
    Connexion
    ============================================================ */
 $('btn-connexion').addEventListener('click', connecter);
-
-/** « Se connecter avec Google » (comptes admin de l'onglet Équipe) + connexion automatique :
- *  si le navigateur a déjà une session Google autorisée (et un premier consentement donné),
- *  One Tap (auto_select) connecte sans clic. Le mot de passe reste l'accès de secours. */
-async function preparerGoogleAdmin(automatique){
-  const masquer = () => { $('rp-google').remove(); $('rp-google-ou').remove(); };
-  const c = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'auth-config' }) }).then(r => r.json()).catch(() => ({}));
-  if(!c.clientId) return masquer();
-  const s = document.createElement('script');
-  s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
-  s.onerror = masquer;
-  s.onload = () => {
-    $('rp-google').style.display = 'flex'; $('rp-google-ou').style.display = 'flex';
-    google.accounts.id.initialize({ client_id: c.clientId, hd: c.domaine, auto_select: true, ux_mode: 'popup', cancel_on_tap_outside: false, callback: async rep => {
-      $('retour-connexion').innerHTML = '';
-      const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'auth-google', credential: rep.credential }) }).then(x => x.json()).catch(() => ({ ok: false, erreur: 'Connexion au serveur impossible.' }));
-      if(r.ok && r.compte && ['admin', 'compta'].includes(r.compte.role)) return connecter(r.jeton);
-      const msg = r.ok ? 'Ce compte a le rôle « Support SAV » : utilisez l’outil Support SAV (support.html).' : (r.erreur || 'Connexion refusée.');
-      $('retour-connexion').innerHTML = '<div class="msg msg-erreur">' + echapper(msg) + '</div>';
-    } });
-    google.accounts.id.renderButton($('rp-google'), { theme: 'outline', size: 'large', text: 'signin_with', shape: 'pill', locale: 'fr', width: 280 });
-    if(automatique) google.accounts.id.prompt();
-  };
-  document.head.appendChild(s);
-}
 $('mdp').addEventListener('keydown', e => { if(e.key === 'Enter') connecter(); });
 
 async function connecter(valeurForcee){
@@ -606,10 +579,7 @@ async function connecter(valeurForcee){
   $('btn-connexion').textContent = 'Connexion…';
   $('retour-connexion').innerHTML = '';
   try{
-    // Jeton de compte Google (j2) : on garde l'identité, validée par auth-moi (réservé aux admins).
-    const estCompte = mdp.startsWith('j2.');
-    let r = await jsonp(estCompte ? { action: 'auth-moi', password: mdp } : { action: 'login', password: mdp });
-    if(estCompte && r && r.ok && (!r.compte || !['admin', 'compta'].includes(r.compte.role))) r = { ok: false, erreur: 'Ce compte a le rôle « Support SAV » : utilisez l’outil Support SAV (support.html).' };
+    const r = await jsonp({ action: 'login', password: mdp });
     if(!r || !r.ok){
       // Reconnexion silencieuse ratée (mot de passe changé entre-temps, session expirée...) :
       // le formulaire doit réapparaître avec l'erreur — sinon la page reste bloquée sur le
@@ -625,18 +595,17 @@ async function connecter(valeurForcee){
       return;
     }
     // Jeton de session signé (12 h) : c'est lui qui est gardé et renvoyé, jamais le mot de passe.
-    motDePasse = estCompte ? mdp : (r.jeton || mdp);
+    motDePasse = r.jeton || mdp;
     $('mdp').value = '';
-    try{ sessionStorage.removeItem('cvdl-admin-password'); sessionStorage.setItem('cvdl-admin-jeton', motDePasse); }catch(e){}
-    state.role = estCompte ? r.compte.role : (r.role || 'admin');
-    state.compte = estCompte ? r.compte : null;
+    try{ sessionStorage.removeItem('cvdl-admin-password'); if(r.jeton) sessionStorage.setItem('cvdl-admin-jeton', r.jeton); }catch(e){}
+    state.role = r.role || 'admin';
     // La fenêtre de connexion (et son flou) reste affichée pendant tout le chargement des
     // données — la masquer avant laissait voir l'appli vide un court instant.
     $('btn-connexion').textContent = 'Chargement des données…';
     await chargerTout();
     const snDepart = lireHash().sn;
-    const ongletDepart = lireHash().onglet || (state.role !== 'admin' ? ONGLETS_COMPTA[0] : 'dashboard');
-    state.activeTab = (state.role === 'admin' || ONGLETS_COMPTA.includes(ongletDepart)) ? ongletDepart : ONGLETS_COMPTA[0];
+    const ongletDepart = lireHash().onglet || (state.role !== 'admin' ? 'factures' : 'dashboard');
+    state.activeTab = (state.role === 'admin' || ongletDepart === 'factures') ? ongletDepart : 'factures';
     history.replaceState({ onglet: state.activeTab }, '', '#' + state.activeTab);
     $('connexion').hidden = true;
     render();
@@ -657,16 +626,15 @@ async function chargerTout(){
   // limite:-1 (commandes) / limite:0 (sav, devis, factures) → tout l'historique, pas une page :
   // c'est le vrai comportement du back (voir routes/*.js), pas une limite de 500 qu'on s'était
   // fixée à tort — nécessaire pour que les statistiques portent sur l'ensemble des données.
-  const compta = state.role === 'compta'; // rôle Comptabilité : ni SAV ni réglages
   const [rc, rs, rss, rst, rd, rf, rp, rr, rdi] = await Promise.all([
     jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }).catch(() => null),
-    compta ? null : jsonp({ action: 'sav-list', password: motDePasse, limite: 0 }).catch(() => null),
-    compta ? null : jsonp({ action: 'sav-statuts-list', password: motDePasse }).catch(() => null),
+    jsonp({ action: 'sav-list', password: motDePasse, limite: 0 }).catch(() => null),
+    jsonp({ action: 'sav-statuts-list', password: motDePasse }).catch(() => null),
     jsonp({ action: 'structures', password: motDePasse }).catch(() => null),
     jsonp({ action: 'devis', password: motDePasse, limite: 0 }).catch(() => null),
     jsonp({ action: 'factures', password: motDePasse, limite: 0 }).catch(() => null),
     jsonp({ action: 'produits', password: motDePasse }).catch(() => null),
-    compta ? null : jsonp({ action: 'reglages', password: motDePasse }).catch(() => null),
+    jsonp({ action: 'reglages', password: motDePasse }).catch(() => null),
     jsonp({ action: 'distributions', password: motDePasse }).catch(() => null)
   ]);
   if(rc && rc.ok) state.commandes = rc.commandes || [];
@@ -678,16 +646,9 @@ async function chargerTout(){
   if(rp && rp.ok) state.produits = rp.produits || [];
   if(rr && rr.ok) state.reglages = rr;
   if(rdi && rdi.ok){ state.distributions = rdi.programmes || []; state.rattachements = rdi.rattachements || []; }
-  if(!compta){
-    chargerDepotVente(); // non bloquant : alimente l'onglet Stock, les fiches et la cloche
-    chargerModeStockBas(); // non bloquant : bouton / bandeau « Mode stock bas » de l'onglet Stock
-  }
-  if(typeof fin !== 'undefined') fin.d = null; // l'onglet Finances se recharge avec les nouvelles données
+  chargerDepotVente(); // non bloquant : alimente l'onglet Stock, les fiches et la cloche
   etat('À jour', 'succes');
 }
-
-/** Rôle « Comptabilité » (compte Google) : seuls ces onglets, le premier à l'ouverture. */
-const ONGLETS_COMPTA = ['finance', 'factures'];
 
 /* ============================================================
    Rendu — nav + shell
@@ -696,17 +657,13 @@ const NAV_DEFS = [
   { key: 'dashboard', label: 'Tableau de bord', ic: 'dashboard' },
   { key: 'commandes', label: 'Commandes', ic: 'cart' },
   { key: 'sav', label: 'SAV', ic: 'wrench' },
-  { key: 'depannage', label: 'Dépannage', ic: 'loupe_diagnostic' }, // arbres de décision avant SAV (depannage-admin.js)
   { key: 'factures', label: 'Devis / Factures', ic: 'receipt' },
-  { key: 'finance', label: 'Finances', ic: 'carte_paiement' }, // facturé / encaissé, territoires, impayés, relances (finance-admin.js)
   { key: 'stock', label: 'Stock', ic: 'package' },
   { key: 'passeport', label: 'Passeport matériel', ic: 'passeport' },
   { key: 'structures', label: 'Structures', ic: 'building' },
   { key: 'distribution', label: 'Distribution', ic: 'truck' },
   { key: 'calendrier', label: 'Calendrier', ic: 'calendrier' },
   { key: 'bilan', label: 'Statistiques', ic: 'stats' },
-  { key: 'retours', label: 'Retours', ic: 'bulle' }, // avis et erreurs des utilisateurs (retours-admin.js)
-  { key: 'equipe', label: 'Équipe', ic: 'personne' }, // comptes Google de l'équipe, rôles (equipe-admin.js)
   { key: 'reglages', label: 'Réglages', ic: 'gear' }
 ];
 
@@ -729,7 +686,6 @@ function naviguerVersOnglet(cle, remplacer){
 }
 window.addEventListener('popstate', e => {
   const cle = (e.state && e.state.onglet) || lireHash().onglet || 'dashboard';
-  if(state.role === 'compta' && !ONGLETS_COMPTA.includes(cle)) return; // rôle Comptabilité : onglets financiers seulement
   if(NAV_DEFS.some(n => n.key === cle) || cle === 'dashboard'){
     state.activeTab = cle; state.highlightRef = null; state.modal = null; render();
     const sn = lireHash().sn;
@@ -737,9 +693,9 @@ window.addEventListener('popstate', e => {
   }
 });
 /* En-tête des onglets au format du kit : illustration au-dessus du titre (portail-ui.js). */
-const ILLUSTRATION_ONGLET = { finance: 'tarifs', dashboard: 'tableau', commandes: 'commandes', sav: 'suiviSav', depannage: 'aide', retours: 'enquete', equipe: 'structure', factures: 'facture', stock: 'stock', passeport: 'passeport', structures: 'structures', distribution: 'distribution', calendrier: 'calendrier', bilan: 'stats', reglages: 'reglages' };
+const ILLUSTRATION_ONGLET = { dashboard: 'tableau', commandes: 'commandes', sav: 'suiviSav', factures: 'facture', stock: 'stock', passeport: 'passeport', structures: 'structures', distribution: 'distribution', calendrier: 'calendrier', bilan: 'stats', reglages: 'reglages' };
 /** Sur-titres des en-têtes de page (maquette admin : illustration + sur-titre + titre). */
-const SURTITRE_ONGLET = { finance: 'Comptabilité', dashboard: 'Pilotage', commandes: 'Gestion', sav: 'Après-vente', depannage: 'Après-vente', retours: 'Utilisateurs', equipe: 'Accès', factures: 'Comptabilité', stock: 'Matériel',
+const SURTITRE_ONGLET = { dashboard: 'Pilotage', commandes: 'Gestion', sav: 'Après-vente', factures: 'Comptabilité', stock: 'Matériel',
   passeport: 'Traçabilité', structures: 'Partenaires', distribution: 'Pilotage', calendrier: 'Planning', bilan: 'Pilotage', stats: 'Pilotage', reglages: 'Plateforme' };
 function decorerEnTeteOnglet(main, onglet){
   const h1 = main.querySelector('h1');
@@ -769,7 +725,7 @@ function teinteOnglet(cle){ const i = NAV_DEFS.findIndex(n => n.key === cle); re
 let derniereCleModale = '';
 let derniereCleVue = '';
 function render(){
-  const navsVisibles = state.role === 'admin' ? NAV_DEFS : NAV_DEFS.filter(n => ONGLETS_COMPTA.includes(n.key));
+  const navsVisibles = state.role === 'admin' ? NAV_DEFS : NAV_DEFS.filter(n => n.key === 'factures');
   const nbUrgentes = commandesUrgentes().length;
   const nbSavOuverts = savOuvertsListe().length;
   $('rp-nav').innerHTML = navsVisibles.map(n => `
@@ -789,11 +745,7 @@ function render(){
   if(state.activeTab === 'dashboard') main.innerHTML = vueDashboard();
   else if(state.activeTab === 'commandes') main.innerHTML = vueCommandes();
   else if(state.activeTab === 'sav') main.innerHTML = vueSav();
-  else if(state.activeTab === 'depannage') main.innerHTML = (typeof vueDepannage === 'function') ? vueDepannage() : '';
-  else if(state.activeTab === 'retours') main.innerHTML = (typeof vueRetours === 'function') ? vueRetours() : '';
-  else if(state.activeTab === 'equipe') main.innerHTML = (typeof vueEquipe === 'function') ? vueEquipe() : '';
   else if(state.activeTab === 'factures') main.innerHTML = vueFactures();
-  else if(state.activeTab === 'finance') main.innerHTML = (typeof vueFinance === 'function') ? vueFinance() : '';
   else if(state.activeTab === 'stock') main.innerHTML = vueStock();
   else if(state.activeTab === 'passeport') main.innerHTML = vuePasseportMateriel();
   else if(state.activeTab === 'structures') main.innerHTML = vueStructures();
@@ -802,7 +754,6 @@ function render(){
   else if(state.activeTab === 'calendrier') main.innerHTML = vueCalendrierGlobal();
   else if(state.activeTab === 'reglages') main.innerHTML = vueReglages();
   decorerEnTeteOnglet(main, state.activeTab);
-  if(state.activeTab === 'depannage' && typeof apresRenduDepannage === 'function') apresRenduDepannage();
   // Animations d'entrée (chiffres, barres) jouées une seule fois par onglet : un simple
   // rafraîchissement (fermeture de modale, clic, mise à jour) ne les rejoue plus.
   main.classList.toggle('rp-vue-stable', state.activeTab === derniereCleVue);
@@ -1747,11 +1698,11 @@ function construireFeedPriorites(limite){
     ...docsEnAttente.map(d => { const t = mkTag(d.statut, DOC_META); return { ...t, type: d.type, id: d.referenceDevis || d.referenceFacture, structure: d.nomStructure || '', statut: d.statut, urgent: d.statut === 'En retard', date: dateItem(d.date), attrs: `data-feed-goto="factures" data-highlight-doc="${echapper(d.referenceDevis || d.referenceFacture)}"` }; }),
     ...paiementsEnAttente.map(c => ({ icon: icon('receipt', 15), badgeBg: 'var(--color-accent-100)', badgeFg: 'var(--color-accent-700)', tagCls: 'tag-accent', type: 'Paiement', id: c.reference, structure: c.nom, statut: 'Lien de paiement consulté', urgent: true, date: dateItem(c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
     ...livraisonsDepassees.map(c => ({ icon: icon('eclair', 15), badgeBg: 'var(--color-accent-100)', badgeFg: 'var(--color-accent-700)', tagCls: 'tag-accent', type: 'Livraison', id: c.reference, structure: c.nom, statut: 'Date dépassée, à vérifier', urgent: true, date: dateItem(c.dateLivraisonCible), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
-    ...commandesDevisDemande().map(c => ({ icon: icon('file', 15), badgeBg: 'var(--th-bg-fbe3ecff, #FBE3EC)', badgeFg: 'var(--th-tx-c2185bff, #C2185B)', tagCls: '', tagStyle: 'background:var(--th-bg-fbe3ecff, #FBE3EC);color:var(--th-tx-c2185bff, #C2185B)', type: 'Devis', id: c.reference, structure: c.nom, statut: 'Devis demandé, à générer', urgent: joursDepuis(c.date) >= 2, date: dateItem(c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
+    ...commandesDevisDemande().map(c => ({ icon: icon('file', 15), badgeBg: '#FBE3EC', badgeFg: '#C2185B', tagCls: '', tagStyle: 'background:#FBE3EC;color:#C2185B', type: 'Devis', id: c.reference, structure: c.nom, statut: 'Devis demandé, à générer', urgent: joursDepuis(c.date) >= 2, date: dateItem(c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
     ...commandesTransferees().map(c => ({ icon: icon('arrow', 15), badgeBg: 'var(--color-accent-100)', badgeFg: 'var(--color-accent-700)', tagCls: 'tag-accent', type: 'Transfert', id: c.reference, structure: c.nom, statut: 'Transférée par une Interne', urgent: true, date: dateItem(c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
-    ...commandesNouvelles().map(c => { const j = joursDepuis(c.date); return { icon: icon('inbox', 15), badgeBg: j >= 3 ? '#FFF3CC' : 'var(--color-neutral-100)', badgeFg: j >= 3 ? '#7A5A00' : 'var(--color-neutral-700)', tagCls: '', tagStyle: j >= 3 ? 'background:var(--th-bg-fff3ccff, #FFF3CC);color:var(--th-tx-7a5a00ff, #7A5A00)' : '', type: 'Commande', id: c.reference, structure: c.nom, statut: j >= 3 ? `Reçue depuis ${j} jours` : 'Nouvelle commande', urgent: false, date: dateItem(c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` }; }),
-    ...commandesDateSouhaiteeDepassee().map(c => ({ icon: icon('clock', 15), badgeBg: 'var(--th-bg-fbe4e4ff, #FBE4E4)', badgeFg: 'var(--th-tx-c62828ff, #c62828)', tagCls: '', tagStyle: 'background:var(--th-bg-fbe4e4ff, #FBE4E4);color:var(--th-tx-c62828ff, #c62828)', type: 'Délai', id: c.reference, structure: c.nom, statut: `Date souhaitée dépassée (${c.dateLivraisonSouhaitee})`, urgent: true, date: dateItem(c.dateLivraisonSouhaitee), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
-    ...commandesLivreesNonPayees().map(c => ({ icon: icon('receipt', 15), badgeBg: 'var(--th-bg-fff3ccff, #FFF3CC)', badgeFg: 'var(--th-tx-7a5a00ff, #7A5A00)', tagCls: '', tagStyle: 'background:var(--th-bg-fff3ccff, #FFF3CC);color:var(--th-tx-7a5a00ff, #7A5A00)', type: 'Paiement', id: c.reference, structure: c.nom, statut: `Livrée, ${String(c.statutPaiement || 'non payée').toLowerCase()}`, urgent: false, date: dateItem(c.dateLivraison || c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
+    ...commandesNouvelles().map(c => { const j = joursDepuis(c.date); return { icon: icon('inbox', 15), badgeBg: j >= 3 ? '#FFF3CC' : 'var(--color-neutral-100)', badgeFg: j >= 3 ? '#7A5A00' : 'var(--color-neutral-700)', tagCls: '', tagStyle: j >= 3 ? 'background:#FFF3CC;color:#7A5A00' : '', type: 'Commande', id: c.reference, structure: c.nom, statut: j >= 3 ? `Reçue depuis ${j} jours` : 'Nouvelle commande', urgent: false, date: dateItem(c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` }; }),
+    ...commandesDateSouhaiteeDepassee().map(c => ({ icon: icon('clock', 15), badgeBg: '#FBE4E4', badgeFg: '#c62828', tagCls: '', tagStyle: 'background:#FBE4E4;color:#c62828', type: 'Délai', id: c.reference, structure: c.nom, statut: `Date souhaitée dépassée (${c.dateLivraisonSouhaitee})`, urgent: true, date: dateItem(c.dateLivraisonSouhaitee), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
+    ...commandesLivreesNonPayees().map(c => ({ icon: icon('receipt', 15), badgeBg: '#FFF3CC', badgeFg: '#7A5A00', tagCls: '', tagStyle: 'background:#FFF3CC;color:#7A5A00', type: 'Paiement', id: c.reference, structure: c.nom, statut: `Livrée, ${String(c.statutPaiement || 'non payée').toLowerCase()}`, urgent: false, date: dateItem(c.dateLivraison || c.date), attrs: `data-commande-ouvrir="${echapper(c.reference)}"` })),
     ...feedDepotVente(),
     ...aRapprocher.map(c => { const cloture3 = c.statutComptable === 'Rapproché'; const t3 = cloture3 ? { bg: 'var(--color-accent-2-100)', fg: 'var(--color-accent-2-700)' } : { bg: 'var(--color-corail-100)', fg: 'var(--color-corail-700)' }; return { icon: icon(cloture3 ? 'check' : 'clock', 15), badgeBg: t3.bg, badgeFg: t3.fg, tagCls: '', tagStyle: `background:${t3.bg};color:${t3.fg}`, type: 'Facture', id: c.reference, structure: c.nom, statut: cloture3 ? 'Rapproché, à clôturer' : 'Non rapproché', urgent: !cloture3, date: dateItem(c.date), attrs: `data-feed-goto="factures" data-highlight-doc="${echapper(c.referenceFacture)}"` }; })
   ];
@@ -2012,7 +1963,7 @@ function tableauCommandes(liste, opts = {}){
         const exempte = structureExclueDevisFacture(c);
         const payee = c.statutPaiement === 'Payé';
         return `
-        <div class="rp-ligne ${c.statutCommande === 'Annulée' ? 'annulee' : ''} ${c.statutCommande === 'Livrée' ? 'livree' : ''}" data-commande-ouvrir="${echapper(c.reference)}" role="button" tabindex="0" style="--st:${COULEUR_STATUT_COMMANDE[c.statutCommande] || 'var(--th-ac-8fa3b3ff, #8FA3B3)'}">
+        <div class="rp-ligne ${c.statutCommande === 'Annulée' ? 'annulee' : ''} ${c.statutCommande === 'Livrée' ? 'livree' : ''}" data-commande-ouvrir="${echapper(c.reference)}" role="button" tabindex="0" style="--st:${COULEUR_STATUT_COMMANDE[c.statutCommande] || '#8FA3B3'}">
           <span class="rp-col-ill" aria-hidden="true">${(() => { const pp = produitPrincipalCommande(c); if(!pp) return ''; const p = state.produits.find(x => x.nom === pp); return illustrationProduitAdmin(pp, p ? p.icone : '', 34); })()}</span>
           <span class="rp-ligne-id"><b>${echapper(c.reference)}</b>${indicateursCommande(c)}<small>${(() => { const st = state.structures.find(x => x.code === c.code); return st ? `<button type="button" class="lien-structure" data-structure-vue="${st.ligne}" title="Ouvrir la fiche 360° de la structure">${echapper(c.nom)}</button>` : echapper(c.nom); })()} · ${echapper(c.date)}</small>${c.regles ? `<span class="rp-type-cmd">${echapper(c.regles.libelleType)}${c.regles.circuit === 'interne' ? ' · circuit Interne' : ''}</span>` : ''}</span>
           <span class="rp-ligne-arts">${detailArticlesCommande(c)}</span>
@@ -2081,7 +2032,7 @@ function vueCommandes(){
       <button type="button" class="rp-filtre ${state.commandesFiltreStatut === 'PRETES' ? 'actif' : ''}" data-filtrer-statut-commande="PRETES">${icon('check', 13)}Prêtes à avancer<span class="n">${listeAvantFiltreStatut.filter(c => c.regles && c.regles.peutAvancer).length}</span></button>
       ${ORDER_STATUSES.map(st => {
         const n = listeAvantFiltreStatut.filter(c => c.statutCommande === st).length;
-        return `<button type="button" class="rp-filtre ${state.commandesFiltreStatut === st ? 'actif' : ''}" style="--st:${COULEUR_STATUT_COMMANDE[st] || 'var(--th-ac-8fa3b3ff, #8FA3B3)'}" data-filtrer-statut-commande="${echapper(st)}"><span class="rp-point"></span>${echapper(st === 'En cours de livraison' ? 'En livraison' : st)}<span class="n">${n}</span></button>`;
+        return `<button type="button" class="rp-filtre ${state.commandesFiltreStatut === st ? 'actif' : ''}" style="--st:${COULEUR_STATUT_COMMANDE[st] || '#8FA3B3'}" data-filtrer-statut-commande="${echapper(st)}"><span class="rp-point"></span>${echapper(st === 'En cours de livraison' ? 'En livraison' : st)}<span class="n">${n}</span></button>`;
       }).join('')}
     </div>
     ${typesPresents.length > 1 ? `<div class="rp-filtres rp-filtres-type">
@@ -2386,7 +2337,7 @@ function vueSav(){
     <div class="rp-sav-carte sv2 ${def && def.terminal ? 'clos' : ''}" style="--st:${coul}" data-sav-ouvrir="${echapper(t.reference)}" role="button" tabindex="0">
       <div class="sv2-haut">
         <span class="sv2-anneau" title="Avancement : ${pleines} étape${pleines > 1 ? 's' : ''} sur ${nbBarres}">${anneauSavSvg(nbBarres ? Math.round(pleines / nbBarres * 100) : 0)}<span class="sv2-anneau-in">${window.illustrationCvdl ? window.illustrationCvdl('sym-' + cleSymptomeAdmin(t.symptome), 34) : ''}</span></span>
-        <span class="sv2-id"><b>${echapper(t.reference)}${typeof pastilleFilSav === 'function' ? pastilleFilSav(t) : ''}</b><small>${echapper(t.structureNom || t.nom || '')}</small></span>
+        <span class="sv2-id"><b>${echapper(t.reference)}</b><small>${echapper(t.structureNom || t.nom || '')}</small></span>
       </div>
       <div class="sv2-corps">
         <b>${echapper([t.marque, t.modele].filter(Boolean).join(' ') || 'Appareil')}</b>
@@ -2647,13 +2598,13 @@ function vueFactures(){
     </div>
     ${champRecherche('rp-recherche-docs', 'Rechercher par nom de facture/devis...', state.docSearch)}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin:var(--space-3) 0 var(--space-5)">
-      <button type="button" style="all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 16px;border-radius:999px;font-weight:700;font-size:13px;font-family:var(--font-heading);background:${!state.docsFiltre ? 'var(--color-neutral-900)' : 'var(--color-surface)'};color:${!state.docsFiltre ? 'var(--th-tx-ffffffff, #fff)' : 'var(--color-text)'};border:1.5px solid ${!state.docsFiltre ? 'var(--color-neutral-900)' : 'var(--color-divider)'}" data-filtrer-docs="">
+      <button type="button" style="all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 16px;border-radius:999px;font-weight:700;font-size:13px;font-family:var(--font-heading);background:${!state.docsFiltre ? 'var(--color-neutral-900)' : 'var(--color-surface)'};color:${!state.docsFiltre ? '#fff' : 'var(--color-text)'};border:1.5px solid ${!state.docsFiltre ? 'var(--color-neutral-900)' : 'var(--color-divider)'}" data-filtrer-docs="">
         Tous
       </button>
-      <button type="button" style="all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 16px;border-radius:999px;font-weight:700;font-size:13px;font-family:var(--font-heading);background:${state.docsFiltre === 'devis-attente' ? 'var(--color-accent)' : 'var(--color-surface)'};color:${state.docsFiltre === 'devis-attente' ? 'var(--th-tx-ffffffff, #fff)' : 'var(--color-text)'};border:1.5px solid ${state.docsFiltre === 'devis-attente' ? 'transparent' : 'var(--color-divider)'}" data-filtrer-docs="devis-attente">
+      <button type="button" style="all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 16px;border-radius:999px;font-weight:700;font-size:13px;font-family:var(--font-heading);background:${state.docsFiltre === 'devis-attente' ? 'var(--color-accent)' : 'var(--color-surface)'};color:${state.docsFiltre === 'devis-attente' ? '#fff' : 'var(--color-text)'};border:1.5px solid ${state.docsFiltre === 'devis-attente' ? 'transparent' : 'var(--color-divider)'}" data-filtrer-docs="devis-attente">
         Devis en attente <span style="opacity:0.65;font-weight:600">${nbDevisAttente}</span>
       </button>
-      <button type="button" style="all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 16px;border-radius:999px;font-weight:700;font-size:13px;font-family:var(--font-heading);background:${state.docsFiltre === 'facture-impayee' ? 'var(--color-accent)' : 'var(--color-surface)'};color:${state.docsFiltre === 'facture-impayee' ? 'var(--th-tx-ffffffff, #fff)' : 'var(--color-text)'};border:1.5px solid ${state.docsFiltre === 'facture-impayee' ? 'transparent' : 'var(--color-divider)'}" data-filtrer-docs="facture-impayee">
+      <button type="button" style="all:unset;box-sizing:border-box;display:flex;align-items:center;gap:8px;cursor:pointer;padding:9px 16px;border-radius:999px;font-weight:700;font-size:13px;font-family:var(--font-heading);background:${state.docsFiltre === 'facture-impayee' ? 'var(--color-accent)' : 'var(--color-surface)'};color:${state.docsFiltre === 'facture-impayee' ? '#fff' : 'var(--color-text)'};border:1.5px solid ${state.docsFiltre === 'facture-impayee' ? 'transparent' : 'var(--color-divider)'}" data-filtrer-docs="facture-impayee">
         Facture impayée <span style="opacity:0.65;font-weight:600">${nbFactureImpayee}</span>
       </button>
     </div>
@@ -2730,15 +2681,10 @@ function vueStock(){
         <h1 style="font-size:32px;margin-bottom:var(--space-2)">Stock</h1>
         <p style="opacity:0.65;margin:0;font-size:15px">Matériel reconditionné disponible.</p>
       </div>
+      <button type="button" class="btn btn-secondary" id="btn-synchroniser-tectech">${icon('refresh', 15)}Synchroniser stock tec.tech</button>
+      <button type="button" class="btn btn-secondary" data-organiser-materiel>${icon('grip', 15)}Organiser la page catalogue</button>
       <button type="button" class="btn btn-primary" data-ouvrir-creation="produit">${icon('plus', 15)}Ajouter un produit</button>
     </div>
-    <div class="stk-outils" role="toolbar" aria-label="Outils du stock">
-      <button type="button" class="btn msb-bouton${msbActif() ? ' actif' : ''}" data-mode-stock-bas title="Limiter toutes les commandes des structures">${icon('alert', 15)}${msbActif() ? 'Mode stock bas · actif' : 'Mode stock bas'}</button>
-      <span class="stk-sep" aria-hidden="true"></span>
-      <button type="button" class="btn btn-secondary" id="btn-synchroniser-tectech" title="Mettre à jour les quantités depuis tec.tech">${icon('refresh', 15)}Synchroniser tec.tech</button>
-      <button type="button" class="btn btn-secondary" data-organiser-materiel title="Ordre et couleurs de la page « Catégories de matériel » du portail">${icon('grip', 15)}Organiser le catalogue</button>
-    </div>
-    ${bandeauModeStockBas()}
     ${sectionDepotVenteStock()}
     ${(state.depotVente || []).length ? '<h2 class="dv-titre-catalogue">Catalogue</h2>' : ''}
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:var(--space-6)">
@@ -2922,81 +2868,65 @@ function vueReglages(){
     </div>
 
 
-    ${sectionReglages({ ic: 'lien_externe', teinte: 'bleu', titre: 'Liens utiles', desc: 'Des fichiers à ouvrir d’un clic là où vous en avez besoin (numérotation des factures, tableau de suivi…), sans aller les chercher dans le Drive.',
-      corps: window.sectionLiensUtiles ? window.sectionLiensUtiles() : '' })}
-
-    ${sectionReglages({ ic: 'file', teinte: 'violet', titre: 'Documents', desc: 'Les modèles utilisés pour générer les bons de livraison, devis, factures et attestations.',
-      corps: `
-      <div class="rg-tuiles">
-        ${[['data-ouvrir-modele-bon', 'Bon de livraison', 'À chaque préparation de commande'], ['data-ouvrir-modele-devis', 'Devis', 'Vente solidaire, Projets'], ['data-ouvrir-modele-facture', 'Facture', 'Après livraison ou en fin de mois'], ['data-ouvrir-modele-attestation', 'Attestation', 'Paiement des personnes accompagnées']]
-          .map(([attr, nom, aide]) => `<button type="button" class="rg-tuile" ${attr}><span class="rg-tuile-ic">${icon('file', 18)}</span><span class="rg-tuile-txt"><b>${nom}</b><small>${aide}</small></span><span class="rg-tuile-go">Modifier ${icon('arrow', 13)}</span></button>`).join('')}
+    <div class="card elev-sm" style="padding:var(--space-6);gap:10px;margin-bottom:var(--space-6)">
+      <div class="card-title">Documents</div>
+      <p style="font-size:13px;opacity:0.7;margin:0">Modèle utilisé pour générer les bons de livraison.</p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button type="button" class="btn btn-secondary" style="width:fit-content" data-ouvrir-modele-bon>${icon('file', 15)}Modèle bon de livraison</button>
+        <span style="opacity:0.35">|</span>
+        <button type="button" class="btn btn-secondary" style="width:fit-content" data-ouvrir-modele-devis>${icon('file', 15)}Modèle devis</button>
+        <span style="opacity:0.35">|</span>
+        <button type="button" class="btn btn-secondary" style="width:fit-content" data-ouvrir-modele-facture>${icon('file', 15)}Modèle facture</button>
+        <span style="opacity:0.35">|</span>
+        <button type="button" class="btn btn-secondary" style="width:fit-content" data-ouvrir-modele-attestation>${icon('file', 15)}Modèle attestation</button>
       </div>
-      <details class="rg-details">
-        <summary>Utiliser un modèle Google Sheets/Docs à la place (repli historique)</summary>
-        <p class="rg-aide">Colle l'ID (ou le lien complet) du classeur/document modèle — ignoré si un modèle HTML est téléversé ci-dessus pour le même document.</p>
-        <div class="rg-grille">
+      <details style="margin-top:6px">
+        <summary style="cursor:pointer;font-size:12.5px;font-weight:600;opacity:0.7">Utiliser un modèle Google Sheets/Docs à la place (repli historique)</summary>
+        <p style="font-size:12.5px;opacity:0.6;margin:8px 0">Colle l'ID (ou le lien complet) du classeur/document modèle — ignoré si un modèle HTML est téléversé ci-dessus pour le même document.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
           ${champ("ID modèle — Bon de livraison", `<input class="input" id="rg-modele-bon-livraison" value="${echapper(r.modeleBonLivraison || '')}" placeholder="ID ou lien du classeur modèle">`)}
           ${champ("ID modèle — Bon d'orientation", `<input class="input" id="rg-modele-bon-orientation" value="${echapper(r.modeleBonOrientation || '')}" placeholder="ID ou lien du classeur modèle">`)}
           ${champ("ID modèle — Attestation de paiement", `<input class="input" id="rg-modele-attestation" value="${echapper(r.modeleAttestationPaiement || '')}" placeholder="ID ou lien du document modèle">`)}
           ${champ("ID modèle — Facturation", `<input class="input" id="rg-modele-facturation" value="${echapper(r.modeleFacturation || '')}" placeholder="ID ou lien du classeur modèle">`)}
         </div>
-        <div class="rg-actions"><button type="button" class="btn btn-primary" id="rg-modeles-sheets-enregistrer">Enregistrer les modèles Sheets</button></div>
+        <button type="button" class="btn btn-primary" style="margin-top:10px" id="rg-modeles-sheets-enregistrer">Enregistrer les modèles Sheets</button>
         <div id="rg-modeles-sheets-retour"></div>
-      </details>` })}
+      </details>
+    </div>
 
-    ${sectionReglages({ ic: 'cart', teinte: 'turquoise', titre: 'Commandes', desc: 'Quantité maximale d’un produit dans une commande, quand le produit n’a pas son propre maximum (fiche produit).',
-      corps: `
-      <div class="rg-grille">
-        ${champ('Maximum par produit et par commande', `<input class="input" id="rg-qte-max" type="number" min="1" max="1000" step="1" inputmode="numeric" value="${echapper(String(r.quantiteMaxDefaut || 5))}">`)}
-        ${champ('Maximum pour les structures ESN et Interne', `<input class="input" id="rg-qte-max-esn" type="number" min="1" max="1000" step="1" inputmode="numeric" value="${echapper(String(r.quantiteMaxDefautEsn || 5))}">`)}
+    <div class="card elev-sm" style="padding:var(--space-6);gap:var(--space-4)">
+      <div>
+        <div class="card-title">Connexion à l'API tec.tech</div>
+        <p style="font-size:13px;opacity:0.7;margin:4px 0 0">Reconditionneur partenaire — synchro stock, donateur/reconditionneur d'origine.</p>
       </div>
-      <p class="rg-aide">Le « Mode stock bas » (onglet Stock) peut abaisser ces limites temporairement.</p>
-      <div class="rg-actions"><button type="button" class="btn btn-primary" id="rg-qte-enregistrer">Enregistrer</button></div>` })}
-
-    ${sectionReglages({ ic: 'refresh', teinte: 'turquoise', titre: 'Connexion à l’API tec.tech', desc: 'Reconditionneur partenaire — synchro stock, donateur/reconditionneur d’origine.',
-      corps: `
-      <div class="rg-grille">
-        ${champ("URL de base", `<input class="input" id="rg-tectech-url" value="${echapper(r.tectechUrlBase || '')}" placeholder="https://tec-tech.osc-fr1.scalingo.io">`)}
-        ${champ("ID de stock suivi", `<input class="input" id="rg-tectech-stock" value="${echapper(r.tectechIdStock || '')}" placeholder="S-0454">`)}
-        <div class="rg-large">${champ("Statuts comptant comme \"disponible\" (séparés par une virgule)", `<input class="input" id="rg-tectech-statuts" value="${echapper(r.tectechStatuts || '')}" placeholder="PRET_A_COMMANDER,A_DISTRIBUER">`)}</div>
-      </div>
-      <div class="rg-actions">
-        <button type="button" class="btn btn-secondary" id="rg-tectech-tester">${icon('refresh', 15)}Tester la connexion</button>
+      ${champ("URL de base", `<input class="input" id="rg-tectech-url" value="${echapper(r.tectechUrlBase || '')}" placeholder="https://tec-tech.osc-fr1.scalingo.io">`)}
+      ${champ("ID de stock suivi", `<input class="input" id="rg-tectech-stock" value="${echapper(r.tectechIdStock || '')}" placeholder="S-0454">`)}
+      ${champ("Statuts comptant comme \"disponible\" (séparés par une virgule)", `<input class="input" id="rg-tectech-statuts" value="${echapper(r.tectechStatuts || '')}" placeholder="PRET_A_COMMANDER,A_DISTRIBUER">`)}
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button type="button" class="btn btn-primary" id="rg-tectech-enregistrer">Enregistrer</button>
+        <button type="button" class="btn btn-secondary" id="rg-tectech-tester">${icon('refresh', 15)}Tester la connexion</button>
       </div>
-      <div id="rg-tectech-retour"></div>` })}
+      <div id="rg-tectech-retour"></div>
+    </div>
 
-    ${sectionReglages({ ic: 'bouclier_garantie', teinte: 'vert', titre: 'Sécurité — partages Drive publics', desc: 'Les documents (bons, attestations, factures, bons Colissimo) ne sont plus partagés « à toute personne disposant du lien » : la plateforme les ouvre par des liens signés valables 24 h. À lancer une fois après la mise à jour, pour les fichiers créés avant ce changement.',
-      corps: `
-      <div class="rg-actions"><button type="button" class="btn btn-secondary" id="rg-retirer-partages">${icon('refresh', 15)}Retirer les partages publics</button></div>
-      <div id="rg-partages-retour"></div>` })}
-
-    ${sectionReglages({ ic: 'alert', teinte: 'rouge', cls: 'rg-danger', titre: 'Mode démo — réinitialisation complète', desc: 'Efface toutes les Structures, Commandes, Devis, Factures, SAV et la flotte interne (jamais le catalogue Produits ni ces réglages), puis les repeuple avec un jeu de démonstration réaliste (~15 structures, ~70 commandes, SAV, devis/factures).',
-      corps: `
-      <p class="rg-aide">Réutilisable à volonté (avant chaque démo par exemple), mais <b>irréversible</b> à chaque lancement. Prend normalement moins d'une minute ; si ça échoue en cours de route, relancer est sans risque : tout est effacé avant d'être régénéré.</p>
-      <div class="rg-grille">${champ('Tape RÉINITIALISER pour confirmer', `<input class="input" id="rg-demo-confirmation" placeholder="RÉINITIALISER" autocomplete="off">`)}</div>
-      <div class="rg-actions"><button type="button" class="btn btn-primary rg-bouton-danger" id="rg-demo-lancer" disabled>${icon('refresh', 15)}Réinitialiser en mode démo</button></div>
-      <div id="rg-demo-retour"></div>` })}`;
-}
-/** Section de l'écran Réglages : même en-tête que « Plan de secours » (pastille d'icône
- *  teintée + titre + phrase d'explication), puis le contenu. */
-function sectionReglages({ ic, teinte, titre, desc, corps, cls }){
-  return `
-    <section class="card elev-sm rg-section rg-${teinte || 'bleu'}${cls ? ' ' + cls : ''}">
-      <div class="rg-secours-tete">
-        <span class="rg-secours-ico">${icon(ic, 20)}</span>
-        <div><div class="card-title">${echapper(titre)}</div>
-        ${desc ? `<p class="rg-desc">${echapper(desc)}</p>` : ''}</div>
+    <div class="card elev-sm" style="padding:var(--space-6);gap:var(--space-4);margin-top:var(--space-6)">
+      <div>
+        <div class="card-title">Sécurité — partages Drive publics</div>
+        <p style="font-size:13px;opacity:0.7;margin:4px 0 0">Les documents (bons, attestations, factures, bons Colissimo) ne sont plus partagés « à toute personne disposant du lien » : la plateforme les ouvre par des liens signés valables 24 h. Ce bouton retire le partage public des fichiers créés avant ce changement. À lancer une fois après la mise à jour.</p>
       </div>
-      <div class="rg-corps">${corps}</div>
-    </section>`;
-}
-async function enregistrerQuantitesMax(){
-  const qte = parseInt($('rg-qte-max').value, 10), esn = parseInt($('rg-qte-max-esn').value, 10);
-  if(!(qte >= 1 && qte <= 1000) || !(esn >= 1 && esn <= 1000)){ etat('Indiquez un nombre entre 1 et 1000', 'erreur'); return; }
-  const r = await poster({ action: 'reglages-set', quantiteMaxDefaut: qte, quantiteMaxDefautEsn: esn });
-  if(r.ok){ Object.assign(state.reglages, { quantiteMaxDefaut: qte, quantiteMaxDefautEsn: esn }); etat('Réglages enregistrés', 'succes'); }
-  else etat(r.erreur || 'Enregistrement impossible', 'erreur');
+      <button type="button" class="btn btn-secondary" style="width:fit-content" id="rg-retirer-partages">${icon('refresh', 15)}Retirer les partages publics</button>
+      <div id="rg-partages-retour"></div>
+    </div>
+
+    <div class="card elev-sm" style="padding:var(--space-6);gap:var(--space-4);margin-top:var(--space-6);border:1.5px solid var(--color-accent)">
+      <div>
+        <div class="card-title" style="color:var(--color-accent-700)"><span class="tag" data-forme="losange" style="--forme:#C62828;margin-right:8px">Attention</span>Mode démo — réinitialisation complète</div>
+        <p style="font-size:13px;opacity:0.7;margin:4px 0 0">Efface <strong>toutes</strong> les Structures, Commandes, Devis, Factures, SAV et la flotte interne (jamais le catalogue Produits ni ces réglages), puis les repeuple avec un jeu de données de démonstration réaliste (~15 structures, ~70 commandes, SAV, devis/factures). Réutilisable à volonté (avant chaque démo par exemple), mais irréversible à chaque lancement — pense à faire une copie du classeur avant si tu as le moindre doute. Prend normalement moins d'une minute (écritures groupées par lots) — si jamais ça échoue en cours de route, relancer est sans risque : tout est effacé avant d'être régénéré à chaque lancement.</p>
+      </div>
+      ${champ('Tape RÉINITIALISER pour confirmer', `<input class="input" id="rg-demo-confirmation" placeholder="RÉINITIALISER" autocomplete="off">`)}
+      <button type="button" class="btn btn-primary" style="width:fit-content;background:var(--color-accent);border-color:var(--color-accent)" id="rg-demo-lancer" disabled>${icon('refresh', 15)}Réinitialiser en mode démo</button>
+      <div id="rg-demo-retour"></div>
+    </div>`;
 }
 /** Accepte aussi bien un ID brut qu'un lien Google complet (Sheets/Docs) — la copie de modèle
  *  (copierModele côté backend) attend un ID nu, jamais une URL. */
@@ -3124,7 +3054,6 @@ document.addEventListener('click', e => {
   if(e.target.closest('#rg-modeles-sheets-enregistrer')) enregistrerModelesSheets();
   if(e.target.closest('#rg-demo-lancer')) lancerReinitialisationDemo();
   if(e.target.closest('#rg-retirer-partages')) retirerPartagesPublics();
-  if(e.target.closest('#rg-qte-enregistrer')) enregistrerQuantitesMax();
 });
 
 function vuePasseportMateriel(){
@@ -3505,7 +3434,7 @@ function badgeGarantie(dateAchatFormatee){
   const { statut, dateFinGarantie } = statutGarantiePourDate(dateAchatFormatee);
   if(statut === 'en_cours') return `<span class="rp-garantie g-ok" style="display:inline-flex;align-items:center;gap:6px;background:${COULEUR_VERT_GARANTIE};color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px">${icon('bouclier_garantie', 13)}Garantie en cours (jusqu'au ${echapper(dateFinGarantie)})</span>`;
   if(statut === 'bientot') return `<span class="rp-garantie g-att" style="display:inline-flex;align-items:center;gap:6px;background:var(--color-warn-700);color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px">${icon('bouclier_garantie', 13)}Garantie bientôt expirée (jusqu'au ${echapper(dateFinGarantie)})</span>`;
-  if(statut === 'expiree') return `<span class="rp-garantie g-ko" style="display:inline-flex;align-items:center;gap:6px;background:var(--th-bg-e5484dff, #E5484D);color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px">${icon('x', 13)}Hors garantie (${echapper(dateFinGarantie)})</span>`;
+  if(statut === 'expiree') return `<span class="rp-garantie g-ko" style="display:inline-flex;align-items:center;gap:6px;background:#E5484D;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px">${icon('x', 13)}Hors garantie (${echapper(dateFinGarantie)})</span>`;
   return '';
 }
 function vueModal(){
@@ -3514,8 +3443,6 @@ function vueModal(){
   if(m.kind === 'distribution-detail') return vueDistributionDetail();
   if(m.kind === 'creer-structure') return vueCreerStructure();
   if(m.kind === 'flotte-structure') return vueFlotteStructure();
-  if(m.kind === 'stock-restreint') return vueStockRestreint();
-  if(m.kind === 'mode-stock-bas') return vueModeStockBas();
   if(m.kind === 'factures-mensuelles') return vueFacturesMensuelles();
   if(m.kind === 'creer-commande') return vueCreerCommande();
   if(m.kind === 'creer-produit') return vueCreerProduit();
@@ -3703,7 +3630,7 @@ function blocAppareilsCommande(c, titre = true){
     <div class="fc2-app-liste">${lignes.map(l => {
       const p = state.produits.find(x => x.nom === l.produit);
       return `<div class="fc2-app"><span class="rpd-ill">${l.produit ? illustrationProduitAdmin(l.produit, p ? p.icone : '', 28) : ''}</span>
-        <span class="fc2-app-t"><b title="${echapper(l.produit || '')}">${echapper(l.produit || 'Appareil')}</b>${l.nom ? `<small>${icon('personne', 12)}${echapper(c.identiteMasquee ? nomPersonneAdmin('commande', c.ligne, l.nom) : l.nom)}</small>` : ''}</span>
+        <span class="fc2-app-t"><b title="${echapper(l.produit || '')}">${echapper(l.produit || 'Appareil')}</b>${l.nom ? `<small>${icon('personne', 12)}${echapper(l.nom)}</small>` : ''}</span>
         <span class="fc2-app-v">${l.valeur ? (l.dematerialise ? pilulesCodes(l.valeur) : pilulesNumerosSerie(l.valeur)) : `<em>${l.dematerialise ? 'Code' : 'N° de série'} à saisir</em>`}</span></div>`;
     }).join('')}</div>
   </section>`;
@@ -3720,8 +3647,7 @@ function nomsPersonnesCommande(c){
  *  de toute façon. */
 function structureExclueDevisFacture(c){
   const structure = state.structures.find(s => s.code === c.code);
-  // Dépôt-vente : mise en dépôt, jamais facturée à la commande (seules les ventes peuvent l'être).
-  return !!(structure && (structure.interne || structure.esn || structure.bo || structure.depotVente));
+  return !!(structure && (structure.interne || structure.esn || structure.bo));
 }
 /* ════════════════════════════════════════════════════════════════════════════════════════
    Dossier commande (maquette B) — grande fenêtre en deux colonnes :
@@ -3901,7 +3827,7 @@ function vueDossierCommande(c){
         ${c.telephone ? `<div class="rpd-row">${icon('telephone', 14)}${echapper(c.telephone)}${copie(c.telephone)}</div>` : ''}
       </section>
     </div>
-    ${personnes.length ? `<section class="fc2-bloc"><div class="fc2-k">Personnes accompagnées · ${personnes.length}${c.identiteMasquee ? boutonIdentite('commande', c.ligne) : ''}</div><div class="fc2-personnes">${personnes.map(n => `<span>${icon('personne', 13)}${echapper(c.identiteMasquee ? nomPersonneAdmin('commande', c.ligne, n) : n)}</span>`).join('')}</div>${c.identiteMasquee && !identiteRevelee('commande', c.ligne) ? '<p class="idr-note">Pseudonymes : l’identité reste utilisée pour les attestations et bons, sans être affichée.</p>' : ''}</section>` : ''}
+    ${personnes.length ? `<section class="fc2-bloc"><div class="fc2-k">Personnes accompagnées · ${personnes.length}</div><div class="fc2-personnes">${personnes.map(n => `<span>${icon('personne', 13)}${echapper(n)}</span>`).join('')}</div></section>` : ''}
     ${blocAppareilsCommande(c)}
     ${commentaireReel(c) ? `<section class="fc2-bloc"><div class="fc2-k">Commentaire de la structure</div><p class="fc2-comm">« ${echapper(c.commentaire)} »</p></section>` : ''}
     ${panneauDevisPaiementCommande(c)}`;
@@ -3963,11 +3889,11 @@ function vueDossierCommande(c){
 /** Carte symptôme — même carte que le formulaire SAV du portail (illustration + couleur par famille). */
 function familleCouleurSymptomeAdmin(texte){
   const t = String(texte || '').toLowerCase();
-  if(/[ée]cran/.test(t) || /virus|malware|infect[ée]/.test(t)) return { bg: 'var(--th-bg-fdececff, #FDECEC)', fg: 'var(--th-tx-b42318ff, #B42318)' };
-  if(/(charge|batterie|alimentation|allum)/.test(t) || /internet|wifi|wi-fi|r[ée]seau|connexion/.test(t)) return { bg: 'var(--th-bg-fff4d6ff, #FFF4D6)', fg: 'var(--th-tx-7a5a00ff, #7A5A00)' };
-  if(/mise.{0,3}[àa].{0,3}jour|update/.test(t) || /lent|lenteur|rame|bloque|fige|plante/.test(t)) return { bg: 'var(--th-bg-e8f0feff, #E8F0FE)', fg: 'var(--th-tx-1d4ed8ff, #1D4ED8)' };
-  if(/clavier/.test(t) || /souris/.test(t) || /\bsons?\b|audio|hauts?[-\s]?parleurs?|micro/.test(t)) return { bg: 'var(--th-bg-fce7efff, #FCE7EF)', fg: 'var(--th-tx-b0164aff, #B0164A)' };
-  return { bg: 'var(--th-bg-eef2f5ff, #EEF2F5)', fg: 'var(--th-tx-002743ff, #002743)' };
+  if(/[ée]cran/.test(t) || /virus|malware|infect[ée]/.test(t)) return { bg: '#FDECEC', fg: '#B42318' };
+  if(/(charge|batterie|alimentation|allum)/.test(t) || /internet|wifi|wi-fi|r[ée]seau|connexion/.test(t)) return { bg: '#FFF4D6', fg: '#7A5A00' };
+  if(/mise.{0,3}[àa].{0,3}jour|update/.test(t) || /lent|lenteur|rame|bloque|fige|plante/.test(t)) return { bg: '#E8F0FE', fg: '#1D4ED8' };
+  if(/clavier/.test(t) || /souris/.test(t) || /\bsons?\b|audio|hauts?[-\s]?parleurs?|micro/.test(t)) return { bg: '#FCE7EF', fg: '#B0164A' };
+  return { bg: '#EEF2F5', fg: '#002743' };
 }
 function carteSymptomeSav(texte){
   const f = familleCouleurSymptomeAdmin(texte);
@@ -4031,24 +3957,16 @@ function vueDossierSav(s){
           </div>` : ''; })()}
           <div class="rpd-sec"><span class="rpd-k">Symptôme</span>${carteSymptomeSav(s.symptome)}
             ${s.problemeEffectif ? `<div class="rpd-row">${icon('wrench', 14)}Constaté : ${echapper(s.problemeEffectif)}</div>` : ''}</div>
-          ${(() => {
-            // Identité pseudonymisée par le serveur ; révélation tracée (identite-admin.js).
-            const rv = s.identiteMasquee ? identiteRevelee('sav', s.ligne) : null;
-            const email = s.email || (rv && rv.contact && rv.contact.email) || '';
-            const tel = s.telephone || (rv && rv.contact && rv.contact.telephone) || '';
-            const nomPers = p => p ? nomPersonneAdmin('sav', s.ligne, p) : '';
-            return `<div class="rpd-sec"><span class="rpd-k">Contact${s.contactPersonnel ? ' · la personne directement' : ''}</span>
-            ${s.nomBeneficiaire ? `<div class="rpd-row">${icon('personne', 14)}${echapper(nomPers(s.nomBeneficiaire))}</div>` : ''}
-            ${s.nom ? `<div class="rpd-row">${icon(s.code ? 'building' : 'personne', 14)}${echapper(s.code ? s.nom : nomPers(s.nom))}</div>` : ''}
-            ${email ? `<div class="rpd-row">${icon('mail', 14)}<a href="mailto:${echapper(email)}">${echapper(email)}</a>${copie(email)}</div>` : (s.emailIndice ? `<div class="rpd-row idr-indice">${icon('mail', 14)}${echapper(s.emailIndice)}</div>` : '')}
-            ${tel ? `<div class="rpd-row">${icon('telephone', 14)}${echapper(tel)}${copie(tel)}</div>` : (s.telephoneIndice ? `<div class="rpd-row idr-indice">${icon('telephone', 14)}${echapper(s.telephoneIndice)}</div>` : '')}
-            ${s.identiteMasquee ? `<div class="rpd-row">${boutonIdentite('sav', s.ligne, s.contactPersonnel ? 'Afficher les coordonnées' : 'Afficher l’identité')}</div>` : ''}
-          </div>`; })()}
+          <div class="rpd-sec"><span class="rpd-k">Contact</span>
+            ${s.nomBeneficiaire ? `<div class="rpd-row">${icon('personne', 14)}${echapper(s.nomBeneficiaire)}</div>` : ''}
+            ${s.nom ? `<div class="rpd-row">${icon('building', 14)}${echapper(s.nom)}</div>` : ''}
+            ${s.email ? `<div class="rpd-row">${icon('mail', 14)}<a href="mailto:${echapper(s.email)}">${echapper(s.email)}</a>${copie(s.email)}</div>` : ''}
+            ${s.telephone ? `<div class="rpd-row">${icon('telephone', 14)}${echapper(s.telephone)}${copie(s.telephone)}</div>` : ''}
+          </div>
           ${s.commentaire ? `<div class="rpd-comm">« ${echapper(s.commentaire)} »</div>` : ''}
           <div class="rpd-menu rpd-menu-v2">
             ${!estSurTerminal ? `<button type="button" class="btn-annuler" data-annuler-sav="${echapper(s.reference)}">${iconeAnnuler()}Annuler ce SAV</button>` : ''}
             ${s.email ? `<a class="rpd-mbtn" href="mailto:${echapper(s.email)}?subject=${encodeURIComponent('Votre demande SAV ' + s.reference)}">${icon('mail', 13)}Écrire</a>` : ''}
-            ${!s.email && s.aEmail ? `<button type="button" class="rpd-mbtn" data-idr-ecrire="sav|${s.ligne}|${echapper(s.reference)}">${icon('mail', 13)}Écrire</button>` : ''}
           </div>
         </aside>
         <section class="rpd-parcours">
@@ -4073,7 +3991,6 @@ function vueDossierSav(s){
             <div class="rpd-hist-titre">${icon('clock', 15)}<b>Historique</b></div>
             ${(s.historique || []).length ? `<ol class="rpd-hist">${s.historique.slice().reverse().map(h => `<li><i></i><span>${echapper(h.statut)}</span><small>${echapper(h.date)}</small></li>`).join('')}</ol>` : '<p class="rpd-apercu">Aucun changement de statut enregistré.</p>'}
           </div>
-          ${typeof blocFilSavAdmin === 'function' ? blocFilSavAdmin(s) : ''}
           <div id="rp-retour-modale"></div>
         </section>
       </div>
@@ -4104,7 +4021,6 @@ function panneauDevisPaiementCommande(c){
           : `${ligneDoc('mag', 'receipt', 'Facture', 'Pas encore générée', '')}
              <div class="rpd-form-ligne"><input class="input" id="pn-numero-facture" placeholder="Numéro de facture (FAC-…)"><button type="button" class="btn btn-secondary" data-generer-facture-livree="${echapper(c.reference)}">Générer</button></div>
              <div id="pn-erreur-facture"></div>`) : ''}
-      ${(devisEligible && !c.referenceDevis) || (factureEligible && !c.referenceFacture && !c.factureMensuelle) ? liensRaccourcis('commande') : ''}
       ${paiementEnAttente ? `<div class="rpd-alerte">${icon('alert', 14)}Lien de paiement cliqué, pas encore réglé</div>` : ''}
       ${paiementCB ? (() => {
         const noms = nomsPersonnesCommande(c);
@@ -4212,7 +4128,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur){
     if(c.transfereAdmin) t.push({ etat: 'info', titre: 'Transférée par la structure Interne', detail: 'Le partenaire n’avait pas le matériel en stock.' });
     if(!exempte && c.devisDemande === 'Oui') t.push(c.referenceDevis
       ? { etat: 'ok', titre: 'Devis envoyé', detail: `Devis ${echapper(c.referenceDevis)}` }
-      : { etat: 'cours', titre: 'Envoyer le devis demandé', detail: 'La structure attend un prix avant de confirmer.', action: `<button type="button" class="btn btn-secondary btn-sm" data-generer-devis="${ref}">${icon('file', 14)}Générer le devis</button>`, contenu: liensRaccourcis('commande', false) || undefined });
+      : { etat: 'cours', titre: 'Envoyer le devis demandé', detail: 'La structure attend un prix avant de confirmer.', action: `<button type="button" class="btn btn-secondary btn-sm" data-generer-devis="${ref}">${icon('file', 14)}Générer le devis</button>` });
     t.push(c.validationLogistiqueEnAttente
       ? { etat: 'cours', titre: 'Validation par la logistique', detail: 'Mail envoyé : la commande passera « Validée » quand la logistique aura cliqué.', action: `<button type="button" class="et-lien" data-renvoyer-validation="${ref}">Renvoyer le mail</button>` }
       : { etat: t.some(x => x.etat === 'cours') ? 'avenir' : 'cours', titre: 'Validation par la logistique', detail: 'Un lien est envoyé par mail à la logistique.' });
@@ -4237,7 +4153,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur){
       if(c.factureMensuelle) t.push({ etat: 'ok', titre: 'Facturée en fin de mois', detail: 'Incluse dans la facture mensuelle de la structure.' });
       else if(c.referenceDevis || c.referenceFacture || c.pasDeFacture) t.push({ etat: 'ok', titre: 'Devis ou facture', detail: echapper(c.referenceFacture ? `Facture ${c.referenceFacture}` : c.referenceDevis ? `Devis ${c.referenceDevis}` : 'Sans facture') });
       else t.push({ etat: t.some(x => x.etat === 'cours') ? 'avenir' : 'cours', titre: 'Devis ou facture', detail: 'Obligatoire avant la préparation.',
-        action: `<button type="button" class="btn btn-secondary btn-sm" data-generer-devis="${ref}">${icon('file', 14)}Générer un devis</button>`, contenu: liensRaccourcis('commande', false) || undefined });
+        action: `<button type="button" class="btn btn-secondary btn-sm" data-generer-devis="${ref}">${icon('file', 14)}Générer un devis</button>` });
     }
     bouton = `<button type="button" class="btn btn-primary et-principal" data-changer-statut="Préparée" data-ref="${ref}">Passer à « Préparée »</button>`;
   }
@@ -4329,7 +4245,7 @@ function carteCommandeLivree(c, personnes, nbArticles){
     if(c.referenceFacture) t.push({ etat: 'ok', titre: 'Facture', detail: `${echapper(c.referenceFacture)}${c.factureMensuelle ? ' (mensuelle)' : ''}`, action: `<button type="button" class="et-lien" data-feed-goto="factures" data-highlight-doc="${echapper(c.referenceFacture)}">Ouvrir</button>` });
     else if(c.factureMensuelle) t.push({ etat: 'ok', titre: 'Facture', detail: 'Incluse dans la facture mensuelle de la structure.' });
     else if(!c.pasDeFacture) t.push({ etat: 'cours', titre: 'Générer la facture',
-      contenu: `<div class="rpd-form-ligne"><input class="input" id="pn-numero-facture" placeholder="Numéro de facture (FAC-…)" aria-label="Numéro de facture"><button type="button" class="btn btn-secondary" data-generer-facture-livree="${ref}">Générer</button></div><div id="pn-erreur-facture"></div>${liensRaccourcis('commande', false)}` });
+      contenu: `<div class="rpd-form-ligne"><input class="input" id="pn-numero-facture" placeholder="Numéro de facture (FAC-…)" aria-label="Numéro de facture"><button type="button" class="btn btn-secondary" data-generer-facture-livree="${ref}">Générer</button></div><div id="pn-erreur-facture"></div>` });
     if(c.moyenPaiement) t.push({ etat: c.statutPaiement === 'Payé' ? 'ok' : 'cours', titre: 'Paiement', detail: echapper(`${c.moyenPaiement} · ${c.statutPaiement || 'Non payé'}`) });
     if(c.referenceFacture) t.push({ etat: c.statutComptable === 'Clôturé' ? 'ok' : 'cours', titre: 'Rapprochement comptable', detail: echapper(c.statutComptable || 'Non rapproché'), action: c.statutComptable === 'Clôturé' ? '' : `<button type="button" class="et-lien" data-feed-goto="factures" data-highlight-doc="${echapper(c.referenceFacture)}">Rapprocher</button>` });
   }
@@ -5015,7 +4931,7 @@ function vueFacturesMensuelles(){
           <div class="fm-id"><b>${echapper(x.nom)}</b><small>${echapper(x.email || 'Pas d’email de facturation')}${x.region ? ' · ' + echapper(x.region) : ''}</small></div>
           <div class="fm-arts">${x.lignes.map(l => `<span><b>${l.quantite} ×</b> ${echapper(l.produit)}</span>`).join('')}<small>${x.commandes.length} commande${x.commandes.length > 1 ? 's' : ''} : ${echapper(x.commandes.join(', '))}</small></div>
           <div class="fm-montant"><b>${echapper(formaterMontant(x.montant))}</b></div>
-          <div class="fm-etat">${f ? `<span class="tag" data-forme="rond" style="--forme:var(--th-ac-1f9d55ff, #1F9D55)">${echapper(f.numero)}</span><small>${f.envoyeeLe ? `Envoyée le ${echapper(f.envoyeeLe)}` : 'Émise, pas encore envoyée'}</small>` : '<span class="tag" data-forme="losange" style="--forme:var(--th-ac-e62460ff, #E62460)">À émettre</span>'}</div>
+          <div class="fm-etat">${f ? `<span class="tag" data-forme="rond" style="--forme:#1F9D55">${echapper(f.numero)}</span><small>${f.envoyeeLe ? `Envoyée le ${echapper(f.envoyeeLe)}` : 'Émise, pas encore envoyée'}</small>` : '<span class="tag" data-forme="losange" style="--forme:#E62460">À émettre</span>'}</div>
           <div class="fm-act"><button type="button" class="btn btn-secondary" data-fm-emettre="${echapper(x.code)}" ${f && f.envoyeeLe ? 'data-fm-renvoyer="1"' : ''} ${x.email ? '' : 'disabled title="Renseigne un email de facturation sur la structure"'}>${icon('mail', 14)}${f ? (f.envoyeeLe ? 'Renvoyer' : 'Envoyer') : 'Émettre et envoyer'}</button></div>
         </div>`; }).join('')}</div>`}`;
   return `
@@ -5071,10 +4987,6 @@ function dialogShell(titre, corps, idFormulaire, boutonGauche){
         </div>
       </div>
     </div>`;
-}
-/** Liens utiles des Réglages pour ce contexte (liens-admin.js) — '' si aucun ou module absent. */
-function liensRaccourcis(contexte, titre){
-  return typeof window.boutonsLiensRaccourcis === 'function' ? window.boutonsLiensRaccourcis(contexte, titre) : '';
 }
 function champ(label, html){
   return `<div class="field" style="margin-top:var(--space-2)"><label>${echapper(label)}</label>${html}</div>`;
@@ -5215,8 +5127,6 @@ function valeursInitialesStructure(s){
     typePublic: s ? s.typePublic || '' : '',
     programmes: String((s && s.programmes) || '').split(',').map(x => x.trim()).filter(Boolean),
     depotVente: !!(s && s.depotVente), lienConvention: s ? s.lienConvention || '' : '',
-    comptesGoogle: s ? s.comptesGoogle || '' : '',
-    facturationDepotVente: (s && s.facturationDepotVente === 'chaque-vente') ? 'chaque-vente' : 'aucune',
   };
 }
 function vueCreerStructure(){
@@ -5351,20 +5261,12 @@ function etapeStructureOptions(v){
     <label class="csw-option${v.depotVente ? ' choisi' : ''}">
       <span class="rp-switch"><input type="checkbox" id="cs-depot-vente" data-cs="depotVente" ${v.depotVente ? 'checked' : ''}><span class="rp-switch-piste"></span></span>
       <span class="csw-option-txt"><b>Dépôt-vente</b>
-        <small>Le matériel est <strong>confié en dépôt</strong> : rien à payer à la commande (ni devis ni facture). La structure déclare chaque vente dans sa flotte (« Vendu ») et <strong>vous suivez tout depuis l’admin</strong>, sans les données des personnes : stock restant, ventes, alertes (appareil en stock depuis 2 mois, stock divisé par deux, stock bas) et « Stock restreint » (plafonds global et par produit).</small>
+        <small>La structure garde du matériel en dépôt et le remet ou le vend sur place. Sa flotte est alors gérée dans la plateforme et <strong>vous la gérez aussi depuis l’admin</strong> : stock restant par structure (onglet Stock et fiche structure), modifications répercutées directement chez elle, et alertes quand un appareil dort en stock depuis 2 mois ou quand le stock a diminué de moitié depuis le dernier réassort.</small>
       </span>
     </label>
-    ${v.depotVente ? `<div class="csw-section" style="margin-top:12px"><h4>Facturation des ventes</h4>
-      <div class="csw-types">
-        <label class="csw-type${v.facturationDepotVente !== 'chaque-vente' ? ' choisi' : ''}"><input type="radio" name="cs-fact-dv" value="aucune" data-cs="facturationDepotVente" ${v.facturationDepotVente !== 'chaque-vente' ? 'checked' : ''}><span class="csw-option-txt"><b>Pas de facturation automatique</b><small>Les ventes sont suivies ; la facturation se règle à part (organisation à définir).</small></span></label>
-        <label class="csw-type${v.facturationDepotVente === 'chaque-vente' ? ' choisi' : ''}"><input type="radio" name="cs-fact-dv" value="chaque-vente" data-cs="facturationDepotVente" ${v.facturationDepotVente === 'chaque-vente' ? 'checked' : ''}><span class="csw-option-txt"><b>Une facture à chaque vente</b><small>Dès qu’un appareil passe en « Vendu », une facture de son prix de cession est émise (onglet Devis / Factures).</small></span></label>
-      </div></div>` : ''}
     <div class="field" style="margin-top:14px"><label for="cs-convention">Lien vers la convention <em>(facultatif)</em></label>
       <input class="input" id="cs-convention" data-cs="lienConvention" type="url" value="${echapper(v.lienConvention)}" placeholder="https://… (Drive, SharePoint…)">
-      <p class="csw-aide">Collez le lien du document signé : il sera accessible depuis la fiche de la structure.</p></div>
-    ${v.type === 'interne' ? `<div class="field" style="margin-top:14px"><label for="cs-google">Équipe (comptes Google) <em>(facultatif)</em></label>
-      <input class="input" id="cs-google" data-cs="comptesGoogle" type="text" value="${echapper(v.comptesGoogle)}" placeholder="paul@emmaus-connect.org (conseiller), anne@emmaus-connect.org (responsable)">
-      <p class="csw-aide">L’e-mail de contact ouvre déjà l’espace <strong>sans code</strong>, en responsable de territoire. Ajoutez d’autres adresses séparées par des virgules, suivies de <strong>(responsable)</strong> ou <strong>(conseiller)</strong> — conseiller par défaut : flotte et ventes, attestations, projets et rapport en consultation. Le responsable peut aussi gérer cette liste depuis son espace.</p></div>` : ''}`;
+      <p class="csw-aide">Collez le lien du document signé : il sera accessible depuis la fiche de la structure.</p></div>`;
 }
 function etapeStructureRecap(v){
   const typeLib = (TYPES_STRUCTURE.find(t => t.cle === v.type) || {}).libelle || '—';
@@ -5378,7 +5280,7 @@ function etapeStructureRecap(v){
     ${bloc(1, 'Identité', [['Nom', v.nom], ...(state.modal.ligne ? (v.nouveauCode ? [['Nouveau code', v.nouveauCode]] : []) : [['Code d’accès', v.code]]), ['SIRET', v.siret], ['Catégorie', v.categorie], ['Région', v.region]])}
     ${bloc(2, 'Contacts', [['Responsable', nomComplet(v.responsablePrenom, v.responsableNom)], ['E-mail', v.email], ['Téléphone', v.telephone], ['Adresse', v.adresse], ['Facturation', [nomComplet(v.respFactPrenom, v.respFactNom), v.emailFacturation].filter(Boolean).join(' · ')]])}
     ${bloc(3, 'Commandes & paiement', [['Paiement', paiement], ['Catalogue', groupes], v.type === 'bo' ? ['Public visé', v.typePublic] : null, v.programmes.length ? ['Programmes', v.programmes.map(id => ((state.distributions || []).find(p => p.id === id) || {}).nom || id).join(', ')] : null])}
-    ${bloc(4, 'Options', [['Dépôt-vente', v.depotVente ? (v.facturationDepotVente === 'chaque-vente' ? 'Oui — une facture à chaque vente' : 'Oui — sans facturation automatique') : 'Non'], ['Convention', v.lienConvention], v.type === 'interne' ? ['Comptes Google', [v.email, v.comptesGoogle].filter(Boolean).join(', ')] : null])}
+    ${bloc(4, 'Options', [['Dépôt-vente', v.depotVente ? 'Oui — flotte gérée aussi depuis l’admin' : 'Non'], ['Convention', v.lienConvention]])}
   </div>`;
 }
 /** Vérifie l'étape affichée ; renvoie un message d'erreur, ou '' si tout va bien. */
@@ -5438,7 +5340,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   const r = lireSaisieStructure(e.target);
-  if(r === 'rendre' || e.target.dataset.cs === 'groupesMode' || e.target.dataset.cs === 'depotVente' || e.target.dataset.cs === 'facturationDepotVente') render();
+  if(r === 'rendre' || e.target.dataset.cs === 'groupesMode' || e.target.dataset.cs === 'depotVente') render();
   if(e.target.id === 'st-filtre-region'){ state.structuresFiltreRegion = e.target.value; render(); }
 });
 document.addEventListener('click', e => {
@@ -5493,8 +5395,6 @@ async function enregistrerStructure(){
     siret: v.siret.replace(/\s+/g, ''), region: v.region,
     ...((state.distributions || []).some(p => p.statut !== 'archive') ? { programmes: v.programmes.join(',') } : {}),
     depotVente: v.depotVente ? 'TRUE' : 'FALSE', lienConvention: v.lienConvention.trim(),
-    comptesGoogle: v.comptesGoogle.trim(),
-    facturationDepotVente: v.depotVente ? v.facturationDepotVente : 'aucune',
     type: v.type,
   };
   const bouton = $('cs-enregistrer'); if(bouton) bouton.disabled = true;
@@ -5505,7 +5405,7 @@ async function enregistrerStructure(){
       const s = state.structures.find(x => x.ligne === ligne) || {};
       // Seuls les champs réellement modifiés sont envoyés (un appel par champ côté API).
       const avant = { ...valeursInitialesStructure(s) };
-      const initiaux = { nom: s.nom || '', email: s.email || '', telephone: s.telephone || '', adresse: s.adresse || '', categorie: s.categorie || '', responsable: s.responsable || '', responsableFacturation: s.responsableFacturation || '', emailFacturation: s.emailFacturation || '', groupesCommande: s.groupesCommande || '', typePublic: s.typePublic || '', moyensPaiement: s.moyensPaiement || '', siret: s.siret || '', region: s.region || '', programmes: s.programmes || '', depotVente: s.depotVente ? 'TRUE' : 'FALSE', lienConvention: s.lienConvention || '', comptesGoogle: s.comptesGoogle || '', facturationDepotVente: s.facturationDepotVente === 'chaque-vente' ? 'chaque-vente' : 'aucune', type: avant.type };
+      const initiaux = { nom: s.nom || '', email: s.email || '', telephone: s.telephone || '', adresse: s.adresse || '', categorie: s.categorie || '', responsable: s.responsable || '', responsableFacturation: s.responsableFacturation || '', emailFacturation: s.emailFacturation || '', groupesCommande: s.groupesCommande || '', typePublic: s.typePublic || '', moyensPaiement: s.moyensPaiement || '', siret: s.siret || '', region: s.region || '', programmes: s.programmes || '', depotVente: s.depotVente ? 'TRUE' : 'FALSE', lienConvention: s.lienConvention || '', type: avant.type };
       const aEnvoyer = Object.keys(champsCommuns).filter(c => String(champsCommuns[c]) !== String(initiaux[c] ?? ''));
       const nouveauCode = v.nouveauCode.trim();
       if(nouveauCode && nouveauCode !== s.code){
@@ -5544,7 +5444,7 @@ const ETAPES_COMMANDE = [
 const MOYENS_PAIEMENT_ADMIN = ['Paiement en ligne (CB)', 'Chèque', 'Espèces', 'Comptoir solidaire', 'Virement'];
 function structureNc(){ const v = state.modal && state.modal.v; return v ? state.structures.find(s => s.code === v.code) : null; }
 function typeNc(s){ return s ? typeStructure(s) : ''; }
-function sansPaiementNc(s){ const t = typeNc(s); return t === 'Interne' || t === 'ESN' || !!(s && s.depotVente); }
+function sansPaiementNc(s){ const t = typeNc(s); return t === 'Interne' || t === 'ESN'; }
 function prixUnitaireNc(p, s){
   if(!p || !s || sansPaiementNc(s)) return null;
   const v = parseFloat(typeNc(s) === 'RNum' ? p.prixRN : p.prixStandard);
@@ -5686,8 +5586,7 @@ function etapeNcPaiement(v, s){
   const t = typeNc(s);
   const moyens = moyensNc(s);
   let blocMoyen = '';
-  if(s && s.depotVente) blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${icon('check', 18)}</span><span><b>Mise en dépôt</b><small>Structure en dépôt-vente : rien à payer à la commande, le matériel reste à Emmaüs Connect jusqu’à sa vente.</small></span></div>`;
-  else if(sansPaiementNc(s)) blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${icon('check', 18)}</span><span><b>Aucun paiement</b><small>Structure ${echapper(t)} : ni paiement, ni facture.</small></span></div>`;
+  if(sansPaiementNc(s)) blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${icon('check', 18)}</span><span><b>Aucun paiement</b><small>Structure ${echapper(t)} : ni paiement, ni facture.</small></span></div>`;
   else if(t === 'RNum') blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${iconeMoyenPaiementAdmin('Virement', 20)}</span><span><b>Virement (RNum uniquement)</b><small>Moyen imposé pour la vente solidaire : devis puis facture.</small></span></div>`;
   else blocMoyen = `
     <div class="csw-moyens" role="radiogroup" aria-label="Moyen de paiement">
@@ -5719,7 +5618,7 @@ function etapeNcRecap(v, s){
   const total = state.ncLignes.reduce((n, l) => { const pu = prixUnitaireNc(state.produits.find(x => x.nom === l.produit), s); return pu == null ? n : n + pu * l.quantite; }, 0);
   const personnes = v.personnes.filter(p => (p.prenom + p.nom).trim());
   const mode = MODES_LIVRAISON.find(md => md.valeur === v.modeLivraison);
-  const moyen = (s && s.depotVente) ? 'Mise en dépôt (payé à la vente)' : sansPaiementNc(s) ? 'Aucun paiement' : typeNc(s) === 'RNum' ? 'Virement (RNum uniquement)' : (v.moyenPaiement || 'À définir');
+  const moyen = sansPaiementNc(s) ? 'Aucun paiement' : typeNc(s) === 'RNum' ? 'Virement (RNum uniquement)' : (v.moyenPaiement || 'À définir');
   return `<div class="csw-recap">
     ${bloc(0, 'Structure', [['Nom', s && s.nom], ['Type', typeNc(s)], ['E-mail', s && s.email]])}
     ${bloc(1, 'Produits', [...state.ncLignes.map(l => [l.produit, '× ' + l.quantite]), sansPaiementNc(s) ? null : ['Montant estimé', formaterMontant(total)]])}
@@ -5962,7 +5861,7 @@ function etapeNsProbleme(v){
     </label>`; }).join('');
   return `
     <div class="nsw-syms" role="radiogroup" aria-label="Symptôme">${cartes}
-      <label class="nsw-sym${v.symptome === '__autre' ? ' choisi' : ''}" style="--c-bg:var(--th-bg-eef2f5ff, #EEF2F5);--c-fg:var(--th-tx-002743ff, #002743)">
+      <label class="nsw-sym${v.symptome === '__autre' ? ' choisi' : ''}" style="--c-bg:#EEF2F5;--c-fg:#002743">
         <input type="radio" name="ns-symptome" value="__autre" ${v.symptome === '__autre' ? 'checked' : ''}>
         <span class="rpd-sym-ill">${window.illustrationCvdl ? window.illustrationCvdl('sym-generique_sav', 52) : icon('wrench', 26)}</span>
         <span>Autre problème</span>
@@ -6204,10 +6103,8 @@ const ETAPES_PRODUIT = [
   { cle: 'comportement', titre: 'Comportement', ill: 'reglages', h: 'Comment se comporte-t-il dans une commande ?', p: 'Visibilité, numéro de série, dématérialisé, facturation en fin de mois.' },
   { cle: 'recap', titre: 'Récapitulatif', ill: 'attestations', h: 'Tout est bon ?', p: 'Relisez avant de créer — chaque bloc se modifie d’un clic.' },
 ];
-/** Maximum par commande appliqué aux produits qui n'ont pas le leur (Réglages → Commandes). */
-function quantiteMaxDefautAffiche(){ return (state.reglages && state.reglages.quantiteMaxDefaut) || 5; }
 function valeursInitialesProduit(){
-  return { 'cp-nom': '', 'cp-icone': '', 'cp-groupe': GROUPES_COMMANDE[0], 'cp-prix-standard': '', 'cp-prix-rn': '', 'cp-prix-revente-max': '', 'cp-stock': '0', 'cp-quantite-max': '',
+  return { 'cp-nom': '', 'cp-icone': '', 'cp-groupe': GROUPES_COMMANDE[0], 'cp-prix-standard': '', 'cp-prix-rn': '', 'cp-prix-revente-max': '', 'cp-stock': '0',
     'cp-message-rupture': '', 'cp-systeme': '', 'cp-ram': '', 'cp-processeur': '', 'cp-disque': '', 'cp-donnees-mobiles': '', 'cp-sms': '', 'cp-appels': '',
     'cp-visible': true, 'cp-sans-suivi': false, 'cp-dematerialise': false, 'cp-facturation-mensuelle': false, 'cp-tectech-type': '', 'cp-tectech-categorie': '' };
 }
@@ -6302,12 +6199,6 @@ function etapeCpPrix(v){
         <div class="field"><label for="cp-stock">Stock de départ *</label><input class="input" id="cp-stock" type="number" step="1" min="0" inputmode="numeric" value="${echapper(v['cp-stock'])}"></div>
         <div class="field"><label for="cp-message-rupture">Message si indisponible <em>(facultatif)</em></label><textarea class="input" id="cp-message-rupture" rows="2" placeholder="Ce produit est temporairement indisponible.">${echapper(v['cp-message-rupture'])}</textarea></div>
       </div>
-    </section>
-    <section class="csw-section">
-      <h4>Commande</h4>
-      <div class="csw-grille">
-        <div class="field"><label for="cp-quantite-max">Quantité maximale par commande <em>(facultatif)</em></label><input class="input" id="cp-quantite-max" type="number" step="1" min="1" max="1000" inputmode="numeric" value="${echapper(v['cp-quantite-max'])}" placeholder="Par défaut : ${quantiteMaxDefautAffiche()}"><small class="cpw-aide">Vide = le réglage par défaut (Réglages → Commandes).</small></div>
-      </div>
     </section>`;
 }
 function etapeCpCaracteristiques(v){
@@ -6360,7 +6251,7 @@ function etapeCpRecap(v){
   return `<div class="csw-recap">
     <section class="csw-recap-bloc cpw-apercu"><span aria-hidden="true">${illustrationProduitAdmin(v['cp-nom'], v['cp-icone'], 56)}</span><div><b>${echapper(v['cp-nom'])}</b><small>${echapper(cat)} · ${echapper(v['cp-groupe'])}</small></div></section>
     ${bloc(0, 'Produit', [['Nom', v['cp-nom']], ['Catégorie', cat], ['Groupe', v['cp-groupe']]])}
-    ${bloc(1, 'Prix et stock', [['Prix standard', euros(v['cp-prix-standard'])], ['Prix RNum', euros(v['cp-prix-rn'])], ['Revente max.', v['cp-prix-revente-max'] ? euros(v['cp-prix-revente-max']) : 'Pas de plafond'], ['Stock', v['cp-stock']], ['Si indisponible', v['cp-message-rupture']], ['Max. par commande', v['cp-quantite-max'] || `Par défaut (${quantiteMaxDefautAffiche()})`]])}
+    ${bloc(1, 'Prix et stock', [['Prix standard', euros(v['cp-prix-standard'])], ['Prix RNum', euros(v['cp-prix-rn'])], ['Revente max.', v['cp-prix-revente-max'] ? euros(v['cp-prix-revente-max']) : 'Pas de plafond'], ['Stock', v['cp-stock']], ['Si indisponible', v['cp-message-rupture']]])}
     ${bloc(2, 'Caractéristiques', tech)}
     ${bloc(3, 'Comportement', [['Visible', oui(v['cp-visible'])], ['Sans n° de série ni personne', oui(v['cp-sans-suivi'])], ['Dématérialisé', oui(v['cp-dematerialise'])], ['Facture mensuelle', oui(v['cp-facturation-mensuelle'])]])}
   </div>`;
@@ -6376,8 +6267,6 @@ function verifierEtapeProduit(i){
     if(v['cp-prix-standard'] === '' || v['cp-prix-rn'] === '') return 'Les deux prix sont obligatoires (0 si gratuit).';
     if(v['cp-stock'] === '') return 'Indiquez le stock de départ (0 si aucun).';
     if([v['cp-prix-standard'], v['cp-prix-rn'], v['cp-stock']].some(x => parseFloat(x) < 0)) return 'Les prix et le stock ne peuvent pas être négatifs.';
-    const qm = String(v['cp-quantite-max'] || '').trim();
-    if(qm && !(parseInt(qm, 10) >= 1 && parseInt(qm, 10) <= 1000)) return 'La quantité maximale doit être entre 1 et 1000 (ou vide).';
   }
   return '';
 }
@@ -6439,7 +6328,6 @@ function vueCreerProduit(){
       <p style="margin:4px 0 0;font-size:12px;opacity:.65">Plafond du prix auquel une structure peut revendre cet appareil à la personne accompagnée (tarifs de revente dans sa flotte).</p></div>
     </div>
     ${champ('Stock *', `<input class="input" id="cp-stock" type="number" step="1" value="${p ? echapper(p.stock) : ''}">`)}
-    ${champ(`Quantité maximale par commande (vide = par défaut : ${quantiteMaxDefautAffiche()})`, `<input class="input" id="cp-quantite-max" type="number" step="1" min="1" max="1000" value="${p && p.quantiteMax ? echapper(p.quantiteMax) : ''}" placeholder="Par défaut">`)}
     ${champ('Message d\'indisponibilité', `<textarea class="input" id="cp-message-rupture" rows="2" placeholder="Ce produit est temporairement indisponible.">${p ? echapper(p.messageRupture || '') : ''}</textarea>`)}
     </div>
     <div class="cp-section"><div class="rp-surtitre">Caractéristiques</div>
@@ -6548,7 +6436,6 @@ async function enregistrerProduit(){
   const avecGo = valeur => valeur && /^\d+$/.test(valeur) ? `${valeur} Go` : valeur;
   const champsCommuns = {
     nom, prixStandard, prixRN, stock, icone, prixReventeMax: lire('cp-prix-revente-max').trim(),
-    quantiteMax: lire('cp-quantite-max').trim(),
     visible: coche('cp-visible'), sansPersonne: sansSuivi,
     exclureDuPasseport: sansSuivi, sansNumeroSerie: sansSuivi && !dematerialise, groupe: lire('cp-groupe'),
     tectechType: lire('cp-tectech-type'), tectechCategorie: lire('cp-tectech-categorie'),
@@ -6666,7 +6553,6 @@ function vueCreerDevis(){
     ` : (eligibles.length
       ? champ('Commande *', `<select class="input" id="cd-ligne">${options}</select>`)
       : '<p style="opacity:0.6;font-size:13px;margin-top:var(--space-2)">Aucune commande sans devis à facturer.</p>')}
-    ${liensRaccourcis('devis')}
   `, 'cd-enregistrer');
 }
 async function enregistrerDevis(){
@@ -6777,7 +6663,6 @@ function vueCreerFacture(){
       ${champ('Commande *', `<select class="input" id="cf-ligne">${options}</select>`)}
       ${champ('Numéro de facture *', '<input class="input" id="cf-numero">')}
     ` : '<p style="opacity:0.6;font-size:13px;margin-top:var(--space-2)">Aucune commande sans facture à facturer.</p>'}
-    ${liensRaccourcis('facture')}
   `, 'cf-enregistrer');
 }
 async function enregistrerFacture(){
@@ -6912,7 +6797,6 @@ decorerElementsUnifies(document.body);
 (async () => {
   let mdpStocke = '';
   try{ mdpStocke = sessionStorage.getItem('cvdl-admin-jeton') || ''; sessionStorage.removeItem('cvdl-admin-password'); }catch(e){}
-  preparerGoogleAdmin(!mdpStocke);
   if(!mdpStocke) return;
   await connecter(mdpStocke); // le jeton est renouvelé à chaque reconnexion
 
@@ -7048,15 +6932,6 @@ async function enregistrerCoefficientsImpact(){
 }
 
 /** Vue 360° d'une structure : identité, chiffres, commandes, SAV, documents, impact. */
-/** Couleur d'un statut SAV hors de l'onglet SAV (fiche 360°) — même règle que couleurHex de
- *  vueSav, qui n'existe que dans cette fonction (la fiche plantait dès qu'un SAV était listé). */
-function couleurStatutSavGlobale(statut){
-  const def = (state.statutsSav || []).find(d => d.statut === statut);
-  if(!def) return '#8FA3B3';
-  if(def.terminal) return def.couleur === 't-vert' ? '#1F9D55' : '#E62460';
-  const premier = (state.statutsSav || []).filter(d => !d.terminal).sort((a, b) => a.ordre - b.ordre)[0];
-  return premier && premier.statut === def.statut ? '#FECC38' : '#00ACB0';
-}
 function vueStructure360(){
   const s = state.structures.find(x => x.ligne === state.modal.ligne);
   if(!s) return '';
@@ -7102,16 +6977,9 @@ function vueStructure360(){
           ${tuile(impayees.length ? `${fmtNombre(montantImpaye)} €` : '0 €', `impayé${impayees.length > 1 ? 's' : ''} (${impayees.length})`, impayees.length > 0, 'facture')}
         </div>
         ${s.depotVente ? (() => { const d = etatDepotVente(s.code); return `<section class="s3-bloc dv-s3">
-          <div class="dv-s3-corps">
-            <div class="dv-s3-titre"><span data-ill="flotte" class="ill s"></span><h3>Dépôt-vente</h3>${d && d.limites && d.limites.actif ? '<span class="dv-badge-restreint">Stock restreint</span>' : ''}</div>
-            ${d ? `<div class="dv-puces"><span><b>${d.enStock}</b> en stock${d.reference ? ` sur ${d.reference} au dernier réassort` : ''}</span><span><b>${d.vendus}</b> vendu${d.vendus > 1 ? 's' : ''}</span>${d.sav ? `<span><b>${d.sav}</b> en SAV</span>` : ''}${pucesAlertesDepot(d)}<span>${d.facturation === 'chaque-vente' ? 'Facture à chaque vente' : 'Sans facturation auto.'}</span></div>` : '<p class="s3-vide">Stock en cours de chargement…</p>'}
-          </div>
-          <div class="dv-s3-actions">
-            <button type="button" class="btn btn-secondary" data-stock-restreint="${echapper(s.code)}">${icon('gear', 14)}Stock restreint</button>
-            <button type="button" class="btn btn-primary" data-flotte-structure="${echapper(s.code)}">${icon('package', 14)}Gérer la flotte</button>
-          </div>
+          <div class="s3-bloc-tete"><span data-ill="flotte" class="ill s"></span><h3>Dépôt-vente</h3><button type="button" class="btn btn-primary" data-flotte-structure="${echapper(s.code)}">${icon('package', 14)}Gérer la flotte</button></div>
+          ${d ? `<div class="dv-puces"><span><b>${d.enStock}</b> en stock${d.reference ? ` sur ${d.reference} au dernier réassort` : ''}</span><span><b>${d.remis}</b> remis</span>${d.sav ? `<span><b>${d.sav}</b> en SAV</span>` : ''}${d.anciens ? `<span class="att">${d.anciens} depuis + de 2 mois</span>` : ''}${d.moitie ? '<span class="ko">Stock divisé par deux</span>' : ''}</div>` : '<p class="s3-vide">Stock en cours de chargement…</p>'}
         </section>`; })() : ''}
-        ${type === 'Interne' || s.type === 'interne' ? blocProjetsStructure360(s) : ''}
         <div class="s3-grille">
           <section class="s3-bloc s3-large">
             <div class="s3-bloc-tete"><span data-ill="commandes" class="ill s"></span><h3>Commandes</h3><span>${commandes.length}</span></div>
@@ -7125,7 +6993,7 @@ function vueStructure360(){
             ${sav.length ? sav.slice(0, 8).map(t => `<div class="s3-ligne" data-sav-ouvrir="${echapper(t.reference)}" role="button" tabindex="0">
               <span class="s3-ic"><span data-ill="panne" class="ill s"></span></span>
               <span class="s3-ligne-txt"><b>${echapper(t.reference)}</b><small>${echapper(t.symptome || t.marque || '')}</small></span>
-              <span class="rp-statut" style="--st:${couleurStatutSavGlobale(t.statut)}">${echapper(t.statut || '')}</span></div>`).join('') : vide('Aucune demande SAV.')}
+              <span class="rp-statut" style="--st:${couleurHex(state.statutsSav.find(d => d.statut === t.statut))}">${echapper(t.statut || '')}</span></div>`).join('') : vide('Aucune demande SAV.')}
           </section>
           <section class="s3-bloc">
             <div class="s3-bloc-tete"><span data-ill="facture" class="ill s"></span><h3>Devis et factures</h3><span>${devis.length + factures.length}</span></div>
@@ -7146,38 +7014,6 @@ function vueStructure360(){
         </div>
       </div>
     </div>`;
-}
-/** Projets de distribution d'une structure Interne (créés depuis son espace, portail) : lecture
- *  seule dans l'admin. Chargés à l'ouverture de la fiche, mis en cache ; la fiche se redessine. */
-const cacheProjetsStructures = {};
-function projetsStructureAdmin(code){
-  const c = cacheProjetsStructures[code];
-  if(c && (c.donnees || c.enCours)) return c.donnees || null;
-  cacheProjetsStructures[code] = { enCours: true };
-  jsonp({ action: 'projets-structure-admin', password: motDePasse, code }).then(r => {
-    cacheProjetsStructures[code] = { donnees: r && r.ok ? r : { projets: [], remisSansProjet: 0 } };
-    if(state.modal && state.modal.kind === 'structure-360') render();
-  }).catch(() => { cacheProjetsStructures[code] = { donnees: { projets: [], remisSansProjet: 0, echec: true } }; });
-  return null;
-}
-function blocProjetsStructure360(s){
-  const d = projetsStructureAdmin(s.code);
-  const projets = d ? d.projets.filter(p => p.statut !== 'archive') : [];
-  const archives = d ? d.projets.length - projets.length : 0;
-  return `<section class="s3-bloc s3-projets">
-    <div class="s3-bloc-tete"><span data-ill="distribution" class="ill s"></span><h3>Projets de distribution</h3><span>${d ? projets.length : '…'}</span>
-      <button type="button" class="s3-lien" data-flotte-structure="${echapper(s.code)}" style="margin-left:auto">Voir la flotte</button></div>
-    ${!d ? '<p class="s3-vide">Chargement…</p>'
-      : !projets.length ? `<p class="s3-vide">Aucun projet en cours${archives ? ` (${archives} archivé${archives > 1 ? 's' : ''})` : ''}. La structure les crée depuis son espace (« Projets de distribution ») et y rattache les appareils remis.</p>`
-      : projets.map(p => { const av = p.avancement || {}; const tot = av.totalObjectif || 0, liv = av.totalLivre || 0; return `
-        <div class="s3-projet">
-          <div class="s3-projet-l"><span><b>${echapper(p.nom)}</b><small>${echapper([p.financeur, `${p.debut ? frDate(p.debut) : '…'} → ${p.butoir ? frDate(p.butoir) : '…'}`].filter(Boolean).join(' · '))}</small></span>
-            <span class="s3-projet-chiffre"><b>${liv}</b> / ${tot || '—'}</span></div>
-          <div class="di-barre" role="img" aria-label="${liv} distribués sur ${tot}"><i class="liv" style="width:${tot ? Math.min(100, liv / tot * 100) : 0}%"></i></div>
-          <div class="s3-projet-pied">${tagRythme(av)}${(av.objectifs || []).filter(o => o.objectif || o.livre).map(o => `<span class="di-tag">${echapper(o.produit)} ${o.livre}${o.objectif ? '/' + o.objectif : ''}</span>`).join('')}</div>
-        </div>`; }).join('')}
-    ${d && d.remisSansProjet ? `<p class="s3-vide">${d.remisSansProjet} appareil${d.remisSansProjet > 1 ? 's' : ''} remis sans projet.</p>` : ''}
-  </section>`;
 }
 /** Impact d'une structure calculé par le serveur (regles/impact.js) — le même que celui du
  *  rapport côté portail ; mis en cache, la vue se redessine à la réception. */
@@ -7355,11 +7191,6 @@ function ligneObjectifForm(o){
   return `<div class="di-ligne-f" data-dist-obj><select class="input" aria-label="Produit"><option value="">Choisir un produit…</option>${state.produits.map(p => `<option ${o && o.produit === p.nom ? 'selected' : ''}>${echapper(p.nom)}</option>`).join('')}</select>
     <input class="input" type="number" min="1" value="${o ? o.quantite : ''}" placeholder="Quantité" aria-label="Quantité"><button type="button" class="btn btn-ghost btn-icon" data-dist-retirer aria-label="Retirer">${icon('x', 14)}</button></div>`;
 }
-/** « Déjà distribués avant le suivi » : produit ('' = sans produit précisé) + quantité. */
-function ligneDejaForm(d){
-  return `<div class="di-ligne-f" data-dist-deja><select class="input" aria-label="Produit"><option value="">Sans produit précisé</option>${state.produits.map(p => `<option ${d && d.produit === p.nom ? 'selected' : ''}>${echapper(p.nom)}</option>`).join('')}</select>
-    <input class="input" type="number" min="1" value="${d ? d.quantite : ''}" placeholder="Quantité" aria-label="Quantité déjà distribuée"><button type="button" class="btn btn-ghost btn-icon" data-dist-retirer aria-label="Retirer">${icon('x', 14)}</button></div>`;
-}
 function ligneJalonForm(j){
   return `<div class="di-ligne-f jalon" data-dist-jalon><input class="input" type="date" value="${j ? echapper(j.date) : ''}" aria-label="Date"><input class="input" value="${j ? echapper(j.libelle) : ''}" placeholder="ex. Bilan intermédiaire financeur" aria-label="Libellé"><button type="button" class="btn btn-ghost btn-icon" data-dist-retirer aria-label="Retirer">${icon('x', 14)}</button></div>`;
 }
@@ -7390,10 +7221,6 @@ function vueDistributionForm(){
       <div><button type="button" class="btn btn-secondary" data-dist-ajout-obj>${icon('plus', 14)}Ajouter un produit</button></div></section>
     <section class="di-sect"><h3>Rattachement des commandes</h3><div class="di-radios">${Object.entries(MODES_RATTACHEMENT).map(([k, m]) => `<label><input type="radio" name="df-mode" value="${k}" ${(p ? p.mode : 'propose') === k ? 'checked' : ''}><span><b>${m.libelle}</b><small>${m.aide}</small></span></label>`).join('')}</div>
       <p class="di-aide">Une structure peut aussi être liée à ce programme depuis sa fiche : toutes ses commandes y sont alors rattachées d’office.</p></section>
-    <section class="di-sect"><h3>Déjà distribués avant le suivi <span class="di-aide">(facultatif)</span></h3>
-      <p class="di-aide">Pour un programme déjà en cours avant sa création ici : ces appareils comptent dans le « livré » dès le début du programme.</p>
-      <div id="df-deja">${((p && p.deja) || []).map(ligneDejaForm).join('')}</div>
-      <div><button type="button" class="btn btn-secondary" data-dist-ajout-deja>${icon('plus', 14)}Ajouter des appareils déjà distribués</button></div></section>
     <section class="di-sect"><h3>Points d’étape <span class="di-aide">(affichés dans le calendrier)</span></h3><div id="df-jalons">${((p && p.jalons) || []).map(ligneJalonForm).join('')}</div>
       <div><button type="button" class="btn btn-secondary" data-dist-ajout-jalon>${icon('plus', 14)}Ajouter un point d’étape</button></div></section>
   </div>`;
@@ -7407,7 +7234,6 @@ function vueDistributionForm(){
 document.addEventListener('click', async e => {
   if(e.target.closest('[data-dist-ajout-obj]')){ $('df-objectifs').insertAdjacentHTML('beforeend', ligneObjectifForm(null)); return; }
   if(e.target.closest('[data-dist-ajout-jalon]')){ $('df-jalons').insertAdjacentHTML('beforeend', ligneJalonForm(null)); return; }
-  if(e.target.closest('[data-dist-ajout-deja]')){ $('df-deja').insertAdjacentHTML('beforeend', ligneDejaForm(null)); return; }
   const r = e.target.closest('[data-dist-retirer]'); if(r){ r.parentElement.remove(); return; }
   if(e.target.id !== 'df-enregistrer') return;
   const coches = g => [...document.querySelectorAll(`[data-dist-per="${g}"]:checked`)].map(x => x.value);
@@ -7419,7 +7245,6 @@ document.addEventListener('click', async e => {
     objectifGlobal: parseInt($('df-global').value, 10) || 0,
     objectifs: [...document.querySelectorAll('[data-dist-obj]')].map(l => ({ produit: l.querySelector('select').value, quantite: parseInt(l.querySelector('input').value, 10) || 0 })).filter(o => o.produit && (o.quantite > 0 || parseInt($('df-global').value, 10) > 0)),
     mode: (document.querySelector('input[name="df-mode"]:checked') || {}).value || 'propose',
-    deja: [...document.querySelectorAll('[data-dist-deja]')].map(l => ({ produit: l.querySelector('select').value, quantite: parseInt(l.querySelector('input').value, 10) || 0 })).filter(d => d.quantite > 0),
     jalons: [...document.querySelectorAll('[data-dist-jalon]')].map(l => ({ date: l.querySelectorAll('input')[0].value, libelle: l.querySelectorAll('input')[1].value.trim() })).filter(j => j.date),
   };
   e.target.disabled = true;
@@ -7449,7 +7274,7 @@ function vueDistributionDetail(){
       <section class="di-bloc"><h3>Avancement</h3>${barresProgramme(av) || '<p class="di-aide">Aucun objectif.</p>'}
         ${av.enRetard && av.rythmeNecessaire ? `<p class="di-aide">Rythme nécessaire : ~${av.rythmeNecessaire} / semaine jusqu’au ${frDate(p.butoir)} (rythme actuel ~${av.rythmeActuel}).${av.projection ? ` Au rythme actuel, objectif atteint vers le ${frDate(av.projection)}.` : ''}</p>` : ''}
         <h3 style="margin-top:6px">Commandes rattachées (${av.commandes.length})</h3>
-        ${av.commandes.length ? `<div class="di-table"><table><thead><tr><th>Commande</th><th>Structure</th><th>Comptés</th><th>État</th></tr></thead><tbody>${av.commandes.map(c => c.avantSuivi ? `<tr class="di-avant"><td><b>Avant le suivi</b></td><td>—</td><td>${Object.entries(c.compte).map(([pr, q]) => `${q} × ${echapper(pr)}`).join(' · ')}</td><td><span class="di-tag">Déjà distribués</span></td></tr>` : `<tr data-commande-ouvrir="${echapper(c.reference)}" role="button" tabindex="0"><td><b>${echapper(c.reference)}</b></td><td>${echapper(c.nom || c.code)}</td><td>${Object.entries(c.compte).map(([pr, q]) => `${q} × ${echapper(pr)}`).join(' · ')}</td><td>${c.statut === 'Livrée' ? `<span class="di-tag ok">Livrée ${echapper(c.dateLivraison)}</span>` : `<span class="di-tag">${echapper(c.statut)}</span>`}</td></tr>`).join('')}</tbody></table></div>` : '<p class="di-aide">Aucune commande rattachée pour l’instant.</p>'}
+        ${av.commandes.length ? `<div class="di-table"><table><thead><tr><th>Commande</th><th>Structure</th><th>Comptés</th><th>État</th></tr></thead><tbody>${av.commandes.map(c => `<tr data-commande-ouvrir="${echapper(c.reference)}" role="button" tabindex="0"><td><b>${echapper(c.reference)}</b></td><td>${echapper(c.nom || c.code)}</td><td>${Object.entries(c.compte).map(([pr, q]) => `${q} × ${echapper(pr)}`).join(' · ')}</td><td>${c.statut === 'Livrée' ? `<span class="di-tag ok">Livrée ${echapper(c.dateLivraison)}</span>` : `<span class="di-tag">${echapper(c.statut)}</span>`}</td></tr>`).join('')}</tbody></table></div>` : '<p class="di-aide">Aucune commande rattachée pour l’instant.</p>'}
       </section>
       <section class="di-bloc"><h3>Par département</h3>${deps.length ? deps.map(([d, q]) => `<div class="di-hb"><b>${echapper(d)}</b><span class="di-hbt"><i style="width:${q / maxDep * 100}%"></i></span><span>${q}</span></div>`).join('') : '<p class="di-aide">Rien de livré.</p>'}
         <h3 style="margin-top:6px">Par structure</h3>${structs.slice(0, 8).map(([n, q]) => `<div class="di-hb large"><span>${echapper(n)}</span><span class="di-hbt"><i style="width:${q / Math.max(1, structs[0][1]) * 100}%"></i></span><span>${q}</span></div>`).join('') || '<p class="di-aide">—</p>'}${structs.length > 8 ? `<p class="di-aide">+ ${structs.length - 8} autres</p>` : ''}
@@ -7549,189 +7374,18 @@ function etatDepotVente(code){ return (state.depotVente || []).find(x => x.code 
 function feedDepotVente(){
   const out = [];
   (state.depotVente || []).forEach(d => {
-    if(d.anciens) out.push({ icon: icon('clock', 15), badgeBg: 'var(--th-bg-fff3ccff, #FFF3CC)', badgeFg: 'var(--th-tx-7a5a00ff, #7A5A00)', tagCls: '', tagStyle: 'background:var(--th-bg-fff3ccff, #FFF3CC);color:var(--th-tx-7a5a00ff, #7A5A00)', type: 'Dépôt-vente', id: d.nom, structure: 'Dépôt-vente', statut: `${d.anciens} appareil${d.anciens > 1 ? 's' : ''} en stock depuis + de 2 mois`, urgent: false, date: new Date(), attrs: `data-flotte-structure="${echapper(d.code)}"` });
-    const bas = d.stockBas || {};
-    if(bas.global || (bas.produits || []).length) out.push({ icon: icon('package', 15), badgeBg: 'var(--th-bg-fff3ccff, #FFF3CC)', badgeFg: 'var(--th-tx-7a5a00ff, #7A5A00)', tagCls: '', tagStyle: 'background:var(--th-bg-fff3ccff, #FFF3CC);color:var(--th-tx-7a5a00ff, #7A5A00)', type: 'Dépôt-vente', id: d.nom, structure: 'Stock bas', statut: bas.global ? `Stock bas : ${d.enStock} appareil${d.enStock > 1 ? 's' : ''} (seuil ${d.limites.seuilBas})` : `Stock bas : ${bas.produits.map(p => `${p.produit} (${p.enStock})`).join(', ')}`, urgent: true, date: new Date(), attrs: `data-flotte-structure="${echapper(d.code)}"` });
+    if(d.anciens) out.push({ icon: icon('clock', 15), badgeBg: '#FFF3CC', badgeFg: '#7A5A00', tagCls: '', tagStyle: 'background:#FFF3CC;color:#7A5A00', type: 'Dépôt-vente', id: d.nom, structure: 'Dépôt-vente', statut: `${d.anciens} appareil${d.anciens > 1 ? 's' : ''} en stock depuis + de 2 mois`, urgent: false, date: new Date(), attrs: `data-flotte-structure="${echapper(d.code)}"` });
     if(d.moitie) out.push({ icon: icon('package', 15), badgeBg: 'var(--color-accent-100)', badgeFg: 'var(--color-accent-700)', tagCls: 'tag-accent', type: 'Dépôt-vente', id: d.nom, structure: 'Dépôt-vente', statut: `Stock divisé par deux (${d.enStock}/${d.reference})`, urgent: true, date: new Date(), attrs: `data-flotte-structure="${echapper(d.code)}"` });
   });
   return out;
 }
-/** Pastilles d'alerte d'une structure en dépôt-vente (fiche, onglet Stock). */
-function pucesAlertesDepot(d){
-  const bas = d.stockBas || {};
-  return [
-    d.anciens ? `<span class="att">${d.anciens} depuis + de 2 mois</span>` : '',
-    d.moitie ? '<span class="ko">Stock divisé par deux</span>' : '',
-    bas.global ? `<span class="ko">Stock bas (≤ ${d.limites.seuilBas})</span>` : '',
-    ...(bas.produits || []).map(p => `<span class="ko">${echapper(p.produit)} : stock bas (${p.enStock})</span>`),
-    d.auPlafond ? `<span class="att">Plafond atteint (${d.limites.plafond})</span>` : '',
-  ].join('');
-}
-
-/* ── « Mode stock bas » (onglet Stock) : limite TOUTES les commandes des structures sur le
-   portail — total d'articles par commande, quantité par produit (défaut + réglage par produit),
-   message affiché sur le formulaire. Les saisies manuelles de l'admin ne sont pas limitées. ── */
-function msbActif(){ return !!(state.modeStockBas && state.modeStockBas.actif); }
-async function chargerModeStockBas(){
-  try{ const r = await jsonp({ action: 'mode-stock-bas', password: motDePasse }); if(r && r.ok){ state.modeStockBas = r.mode; if(state.activeTab === 'stock' && !state.modal) render(); } }catch(e){ /* non bloquant */ }
-}
-function resumeModeStockBas(m){
-  const parties = [];
-  if(m.maxParCommande != null) parties.push(`${m.maxParCommande} article${m.maxParCommande > 1 ? 's' : ''} max. par commande`);
-  if(m.maxParProduit != null) parties.push(`${m.maxParProduit} par produit`);
-  const n = Object.keys(m.produits || {}).length;
-  if(n) parties.push(`${n} produit${n > 1 ? 's' : ''} réglé${n > 1 ? 's' : ''} à part`);
-  return parties.join(' · ') || 'aucune limite chiffrée pour l’instant';
-}
-function bandeauModeStockBas(){
-  if(!msbActif()) return '';
-  const m = state.modeStockBas;
-  return `<div class="msb-bandeau" role="status">${icon('alert', 18)}<div><b>Mode stock bas actif</b>${m.depuis ? ` <small>depuis le ${echapper(new Date(m.depuis).toLocaleDateString('fr-FR'))}</small>` : ''}<span>Toutes les commandes des structures sont limitées : ${echapper(resumeModeStockBas(m))}.</span></div><button type="button" class="btn btn-secondary" data-mode-stock-bas>Modifier</button></div>`;
-}
-function vueModeStockBas(){
-  const m = state.modal; const v = m.v;
-  const val = x => x === null || x === undefined ? '' : x;
-  const produits = (state.produits || []).filter(p => p.visible && !p.dematerialise);
-  return `
-    <div class="dialog-backdrop">
-      <div class="dialog dialog-large" role="dialog" aria-modal="true" aria-labelledby="msb-titre" style="width:min(780px,100%)">
-        <header class="csw-tete">
-          <div class="csw-tete-txt"><div class="rp-surtitre">Stock</div><h2 class="csw-titre" id="msb-titre">Mode stock bas</h2></div>
-          <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button>
-        </header>
-        <div class="dialog-corps"><div style="grid-column:1 / -1;min-width:0;display:flex;flex-direction:column;gap:14px">
-          <label class="csw-option${v.actif ? ' choisi' : ''}">
-            <span class="rp-switch"><input type="checkbox" data-msb="actif" ${v.actif ? 'checked' : ''}><span class="rp-switch-piste"></span></span>
-            <span class="csw-option-txt"><b>Activer le mode stock bas</b><small>Limite toutes les commandes passées par les structures sur le portail, quel que soit leur type. Les quantités proposées dans le formulaire sont réduites en conséquence et le serveur refuse tout dépassement. Vos saisies de commande dans l’admin ne sont pas limitées.</small></span>
-          </label>
-          <div class="sr-global msb-global${v.actif ? '' : ' sr-off'}">
-            <label class="field"><span>Articles max. par commande</span><input class="input" type="number" min="1" data-msb="maxParCommande" value="${val(v.maxParCommande)}" placeholder="Sans limite"></label>
-            <label class="field"><span>Max. par produit (tous produits)</span><input class="input" type="number" min="1" data-msb="maxParProduit" value="${val(v.maxParProduit)}" placeholder="Sans limite"></label>
-            <label class="field msb-message"><span>Message affiché aux structures <em>(facultatif)</em></span><input class="input" data-msb="message" maxlength="300" value="${echapper(v.message || '')}" placeholder="Ex. : Stock tendu jusqu’à fin octobre, merci de limiter vos demandes."></label>
-          </div>
-          <div class="sr-produits${v.actif ? '' : ' sr-off'}">
-            <div class="sr-ligne msb-ligne sr-entete"><span>Produit</span><span>Stock EC</span><span>Max. par commande</span></div>
-            ${produits.map(p => `<div class="sr-ligne msb-ligne">
-              <span class="sr-nom">${window.illustrationCvdl && window.cleIllustrationProduit ? window.illustrationCvdl(window.cleIllustrationProduit(p.nom, p.icone), 26) : ''}<b>${echapper(p.nom)}</b></span>
-              <span class="${p.stock <= 5 ? 'msb-stock-bas' : ''}">${p.stock}</span>
-              <input class="input" type="number" min="1" data-msb-produit="${echapper(p.nom)}" value="${val((v.produits || {})[p.nom])}" placeholder="${v.maxParProduit != null ? v.maxParProduit : '—'}" aria-label="Maximum par commande ${echapper(p.nom)}">
-            </div>`).join('') || '<p class="csw-aide">Aucun produit visible.</p>'}
-            <p class="csw-aide">Champ vide = le « max. par produit » ci-dessus s’applique.</p>
-          </div>
-        </div></div>
-        <div id="rp-retour-modale"></div>
-        <div class="dialog-actions" style="justify-content:flex-end">
-          <button type="button" class="btn btn-secondary" data-modal-fermer>Annuler</button>
-          <button type="button" class="btn btn-primary" data-msb-enregistrer>${icon('check', 15)}Enregistrer</button>
-        </div>
-      </div>
-    </div>`;
-}
-document.addEventListener('change', e => {
-  const m = state.modal; if(!m || m.kind !== 'mode-stock-bas') return;
-  const t = e.target; const n = x => x === '' ? null : Math.max(1, parseInt(x, 10) || 1);
-  if(t.dataset.msb === 'actif'){ m.v.actif = t.checked; render(); return; }
-  if(t.dataset.msb === 'message'){ m.v.message = t.value; return; }
-  if(t.dataset.msb){ m.v[t.dataset.msb] = n(t.value); return; }
-  if(t.dataset.msbProduit){ const x = n(t.value); if(x === null) delete m.v.produits[t.dataset.msbProduit]; else m.v.produits[t.dataset.msbProduit] = x; }
-});
-document.addEventListener('click', async e => {
-  if(e.target.closest('[data-mode-stock-bas]')){
-    e.stopPropagation();
-    state.modal = { kind: 'mode-stock-bas', v: JSON.parse(JSON.stringify(state.modeStockBas || { actif: false, maxParCommande: null, maxParProduit: null, produits: {}, message: '' })) };
-    state.modal.v.produits = state.modal.v.produits || {};
-    render(); return;
-  }
-  if(!e.target.closest('[data-msb-enregistrer]')) return;
-  const m = state.modal; if(!m || m.kind !== 'mode-stock-bas') return;
-  document.querySelectorAll('[data-msb]:not([type=checkbox]), [data-msb-produit]').forEach(el => el.dispatchEvent(new Event('change', { bubbles: true })));
-  const r = await posterEtat({ action: 'mode-stock-bas', mode: m.v }, 'Enregistrement…', m.v.actif ? 'Mode stock bas activé' : 'Mode stock bas désactivé');
-  if(r && r.ok){ state.modeStockBas = r.mode; state.modal = null; render(); }
-}, true);
-
-/* ── « Stock restreint » : plafonds (global / par produit) et seuils de stock bas d'une
-   structure en dépôt-vente, réglés dans une seule fenêtre (routes/depotVente.js). ── */
-async function ouvrirStockRestreint(code){
-  state.modal = { kind: 'stock-restreint', ref: code, chargement: true, modalParent: state.modal && state.modal.kind === 'structure-360' ? state.modal : null };
-  render();
-  try{
-    const r = await jsonp({ action: 'depot-vente-limites', password: motDePasse, code });
-    if(state.modal && state.modal.kind === 'stock-restreint'){
-      if(r && r.ok){ state.modal.limites = JSON.parse(JSON.stringify(r.limites)); state.modal.occupation = r.occupation; }
-      else state.modal.erreur = (r && r.erreur) || 'Chargement impossible.';
-      state.modal.chargement = false; render();
-    }
-  }catch(e){ if(state.modal){ state.modal.chargement = false; state.modal.erreur = 'Chargement impossible.'; render(); } }
-}
-function vueStockRestreint(){
-  const m = state.modal;
-  const s = state.structures.find(x => x.code === m.ref) || { nom: m.ref };
-  const l = m.limites || { actif: false, plafond: null, seuilBas: null, produits: {} };
-  const occ = m.occupation || { total: 0, parProduit: {} };
-  const d = etatDepotVente(m.ref) || {};
-  const enStockP = d.parProduit || {};
-  const noms = [...new Set([...(state.produits || []).filter(p => p.visible && !p.dematerialise).map(p => p.nom), ...Object.keys(occ.parProduit || {}), ...Object.keys(l.produits || {})])].filter(Boolean);
-  const val = v => v === null || v === undefined ? '' : v;
-  const corps = m.chargement ? '<p style="opacity:.6">Chargement…</p>' : m.erreur ? `<div class="msg msg-erreur">${echapper(m.erreur)}</div>` : `
-    <label class="csw-option${l.actif ? ' choisi' : ''}">
-      <span class="rp-switch"><input type="checkbox" data-sr="actif" ${l.actif ? 'checked' : ''}><span class="rp-switch-piste"></span></span>
-      <span class="csw-option-txt"><b>Activer le stock restreint</b><small>Limite le matériel confié à cette structure : au-delà d’un plafond, elle ne peut plus commander (le formulaire ne propose que ce qui reste possible). Le seuil de stock bas déclenche une alerte de réassort (fil des priorités, cloche, e-mail).</small></span>
-    </label>
-    <div class="sr-global${l.actif ? '' : ' sr-off'}">
-      <div class="sr-chiffre"><b>${occ.total}</b><span>en dépôt ou en commande<br>(${d.enStock != null ? d.enStock : '—'} en stock)</span></div>
-      <label class="field"><span>Plafond global</span><input class="input" type="number" min="0" inputmode="numeric" data-sr="plafond" value="${val(l.plafond)}" placeholder="Sans limite"></label>
-      <label class="field"><span>Seuil de stock bas</span><input class="input" type="number" min="0" inputmode="numeric" data-sr="seuilBas" value="${val(l.seuilBas)}" placeholder="Aucune alerte"></label>
-    </div>
-    <div class="sr-produits${l.actif ? '' : ' sr-off'}">
-      <div class="sr-ligne sr-entete"><span>Produit</span><span>En stock</span><span>Dépôt + commandes</span><span>Plafond</span><span>Seuil bas</span></div>
-      ${noms.map(n => { const lp = (l.produits || {})[n] || {}; return `<div class="sr-ligne">
-        <span class="sr-nom">${window.illustrationCvdl && window.cleIllustrationProduit ? window.illustrationCvdl(window.cleIllustrationProduit(n, ((state.produits || []).find(p => p.nom === n) || {}).icone), 26) : ''}<b>${echapper(n)}</b></span>
-        <span>${enStockP[n] || 0}</span><span>${(occ.parProduit || {})[n] || 0}</span>
-        <input class="input" type="number" min="0" inputmode="numeric" data-sr-produit="${echapper(n)}" data-sr-champ="plafond" value="${val(lp.plafond)}" placeholder="—" aria-label="Plafond ${echapper(n)}">
-        <input class="input" type="number" min="0" inputmode="numeric" data-sr-produit="${echapper(n)}" data-sr-champ="seuilBas" value="${val(lp.seuilBas)}" placeholder="—" aria-label="Seuil bas ${echapper(n)}">
-      </div>`; }).join('') || '<p class="csw-aide">Aucun produit au catalogue.</p>'}
-      <p class="csw-aide">Champ vide = pas de limite pour ce produit (seul le plafond global s’applique).</p>
-    </div>`;
-  return `
-    <div class="dialog-backdrop">
-      <div class="dialog dialog-large" role="dialog" aria-modal="true" aria-labelledby="sr-titre" style="width:min(820px,100%)">
-        <header class="csw-tete">
-          <div class="csw-tete-txt"><div class="rp-surtitre">Dépôt-vente · Stock restreint</div><h2 class="csw-titre" id="sr-titre">${echapper(s.nom)}</h2></div>
-          <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button>
-        </header>
-        <div class="dialog-corps"><div style="grid-column:1 / -1;min-width:0;display:flex;flex-direction:column;gap:14px">${corps}</div></div>
-        <div id="rp-retour-modale"></div>
-        <div class="dialog-actions" style="justify-content:flex-end">
-          <button type="button" class="btn btn-secondary" data-modal-fermer>Annuler</button>
-          <button type="button" class="btn btn-primary" data-sr-enregistrer ${m.chargement || m.erreur ? 'disabled' : ''}>${icon('check', 15)}Enregistrer</button>
-        </div>
-      </div>
-    </div>`;
-}
-document.addEventListener('change', e => {
-  const m = state.modal; if(!m || m.kind !== 'stock-restreint' || !m.limites) return;
-  const t = e.target; const n = v => v === '' ? null : Math.max(0, parseInt(v, 10) || 0);
-  if(t.dataset.sr === 'actif'){ m.limites.actif = t.checked; render(); return; }
-  if(t.dataset.sr){ m.limites[t.dataset.sr] = n(t.value); return; }
-  if(t.dataset.srProduit){ const p = m.limites.produits[t.dataset.srProduit] = m.limites.produits[t.dataset.srProduit] || { plafond: null, seuilBas: null }; p[t.dataset.srChamp] = n(t.value); }
-});
-document.addEventListener('click', async e => {
-  const o = e.target.closest('[data-stock-restreint]');
-  if(o){ e.stopPropagation(); e.preventDefault(); ouvrirStockRestreint(o.dataset.stockRestreint); return; }
-  if(!e.target.closest('[data-sr-enregistrer]')) return;
-  const m = state.modal; if(!m || m.kind !== 'stock-restreint') return;
-  document.querySelectorAll('[data-sr], [data-sr-produit]').forEach(el => el.dispatchEvent(new Event('change', { bubbles: true }))); // valeurs en cours de saisie
-  const r = await posterEtat({ action: 'depot-vente-limites', code: m.ref, limites: m.limites }, 'Enregistrement…', 'Stock restreint enregistré');
-  if(r && r.ok){ state.modal = m.modalParent || null; render(); chargerDepotVente(); }
-}, true);
-
 /** Section « Dépôt-vente » de l'onglet Stock : stock restant par structure, lien direct. */
 function sectionDepotVenteStock(){
   const liste = state.depotVente || [];
   if(!liste.length) return '';
   return `
     <section class="dv-section">
-      <div class="dv-tete"><span data-ill="flotte" class="ill"></span><div><h2>Dépôt-vente</h2><p>Matériel confié en dépôt : stock restant et ventes déclarées, mis à jour à chaque modification, chez elles comme ici.</p></div></div>
+      <div class="dv-tete"><span data-ill="flotte" class="ill"></span><div><h2>Dépôt-vente</h2><p>Stock restant chez les structures en dépôt-vente — mis à jour à chaque modification, chez elles comme ici.</p></div></div>
       <div class="dv-grille">
         ${liste.map(d => { const pct = d.reference ? Math.round(d.enStock / d.reference * 100) : 100; return `
         <article class="card dv-carte${d.moitie ? ' alerte' : ''}" data-flotte-structure="${echapper(d.code)}" role="button" tabindex="0" aria-label="Gérer la flotte de ${echapper(d.nom)}">
@@ -7739,10 +7393,10 @@ function sectionDepotVenteStock(){
           <div class="dv-chiffre"><b>${d.enStock}</b><span>en stock${d.reference ? ` sur ${d.reference} au dernier réassort` : ''}</span></div>
           <div class="dv-barre" aria-hidden="true"><i style="width:${Math.max(3, Math.min(100, pct))}%"></i></div>
           <div class="dv-puces">
-            <span>${d.vendus} vendu${d.vendus > 1 ? 's' : ''}</span>${d.sav ? `<span>${d.sav} en SAV</span>` : ''}
-            ${pucesAlertesDepot(d)}
+            <span>${d.remis} remis</span>${d.sav ? `<span>${d.sav} en SAV</span>` : ''}
+            ${d.anciens ? `<span class="att">${d.anciens} depuis + de 2 mois</span>` : ''}
+            ${d.moitie ? '<span class="ko">Stock divisé par deux</span>' : ''}
           </div>
-          <button type="button" class="et-lien dv-carte-restreint" data-stock-restreint="${echapper(d.code)}">${icon('gear', 13)}Stock restreint${d.limites && d.limites.actif ? ' · actif' : ''}</button>
         </article>`; }).join('')}
       </div>
     </section>`;
@@ -7766,7 +7420,7 @@ function vueFlotteStructure(){
       <div class="dialog dv-modale" role="dialog" aria-modal="true" aria-labelledby="dv-titre">
         <header class="csw-tete dv-tete">
           <div class="csw-tete-txt"><div class="rp-surtitre">Flotte${s.depotVente ? ' · dépôt-vente' : ''}</div><h2 class="csw-titre" id="dv-titre">${echapper(s.nom)}</h2></div>
-          ${d ? `<div class="dv-puces"><span><b>${d.enStock}</b> en stock${d.reference ? ` / ${d.reference}` : ''}</span><span><b>${d.vendus}</b> vendu${d.vendus > 1 ? 's' : ''}</span>${d.anciens ? `<span class="att">${d.anciens} depuis + de 2 mois</span>` : ''}${d.moitie ? '<span class="ko">Stock divisé par deux</span>' : ''}</div>` : ''}
+          ${d ? `<div class="dv-puces"><span><b>${d.enStock}</b> en stock${d.reference ? ` / ${d.reference}` : ''}</span><span><b>${d.remis}</b> remis</span>${d.anciens ? `<span class="att">${d.anciens} depuis + de 2 mois</span>` : ''}${d.moitie ? '<span class="ko">Stock divisé par deux</span>' : ''}</div>` : ''}
           <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button>
         </header>
         ${m.chargement ? '<div class="pk-etat">Mise à jour de la flotte…</div>'
@@ -7800,7 +7454,7 @@ async function deposerBonColissimoSav(ligne, fichier){
   const base64 = fichier ? await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = ko; r.readAsDataURL(fichier); }) : '';
   const r = await posterEtat({ action: 'sav-bon-colissimo', ligne, fichier: fichier ? { nom: fichier.name, type: fichier.type || 'application/pdf', base64 } : null },
     fichier ? 'Dépôt du bon Colissimo…' : 'Retrait…', fichier ? 'Bon Colissimo déposé' : 'Bon retiré');
-  if(r && r.ok){ s.bonColissimo = r.url || ''; if(typeof filSavAdminInvalider === 'function') filSavAdminInvalider(ligne); render(); }
+  if(r && r.ok){ s.bonColissimo = r.url || ''; render(); }
 }
 document.addEventListener('change', e => {
   const f = e.target.closest && e.target.closest('[data-sav-bon-colissimo]');

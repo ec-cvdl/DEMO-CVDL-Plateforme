@@ -24,16 +24,6 @@
     }
   }
   appliquerPrefs(lirePrefs());
-  // Accès « conseiller numérique » (connexion Google, jeton j3 à la place du code structure) :
-  // les éléments marqués data-role="responsable" sont masqués (le serveur refuse de toute façon).
-  try{
-    if((sessionStorage.getItem('cvdl-code-structure') || '').startsWith('j3.')){
-      document.documentElement.classList.add('role-conseiller');
-      const st = document.createElement('style');
-      st.textContent = 'html.role-conseiller [data-role="responsable"]{display:none!important}';
-      document.head.appendChild(st);
-    }
-  }catch(e){}
   try{ if(window.self !== window.top || new URLSearchParams(location.search).has('integre')) document.documentElement.classList.add('cvdl-integre'); }catch(e){ document.documentElement.classList.add('cvdl-integre'); }
   const page = (location.pathname.split('/').pop() || 'portail.html').replace(/\.html$/, '') || 'portail';
   const SURTITRES = {
