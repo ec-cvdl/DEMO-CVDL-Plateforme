@@ -1,0 +1,172 @@
+const $ = (id) => document.getElementById(id);
+const esc = (v) =>
+  String(v == null ? '' : v).replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+  );
+const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
+const params = new URLSearchParams(location.search);
+const ref = params.get('ref') || '';
+let code = params.get('code') || '';
+try {
+  if (!code) code = sessionStorage.getItem('cvdl-code-structure') || '';
+} catch (e) {}
+let donnees = null,
+  periode = '';
+
+function totaux(liste) {
+  const t = { parCat: {}, appareils: 0, personnes: 0, co2: 0, matieres: 0, dechets: 0 };
+  liste.forEach((c) => {
+    Object.entries(c.parCat || {}).forEach(([k, q]) => {
+      t.parCat[k] = (t.parCat[k] || 0) + q;
+    });
+    t.appareils += c.appareils;
+    t.personnes += c.personnes;
+    t.co2 += c.co2 || 0;
+    t.matieres += c.matieres || 0;
+    t.dechets += c.dechets || 0;
+  });
+  return t;
+}
+function kpi(ill, valeur, libelle) {
+  return `<div class="ri-kpi"><span data-ill="${ill}" class="ill"></span><b>${valeur}</b><span class="ri-kpi-l">${libelle}</span></div>`;
+}
+function rendre() {
+  const toutes = donnees.commandes;
+  const liste = ref
+    ? toutes.filter((c) => c.reference === ref)
+    : periode
+      ? toutes.filter((c) => c.annee === periode)
+      : toutes;
+  const t = totaux(liste);
+  const unique = !!ref;
+  $('ri-portee').textContent = unique
+    ? `Rapport d’impact · commande ${ref}`
+    : 'Rapport d’impact · toutes les commandes';
+  $('ri-titre').textContent = donnees.nomStructure;
+  const aujourdhui = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  $('ri-sous').textContent = unique
+    ? liste[0]
+      ? `Commande livrée le ${liste[0].dateLivraison} · établi le ${aujourdhui}`
+      : 'Commande introuvable ou pas encore livrée.'
+    : `${liste.length} commande${liste.length > 1 ? 's' : ''} livrée${liste.length > 1 ? 's' : ''}${periode ? ' en ' + periode : ''} · établi le ${aujourdhui}`;
+  $('ri-kpis').innerHTML = [
+    kpi('flotte', fmt(t.appareils), 'appareils remis'),
+    t.personnes ? kpi('personne', fmt(t.personnes), 'personnes équipées') : '',
+    !unique ? kpi('commandes', fmt(liste.length), 'commandes livrées') : '',
+    t.co2 ? kpi('impact', `${fmt(t.co2)} kg`, 'CO₂e évités / an') : '',
+    t.matieres ? kpi('stock', `${fmt(t.matieres)} kg`, 'matières premières<br>non extraites / an') : '',
+  ].join('');
+  rendreEquivalences(t.co2);
+  const cats = donnees.categories.filter((c) => t.parCat[c]);
+  const max = Math.max(1, ...cats.map((c) => t.parCat[c]));
+  $('ri-categories').innerHTML = cats.length
+    ? cats
+        .map(
+          (c) => `
+    <div class="ri-cat">
+      <span class="ri-cat-ill">${window.illustrationCvdl ? window.illustrationCvdl(donnees.illustrations[c] || 'prod-package', 36) : ''}</span>
+      <span class="ri-cat-nom">${esc(c)}</span>
+      <span class="ri-cat-barre" aria-hidden="true"><i style="width:${Math.round((t.parCat[c] / max) * 100)}%"></i></span>
+      <b class="ri-cat-n">${fmt(t.parCat[c])}</b>
+    </div>`,
+        )
+        .join('')
+    : '<p class="ri-vide">Aucune commande livrée sur cette période.</p>';
+  $('ri-methode').innerHTML =
+    `<b>Méthode.</b> Seules les commandes livrées sont comptées ; accessoires et recharges ne sont pas comptés comme appareils. ` +
+    `Impacts évités par année d’utilisation d’un appareil reconditionné à la place d’un neuf (PC portable, smartphone, tablette) — source : ${esc(donnees.source || '')}. ` +
+    `Équivalences : ${esc(donnees.sourceFacteurs || '')}, trajet Paris–Marseille en voiture thermique de ${donnees.kmParisMarseille || 775} km. Ordres de grandeur, pas une mesure.` +
+    (t.personnes
+      ? ''
+      : ' Le nombre de personnes équipées n’apparaît que lorsque les personnes sont renseignées dans la commande.');
+  $('ri-periodes')
+    .querySelectorAll('button')
+    .forEach((b) => {
+      const actif = b.dataset.periode === periode;
+      b.classList.toggle('actif', actif);
+      b.setAttribute('aria-pressed', actif);
+    });
+  if (window.portailIllustrations) window.portailIllustrations(document);
+}
+/* Équivalences (ADEME Impact CO2) — pictogrammes au style de la charte (trait + aplat). */
+const PICTO = {
+  voiture:
+    '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 26h34l-4-10H13z" fill="#7FD4D6" transform="translate(2 2)"/><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"><path d="M5 26 10 14h26l5 12v8H5z"/><circle cx="13" cy="34" r="4" fill="#fff"/><circle cx="34" cy="34" r="4" fill="#fff"/><path d="M11 22h25"/></g></svg>',
+  route:
+    '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="14" cy="14" r="7" fill="#F5A3BC" transform="translate(2 2)"/><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="13" r="6" fill="#fff"/><path d="M13 19v4c0 6 22 2 22 10v4"/><path d="M35 37l-3-4M35 37l3-4"/><path d="M11 13h4"/></g></svg>',
+  repas:
+    '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="25" cy="25" r="14" fill="#F5A3BC"/><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linecap="round"><circle cx="23" cy="23" r="14" fill="#fff"/><circle cx="23" cy="23" r="8"/><path d="M4 9v10M7 9v10M4 14h3M5.5 19v18M42 9c-3 3-3 10 0 12v16"/></g></svg>',
+  ecran:
+    '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="8" y="10" width="34" height="22" rx="3" fill="#7FD4D6"/><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="34" height="22" rx="3" fill="#fff"/><path d="M20 14v10l8-5z"/><path d="M16 38h14M23 30v8"/></g></svg>',
+  personne:
+    '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="25" cy="17" r="8" fill="#7FD4D6"/><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linecap="round"><circle cx="23" cy="15" r="7" fill="#fff"/><path d="M9 39a14 14 0 0 1 28 0"/></g></svg>',
+};
+function rendreEquivalences(co2) {
+  const f = donnees.facteurs || {};
+  const bloc = $('ri-bloc-equiv');
+  if (!co2 || !f.voiturethermique) {
+    bloc.hidden = true;
+    return;
+  }
+  const km = co2 / f.voiturethermique;
+  const pm = co2 / (f.voiturethermique * (donnees.kmParisMarseille || 775));
+  const joursFrancais = f.francais ? co2 / (f.francais / 365) : 0;
+  const items = [
+    ['voiture', fmt(km) + ' km', 'en voiture thermique'],
+    [
+      'route',
+      pm >= 1 ? fmt(pm) : pm.toLocaleString('fr-FR', { maximumFractionDigits: 1 }),
+      `trajet${pm >= 2 ? 's' : ''} Paris → Marseille en voiture`,
+    ],
+    f.repasavecduboeuf ? ['repas', fmt(co2 / f.repasavecduboeuf), 'repas avec du bœuf'] : null,
+    f.streamingvideo ? ['ecran', fmt(co2 / f.streamingvideo), 'heures de vidéo en streaming'] : null,
+    joursFrancais >= 1 ? ['personne', fmt(joursFrancais), 'jours d’empreinte carbone d’un Français'] : null,
+  ].filter(Boolean);
+  $('ri-intro-equiv').textContent =
+    `Les ${fmt(co2)} kg de CO₂e évités chaque année représentent autant d’émissions que :`;
+  $('ri-equivs').innerHTML = items
+    .map(
+      ([p, v, l]) =>
+        `<div class="ri-equiv"><span class="ri-equiv-ic">${PICTO[p]}</span><b>${v}</b><span>${l}</span></div>`,
+    )
+    .join('');
+  bloc.hidden = false;
+}
+async function charger() {
+  if (!code) {
+    $('ri-etat').innerHTML =
+      '<span data-ill="cle" class="ill"></span>Identifiez-vous d’abord sur le <a href="portail-structure.html">portail structure</a>.';
+    return;
+  }
+  try {
+    const r = await fetch(API + '?' + new URLSearchParams({ action: 'rapport-impact-par-code', code })).then((x) =>
+      x.json(),
+    );
+    if (!r.ok) throw new Error(r.erreur || 'Erreur');
+    donnees = r;
+    const annees = [...new Set(r.commandes.map((c) => c.annee).filter(Boolean))].sort().reverse();
+    if (!ref && annees.length > 1) {
+      $('ri-periodes').hidden = false;
+      $('ri-periodes').innerHTML = [
+        ...annees.map((a) => `<button type="button" class="cs-filtre" data-periode="${a}">${a}</button>`),
+        '<button type="button" class="cs-filtre" data-periode="">Tout</button>',
+      ].join('');
+    }
+    $('ri-etat').hidden = true;
+    $('ri-page').hidden = false;
+    rendre();
+  } catch (e) {
+    $('ri-etat').innerHTML =
+      '<span data-ill="vide" class="ill"></span>Le rapport n’a pas pu être chargé. Réessayez dans un instant.';
+  }
+}
+document.addEventListener('click', (e) => {
+  const p = e.target.closest('[data-periode]');
+  if (p) {
+    periode = p.dataset.periode;
+    rendre();
+  }
+});
+$('ri-imprimer').addEventListener('click', () => window.print());
+charger();
