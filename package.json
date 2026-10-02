@@ -1,0 +1,16 @@
+{
+  "name": "cvdl-frontend",
+  "private": true,
+  "description": "Front CVDL (site statique). Outils de développement uniquement : rien n'est à installer pour servir le site.",
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{js,css}\"",
+    "verifier": "prettier --check \"**/*.{js,css}\" && eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9"
+  }
+}

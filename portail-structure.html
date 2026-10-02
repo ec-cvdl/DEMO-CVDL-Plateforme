@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net https://accounts.google.com/gsi/; frame-src 'self' https://ec-cvdl.github.io https://accounts.google.com/gsi/; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CVDL — Espace structure</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=30">
+<link rel="stylesheet" href="cvdl-ui.css?v=32">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -153,9 +153,17 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 .ps-bas:has(#pv-liste-commandes[hidden]) .ps-plus-liste{ display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); }
 /* « Besoin d'aide ? » sur toute la largeur, sous les deux colonnes */
 .bloc-aide-large{ margin-top:22px; }
+.bloc-aide-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+/* Accès rapides : commandes en turquoise, pannes en magenta (aplat des illustrations aussi) */
+.ps-choix-carte[style*="--tur"] .ill .ill-fond{ fill:color-mix(in srgb, var(--tur) 45%, #fff); }
+.ps-choix-carte[style*="--mag"] .ill .ill-fond{ fill:color-mix(in srgb, var(--mag) 35%, #fff); }
 </style>
-<script src="portail-ui.js?v=22" defer></script>
-<script src="cvdl-ui.js?v=10" defer></script>
+<script src="portail-ui.js?v=24" defer></script>
+<script src="cvdl-ui.js?v=12" defer></script>
+<link rel="stylesheet" href="retours.css?v=1">
+<script src="retours.js?v=1" defer></script>
+<link rel="stylesheet" href="visite-guidee.css?v=1">
+<script src="visite-guidee.js?v=1" defer></script>
 </head>
 <body data-famille="accueil">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -199,7 +207,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
       <span class="message-contexte-txt"><span class="message-contexte-k">À traiter</span><span id="texte-message-contexte"></span></span><svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </a>
 
-    <div class="ps-choix">
+    <div class="ps-choix" data-role="responsable">
       <a class="ps-choix-carte" href="commande.html" style="--ps-c:var(--tur)">
         <span data-ill="commander" class="ill xl"></span>
         <span class="ps-choix-txt"><b>Commander du matériel</b><span>Ordinateurs, tablettes, smartphones reconditionnés.</span></span>
@@ -210,19 +218,19 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <span class="ps-choix-txt"><b>Suivre mes commandes</b><span>État, documents, numéros de série.</span></span>
         <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="pv-badge" data-badge="commandes" hidden></span>
       </a>
-      <a class="ps-choix-carte" href="sav.html" style="--ps-c:var(--rouge)">
+      <a class="ps-choix-carte" href="sav.html" style="--ps-c:var(--mag)">
         <span data-ill="panne" class="ill xl"></span>
         <span class="ps-choix-txt"><b>Signaler une panne</b><span>Un appareil ne marche plus ? On s’en occupe.</span></span>
         <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
       </a>
-      <a class="ps-choix-carte" href="suivi-sav-structure.html" style="--ps-c:var(--rouge)" data-tuto="sav">
+      <a class="ps-choix-carte" href="suivi-sav-structure.html" style="--ps-c:var(--mag)" data-tuto="sav">
         <span data-ill="suiviSav" class="ill xl"></span>
         <span class="ps-choix-txt"><b>Mes demandes SAV</b><span>Suivre l’avancement de vos dossiers de panne.</span></span>
         <span class="ps-choix-go">Ouvrir <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="pv-badge alerte" data-badge="sav" hidden></span>
       </a>
     </div>
 
-    <section class="ps-chiffres ps-chiffres-large" id="bloc-chiffres-portail">
+    <section class="ps-chiffres ps-chiffres-large" data-role="responsable" id="bloc-chiffres-portail">
       <div class="cvdl-surtitre ps-plus-titre">En chiffres</div>
       <div class="ps-stats" id="grille-stats-portail" hidden></div>
     </section>
@@ -242,7 +250,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 
     <div class="ps-bas">
       <div class="ps-colonne">
-        <section class="card ps-activite" id="pv-liste-commandes" hidden>
+        <section class="card ps-activite" data-role="responsable" id="pv-liste-commandes" hidden>
           <div class="ps-activite-tete">
             <span data-ill="tableau" class="ill s"></span>
             <h2>Activité récente</h2>
@@ -258,23 +266,45 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
       </div>
       <iframe src="https://ec-cvdl.github.io/decision-tree/" title="Arbre de décision — redirection du matériel" style="width:100%;height:600px" loading="lazy"></iframe>
     </div>
+    <div class="card elev-sm" id="panneau-equipe" hidden style="padding:var(--space-5) var(--space-6);margin-top:var(--space-5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
+        <h2 style="margin:0">Accès de l’équipe</h2>
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('panneau-equipe').hidden = true">Fermer</button>
+      </div>
+      <p style="opacity:.7;margin:0 0 var(--space-3);font-size:14px">Ces personnes ouvrent l’espace <strong>sans code</strong>, avec leur compte Google <span id="eq-domaine"></span>. <b>Responsable de territoire</b> : tout. <b>Conseiller numérique</b> : flotte et ventes, attestations, projets et rapport d’impact (consultation).</p>
+      <div id="eq-liste" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--space-4)">
+        <input class="input" type="email" id="eq-email" placeholder="prenom.nom@emmaus-connect.org" style="flex:1;min-width:220px">
+        <select class="input" id="eq-role" style="width:auto"><option value="conseiller">Conseiller numérique</option><option value="responsable">Responsable de territoire</option></select>
+        <button type="button" class="btn btn-primary" id="eq-ajouter">Ajouter</button>
+      </div>
+      <div id="eq-retour" style="margin-top:var(--space-3)"></div>
+    </div>
       </div>
       <aside class="ps-colonne">
         <section class="ps-plus">
           <div class="cvdl-surtitre ps-plus-titre">Aller plus loin</div>
           <div class="ps-plus-liste">
-            <a class="pv-carte" href="commandes-partenaires.html" data-gate="interne" hidden>
+            <a class="pv-carte" href="commandes-partenaires.html" data-gate="interne" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M10 18 24 11l14 7v14l-14 7-14-7z"/></g><g class="pv-illu-trait"><path d="M8 16 22 9l14 7v14l-14 7-14-7z"/><path d="M8 16l14 7 14-7M22 23v14"/><path d="M15 12.5 29 19.5"/><circle cx="37" cy="36" r="7" fill="var(--pv-fond)"/><path d="M34 36h6M37.5 33.5 40 36l-2.5 2.5"/></g></svg></span>
         <span class="pv-txt"><b>Commandes de mes partenaires</b><small>Attribuez du matériel de votre flotte à leurs commandes.</small></span><span class="pv-badge alerte" data-badge="commandes-partenaires" hidden></span>
       </a>
-            <a class="pv-carte" href="structures-partenaires.html" data-gate="interne" hidden>
+            <a class="pv-carte" href="projets-distribution.html" data-gate="interne" hidden>
+        <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M9 20 21 14l12 6v13l-12 6-12-6z"/></g><g class="pv-illu-trait"><path d="M7 18 19 12l12 6v13l-12 6-12-6z"/><path d="M7 18l12 6 12-6M19 24v13"/><path d="M34 14h9M39 10l4 4-4 4"/><path d="M34 24h6M37 21l3 3-3 3"/></g></svg></span>
+        <span class="pv-txt"><b>Projets de distribution</b><small>Suivez vos projets financés : objectifs, appareils remis, rythme à tenir.</small></span>
+      </a>
+            <a class="pv-carte" href="structures-partenaires.html" data-gate="interne" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><rect x="9" y="16" width="14" height="24" rx="2"/><rect x="27" y="10" width="14" height="30" rx="2"/></g><g class="pv-illu-trait"><rect x="7" y="14" width="14" height="24" rx="2"/><rect x="25" y="8" width="14" height="30" rx="2"/><path d="M11 20h2M16 20h2M11 26h2M16 26h2M29 14h2M34 14h2M29 20h2M34 20h2M29 26h2M34 26h2"/><path d="M12 38v-5h4v5M30 38v-5h4v5"/><path d="M3 38h40"/></g></svg></span>
         <span class="pv-txt"><b>Mes structures partenaires</b><small>Créez des structures que vous accompagnez, pour qu’elles puissent commander.</small></span><span class="pv-badge neutre" data-badge="structures-partenaires" hidden></span>
       </a>
-            <a class="pv-carte" href="tarifs-partenaires.html" data-gate="interne" hidden>
+            <a class="pv-carte" href="tarifs-partenaires.html" data-gate="interne" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M26 8h14v14L22 40 8 26z"/></g><g class="pv-illu-trait"><path d="M24 6h14v14L20 38 6 24z"/><circle cx="31.5" cy="12.5" r="2.5"/><path d="M24.5 22.5a5 5 0 1 0 0 6.5M16 24.2h7M16.5 27.2h6"/></g></svg></span>
         <span class="pv-txt"><b>Tarifs partenaires</b><small>Prix personnalisés du catalogue pour vos structures partenaires.</small></span>
       </a>
+            <button class="pv-carte" type="button" id="carte-equipe" data-gate="interne" data-role="responsable" hidden>
+        <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><circle cx="18" cy="18" r="8"/><circle cx="33" cy="21" r="6"/></g><g class="pv-illu-trait"><circle cx="18" cy="17" r="6"/><path d="M7 38c1-7 6-11 11-11s10 4 11 11"/><circle cx="33" cy="20" r="5"/><path d="M31 29c5 0 9 3 10 9"/></g></svg></span>
+        <span class="pv-txt"><b>Accès de l’équipe</b><small>Conseillers numériques et responsables qui entrent avec leur compte Google.</small></span>
+      </button>
             <button class="pv-carte" type="button" id="carte-aide-decision" onclick="document.getElementById('panneau-aide-decision').hidden = !document.getElementById('panneau-aide-decision').hidden; if(!document.getElementById('panneau-aide-decision').hidden) document.getElementById('panneau-aide-decision').scrollIntoView({behavior:'smooth', block:'start'});">
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M12 12h22l5 5-5 5H12z"/></g><g class="pv-illu-trait"><path d="M22 4v38"/><path d="M10 10h22l5 5-5 5H10z"/><path d="M34 24H14l-5 5 5 5h20z" fill="var(--pv-fond)"/><path d="M16 42h12"/></g></svg></span>
         <span class="pv-txt"><b>Aide à la décision</b><small>Un arbre de décision pas à pas pour orienter vers le bon équipement.</small></span>
@@ -296,209 +326,18 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
           <span data-ill="aide" class="ill"></span>
           <div class="texte">
             <strong>Besoin d’aide ?</strong>
-            <span>Une question sur une commande, un SAV ou votre espace.</span>
+            <span>Une question sur une commande, un SAV ou votre espace. <a href="#" id="lien-revoir-visite" class="pk-lien">Revoir la visite guidée</a></span>
           </div>
-          <a class="btn btn-secondary" id="lien-contact-aide" href="#">Nous écrire</a>
+          <div class="bloc-aide-actions">
+            <button type="button" class="btn btn-secondary" data-donner-avis="portail-structure">Donner mon avis</button>
+            <a class="btn btn-secondary" id="lien-contact-aide" href="#">Nous écrire</a>
+          </div>
         </div>
   </div>
 </main>
 
-<script>
-try{ if(sessionStorage.getItem('cvdl-code-structure')) document.documentElement.classList.add('deja-identifie'); }catch(e){}
-</script>
-<script>
-const API = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api';
-const $ = id => document.getElementById(id);
-
-/** Trajectoire aléatoire pour chaque forme décorative de la bannière — direction, distance et
- *  vitesse tirées au sort au chargement de la page plutôt qu'un jeu figé de préréglages
- *  horizontal/vertical/diagonal. Formes assez grandes (f1/f6) pour rester crédibles même en
- *  sortant loin du cadre : amplitude proportionnelle à leur taille. */
-document.querySelectorAll('.bandeau-accueil .forme').forEach(forme => {
-  const amplitude = 80 + Math.random() * 220;
-  const angle = Math.random() * Math.PI * 2;
-  const x0 = Math.round(Math.cos(angle) * amplitude), y0 = Math.round(Math.sin(angle) * amplitude);
-  forme.style.setProperty('--x0', `${x0}px`);
-  forme.style.setProperty('--y0', `${y0}px`);
-  forme.style.setProperty('--x1', `${-x0}px`);
-  forme.style.setProperty('--y1', `${-y0}px`);
-  forme.style.animationDuration = `${(16 + Math.random() * 16).toFixed(1)}s`;
-  forme.style.animationDelay = `${(-Math.random() * 15).toFixed(1)}s`;
-});
-function echapper(s){
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML;
-}
-function jsonp(params){
-  return fetch(API + '?' + new URLSearchParams(params)).then(r => r.json());
-}
-
-async function verifierCodePortail(code){
-  if(!code){ $('retour-code-portail').innerHTML = '<div class="msg msg-erreur">Merci de saisir un code.</div>'; return; }
-  $('btn-verifier-code-portail').disabled = true;
-  $('btn-verifier-code-portail').textContent = 'Vérification…';
-  $('retour-code-portail').innerHTML = '';
-  try{
-    const r = await jsonp({action:'check', code: code});
-    if(r.ok){
-      try{ sessionStorage.setItem('cvdl-code-structure', code); }catch(e){}
-      const heure = new Date().getHours();
-      const salutation = (heure >= 5 && heure < 18) ? 'Bonjour' : 'Bonsoir';
-      $('titre-structure-identifiee').innerHTML = r.nom ? `${echapper(salutation)}, <em>${echapper(r.nom)}</em>` : 'Espace structure';
-      document.querySelectorAll('[data-gate="interne"]').forEach(el => { el.hidden = !r.interne; });
-      $('etape-code').hidden = true;
-      // Le voile reste affiché tant que les données du tableau de bord n'ont pas fini de
-      // charger — avant, la grille de cartes s'affichait immédiatement (vide), le temps que
-      // les stats/message contextuel arrivent en tâche de fond derrière.
-      $('voile-verification-precoce').style.display = 'flex';
-      await chargerTableauBordPortail(code);
-      $('voile-verification-precoce').style.display = 'none';
-      $('etape-portail').hidden = false;
-      $('btn-deconnexion-portail').hidden = false;
-      demarrerTutoPortailSiDemande();
-    }else{
-      $('retour-code-portail').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
-    }
-  }catch(e){
-    $('retour-code-portail').innerHTML = '<div class="msg msg-erreur">Connexion impossible — réessaie.</div>';
-  }
-  $('btn-verifier-code-portail').disabled = false;
-  $('btn-verifier-code-portail').textContent = "Accéder à l'espace structure";
-}
-
-/** Charge stats/message contextuel/activité récente en tâche de fond, sans bloquer l'affichage
- *  de la grille de cartes — chaque bloc reste caché tant que sa donnée est vide plutôt que
- *  d'afficher un "0" ou un encart vide. */
-async function chargerTableauBordPortail(code){
-  try{
-    const r = await jsonp({action:'tableau-bord-structure', code});
-    if(!r.ok) return;
-
-    if(r.messageContexte){
-      $('texte-message-contexte').textContent = r.messageContexte.texte;
-      $('message-contexte-portail').href = r.messageContexte.lien;
-      $('message-contexte-portail').classList.toggle('urgent', r.messageContexte.type === 'urgent');
-      $('message-contexte-portail').hidden = false;
-    }
-
-    const s = r.stats;
-    const statsAffichees = [
-      s.beneficiairesEquipes > 0 ? { label: 'Personnes accompagnées équipées', valeur: s.beneficiairesEquipes, ill: 'personne', lien: 'flotte-structure.html' } : null,
-      s.appareilsFlotte > 0 ? { label: 'Appareils dans votre flotte', valeur: s.appareilsFlotte, ill: 'flotte', lien: 'flotte-structure.html' } : null,
-      s.commandesEnCours > 0 ? { label: 'Commandes en cours', valeur: s.commandesEnCours, ill: 'commandes', lien: 'suivi.html' } : null,
-      s.savOuverts > 0 ? { label: 'SAV ouverts', valeur: s.savOuverts, ill: 'suiviSav', lien: 'suivi-sav-structure.html' } : null,
-    ].filter(Boolean);
-    if(statsAffichees.length){
-      $('grille-stats-portail').innerHTML = statsAffichees.map(x => `<div class="ps-stat"><span data-ill="${x.ill}" class="ill"></span><span class="ps-stat-label">${echapper(x.label)}</span><span class="ps-stat-valeur">${x.valeur}</span></div>`).join('');
-      $('grille-stats-portail').hidden = false;
-    }
-
-
-    // « Mes commandes » : les 5 plus récentes, les livrées teintées en vert ; un clic ouvre la
-    // commande seule dans la page de suivi (?ref=), le bouton du bas les affiche toutes.
-    if(r.commandesRecentes && r.commandesRecentes.length){
-      $('pv-lignes-commandes').innerHTML = r.commandesRecentes.map(c => {
-        const livree = c.statut === 'Livrée';
-        return `
-        <a class="ps-ligne${livree ? ' livree' : ''}" href="suivi.html?ref=${encodeURIComponent(c.reference)}">
-          <span class="ps-ligne-txt"><b>${echapper(c.reference)}</b><small>${echapper(c.produits || '')}</small></span>
-          <span class="tag">${echapper(c.statut)}</span>
-          <span class="ps-ligne-date">${livree && c.dateLivraison ? 'le ' + echapper(c.dateLivraison) : `étape ${Math.min(c.etape, c.total)} / ${c.total}`}</span>
-        </a>`;
-      }).join('');
-      if(r.nbCommandesTotal) $('pv-toutes-commandes').firstChild.textContent = `Voir toutes mes commandes (${r.nbCommandesTotal}) `;
-      $('pv-liste-commandes').hidden = false;
-    }
-    if(s.commandesEnCours > 0){ document.querySelectorAll('[data-badge="commandes"]').forEach(el => { el.textContent = s.commandesEnCours; el.hidden = false; }); }
-    if(s.savOuverts > 0){ document.querySelectorAll('[data-badge="sav"]').forEach(el => { el.textContent = s.savOuverts; el.hidden = false; }); }
-    if(s.structuresPartenaires){ document.querySelectorAll('[data-badge="structures-partenaires"]').forEach(el => { el.textContent = s.structuresPartenaires; el.hidden = false; }); }
-    if(s.commandesPartenairesEnAttente > 0){ document.querySelectorAll('[data-badge="commandes-partenaires"]').forEach(el => { el.textContent = s.commandesPartenairesEnAttente; el.hidden = false; }); }
-
-
-    $('lien-contact-aide').href = r.emailContact ? `mailto:${r.emailContact}` : 'mailto:contact@emmaus-connect.org';
-  }catch(e){ /* le reste du portail (grille de cartes) fonctionne déjà sans ce tableau de bord */ }
-}
-
-// Tuto interactif au retour de la toute première commande (ou demande SAV) d'une structure :
-// ?tuto=commande ou ?tuto=sav dans l'URL déclenche un spotlight sur la carte correspondante.
-// Ne s'affiche qu'une fois par appareil (mémorisé indépendamment du code, voir portail.html).
-let tutoPortailDejaLance = false;
-function demarrerTutoPortailSiDemande(){
-  if(tutoPortailDejaLance) return;
-  const params = new URLSearchParams(location.search);
-  const cible = params.get('tuto');
-  if(cible !== 'commande' && cible !== 'sav') return;
-
-  const cleMemoire = `cvdl-tuto-${cible}-vu`;
-  try{ if(localStorage.getItem(cleMemoire) === 'oui') return; }catch(e){}
-
-  const carte = document.querySelector('[data-tuto="'+cible+'"]');
-  if(!carte) return;
-  tutoPortailDejaLance = true;
-
-  const voile = document.createElement('div');
-  voile.className = 'voile-tuto-portail';
-  document.body.appendChild(voile);
-  carte.classList.add('carte-tuto-spotlight');
-
-  const refCible = params.get('ref') || '';
-  const pageSuivi = cible === 'sav' ? 'suivi-sav-structure.html' : 'suivi.html';
-  if(refCible) carte.setAttribute('href', `${pageSuivi}?ref=${encodeURIComponent(refCible)}`);
-  const bulle = document.createElement('div');
-  bulle.className = 'bulle-tuto-portail';
-  bulle.setAttribute('role', 'dialog'); bulle.setAttribute('aria-label', 'Astuce');
-  bulle.innerHTML = `
-    <div class="bt-k">Astuce · à retenir</div>
-    <p class="bt-t">${cible === 'sav' ? 'Vos demandes SAV se suivent ici' : 'Vos commandes se suivent ici'}</p>
-    <p class="bt-p">${cible === 'sav'
-      ? "À tout moment, retrouvez l'avancement de votre demande depuis cette carte."
-      : "À tout moment, retrouvez depuis cette carte l'avancement, le suivi du colis et les numéros de série."}</p>
-    <div class="bt-actions"><button type="button" class="btn btn-ghost" data-bt="fermer">Compris</button>${refCible ? `<a class="btn btn-primary" href="${pageSuivi}?ref=${encodeURIComponent(refCible)}" data-bt="suivre">${cible === 'sav' ? 'Voir ma demande' : 'Voir ma commande'} →</a>` : ''}</div>
-  `;
-  document.body.appendChild(bulle);
-
-  function positionnerBulle(){
-    const r = carte.getBoundingClientRect();
-    const largeurBulle = bulle.offsetWidth || 270;
-    bulle.style.top = (window.scrollY + r.bottom + 12) + 'px';
-    bulle.style.left = Math.min(Math.max(12, window.scrollX + r.left), window.scrollX + document.documentElement.clientWidth - largeurBulle - 12) + 'px';
-  }
-  positionnerBulle();
-  window.addEventListener('resize', positionnerBulle);
-
-  function fermerTuto(){
-    voile.remove();
-    bulle.remove();
-    carte.classList.remove('carte-tuto-spotlight');
-    try{ localStorage.setItem(cleMemoire, 'oui'); }catch(e){}
-    history.replaceState(null, '', location.pathname);
-  }
-  voile.addEventListener('click', fermerTuto);
-  bulle.querySelector('[data-bt="fermer"]').addEventListener('click', fermerTuto);
-  const suivre = bulle.querySelector('[data-bt="suivre"]'); if(suivre) suivre.addEventListener('click', () => { try{ localStorage.setItem(cleMemoire, 'oui'); }catch(e){} });
-  carte.addEventListener('click', fermerTuto); // laisse le clic suivre le lien normalement, referme juste le tuto
-}
-
-$('btn-verifier-code-portail').addEventListener('click', () => verifierCodePortail($('code-portail').value.trim()));
-$('code-portail').addEventListener('keydown', e => { if(e.key === 'Enter') verifierCodePortail($('code-portail').value.trim()); });
-
-$('btn-deconnexion-portail').addEventListener('click', () => {
-  try{ sessionStorage.removeItem('cvdl-code-structure'); }catch(e){}
-  location.reload();
-});
-
-// Déjà identifiée sur cet appareil : on saute directement à la grille, sans redemander le code.
-try{
-  const codeMemorise = sessionStorage.getItem('cvdl-code-structure');
-  if(codeMemorise){
-    $('code-portail').value = codeMemorise;
-    verifierCodePortail(codeMemorise).finally(() => {
-      document.documentElement.classList.remove('deja-identifie');
-      const v = document.getElementById('voile-verification-precoce'); if(v) v.style.display = 'none';
-    });
-  }
-}catch(e){}
-</script>
+<script src="deja-identifie.js?v=1"></script>
+<script src="api.js?v=1"></script>
+<script src="pages/portail-structure.js?v=1"></script>
 </body>
 </html>

@@ -6,9 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- La connexion Google exige que l'origine soit transmise (pas de « no-referrer » ici). -->
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<script>/* Anti-clickjacking : jamais dans un cadre d'un autre site. */
-(function(){ if(window.top === window.self) return; var ok = false; try{ ok = window.top.location.origin === window.location.origin; }catch(e){} if(!ok){ document.documentElement.style.display = 'none'; try{ window.top.location = window.location.href; }catch(e){} } })();</script>
-<script>const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo</script>
+<script src="anti-cadre.js?v=1"></script>
+<script src="api.js?v=1"></script>
 <title>Support SAV — CVDL</title>
 <link rel="stylesheet" href="cvdl-ui.css?v=32">
 <link rel="stylesheet" href="sav-fil.css?v=1">

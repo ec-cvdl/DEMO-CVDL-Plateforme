@@ -1,23 +1,126 @@
 /* fiche-commande.css — styles du composant partagé fiche-commande.js (admin + espace partenaire). */
-.fc-frise{ list-style:none; display:flex; margin:0; padding:6px 0 2px; }
-.fc-frise li{ flex:1; position:relative; display:flex; flex-direction:column; align-items:center; gap:7px; font-size:12px; font-weight:600; text-align:center; }
-.fc-frise li::before{ content:''; position:absolute; top:9px; left:50%; width:100%; border-top:1.5px dashed color-mix(in srgb, #002743 30%, transparent); }
-.fc-frise li:last-child::before{ display:none; }
-.fc-frise li.fait::before{ border-top:2px solid #00ACB0; }
-.fc-frise i{ position:relative; z-index:1; width:18px; height:18px; box-sizing:border-box; border-radius:50%; border:1.5px solid #002743; background:#fff; }
-.fc-frise li.fait i{ background:#00ACB0; }
-.fc-frise li.cours i{ background:#E62460; border-radius:5px; box-shadow:2px 2px 0 color-mix(in srgb, #002743 38%, transparent); }
-.fc-frise li.cours span{ font-weight:700; }
-.fc-frise li.avenir i{ border-style:dashed; } .fc-frise li.avenir span{ opacity:.6; }
-.fc-annulee{ font-weight:700; font-size:13.5px; opacity:.75; }
-.fc-checklist{ display:flex; flex-direction:column; gap:7px; }
-.fc-titre{ font-weight:700; font-size:13.5px; } .fc-titre small{ font-weight:500; opacity:.7; }
-.fc-pr{ display:flex; align-items:center; gap:10px; font-size:13.5px; }
-.fc-c{ width:18px; height:18px; flex:none; box-sizing:border-box; border-radius:5px; border:1.5px solid #002743; background:#fff; display:inline-flex; align-items:center; justify-content:center; }
-.fc-pr.ok .fc-c{ background:#00ACB0; }
-.fc-pr.ok .fc-c::after{ content:''; width:8px; height:4px; border:2px solid #fff; border-top:0; border-right:0; transform:rotate(-45deg) translate(1px,-1px); }
-.fc-pr.ko{ font-weight:600; }
-.fc-pr.info{ opacity:.75; } .fc-pr.info .fc-c{ border-style:dashed; }
-.fc-bilan{ font-size:12.5px; font-weight:700; }
-.fc-bilan.manque{ color:color-mix(in srgb, #E62460 75%, #002743); } .fc-bilan.pret{ color:#1F9D55; }
-html.rp-dark .fc-frise i, html.rp-dark .fc-c{ background:transparent; border-color:currentColor; }
+.fc-frise {
+  list-style: none;
+  display: flex;
+  margin: 0;
+  padding: 6px 0 2px;
+}
+.fc-frise li {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+.fc-frise li::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 100%;
+  border-top: 1.5px dashed color-mix(in srgb, var(--th-bd-002743ff, #002743) 30%, transparent);
+}
+.fc-frise li:last-child::before {
+  display: none;
+}
+.fc-frise li.fait::before {
+  border-top: 2px solid var(--th-bd-00acb0ff, #00acb0);
+}
+.fc-frise i {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1.5px solid var(--th-bd-002743ff, #002743);
+  background: var(--th-bg-ffffffff, #fff);
+}
+.fc-frise li.fait i {
+  background: var(--th-bg-00acb0ff, #00acb0);
+}
+.fc-frise li.cours i {
+  background: var(--th-bg-e62460ff, #e62460);
+  border-radius: 5px;
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--th-om-002743ff, #002743) 38%, transparent);
+}
+.fc-frise li.cours span {
+  font-weight: 700;
+}
+.fc-frise li.avenir i {
+  border-style: dashed;
+}
+.fc-frise li.avenir span {
+  opacity: 0.6;
+}
+.fc-annulee {
+  font-weight: 700;
+  font-size: 13.5px;
+  opacity: 0.75;
+}
+.fc-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.fc-titre {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.fc-titre small {
+  font-weight: 500;
+  opacity: 0.7;
+}
+.fc-pr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.fc-c {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  box-sizing: border-box;
+  border-radius: 5px;
+  border: 1.5px solid var(--th-bd-002743ff, #002743);
+  background: var(--th-bg-ffffffff, #fff);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.fc-pr.ok .fc-c {
+  background: var(--th-bg-00acb0ff, #00acb0);
+}
+.fc-pr.ok .fc-c::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  border: 2px solid var(--th-bd-ffffffff, #fff);
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+.fc-pr.ko {
+  font-weight: 600;
+}
+.fc-pr.info {
+  opacity: 0.75;
+}
+.fc-pr.info .fc-c {
+  border-style: dashed;
+}
+.fc-bilan {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.fc-bilan.manque {
+  color: color-mix(in srgb, var(--th-tx-e62460ff, #e62460) 75%, var(--th-tx-002743ff, #002743));
+}
+.fc-bilan.pret {
+  color: var(--th-tx-1f9d55ff, #1f9d55);
+}
