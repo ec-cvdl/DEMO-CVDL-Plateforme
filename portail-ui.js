@@ -1,420 +1,145 @@
 /** Lien sûr pour un href : seulement http(s), mailto, un chemin relatif ou un document généré en data: (PDF/HTML) —
  *  tout le reste (javascript:, data:text/html…) est remplacé par « # ». */
-window.urlSure = function (u) {
+window.urlSure = function(u){
   const v = String(u == null ? '' : u).trim();
-  if (!v) return '#';
-  if (/^(https?:|mailto:)/i.test(v) || /^data:(application\/pdf|text\/html)[;,]/i.test(v)) return v;
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^\/\//.test(v)) return v; // relatif (même site)
+  if(!v) return '#';
+  if(/^(https?:|mailto:)/i.test(v) || /^data:(application\/pdf|text\/html)[;,]/i.test(v)) return v;
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^\/\//.test(v)) return v; // relatif (même site)
   return '#';
 };
 /* portail-ui.js — illustrations communes de l'espace public.
    Tout élément <span data-ill="nom" class="ill …"></span> reçoit son dessin (trait fin bleu nuit +
    aplat de couleur décalé). Styles dans portail.css. Aucune dépendance. */
-(function () {
+(function(){
   const I = {
-    flotte: [
-      't',
-      '<rect x="8" y="12" width="26" height="18" rx="3"/><rect x="30" y="18" width="12" height="20" rx="3"/>',
-      '<rect x="6" y="10" width="26" height="18" rx="3"/><path d="M3 32h32"/><rect x="31" y="16" width="12" height="22" rx="2.5" fill="var(--ill-fond)"/><path d="M35.5 34h3"/>',
-    ],
-    partenairesCmd: [
-      'm',
-      '<path d="M10 18 24 11l14 7v14l-14 7-14-7z"/>',
-      '<path d="M8 16 22 9l14 7v14l-14 7-14-7z"/><path d="M8 16l14 7 14-7M22 23v14M15 12.5 29 19.5"/><circle cx="37" cy="36" r="7" fill="var(--ill-fond)"/><path d="M34 36h6M37.5 33.5 40 36l-2.5 2.5"/>',
-    ],
-    structures: [
-      't',
-      '<rect x="9" y="16" width="14" height="24" rx="2"/><rect x="27" y="10" width="14" height="30" rx="2"/>',
-      '<rect x="7" y="14" width="14" height="24" rx="2"/><rect x="25" y="8" width="14" height="30" rx="2"/><path d="M11 20h2M16 20h2M11 26h2M16 26h2M29 14h2M34 14h2M29 20h2M34 20h2M29 26h2M34 26h2M12 38v-5h4v5M30 38v-5h4v5M3 38h40"/>',
-    ],
-    tarifs: [
-      'm',
-      '<path d="M26 8h14v14L22 40 8 26z"/>',
-      '<path d="M24 6h14v14L20 38 6 24z"/><circle cx="31.5" cy="12.5" r="2.5"/><path d="M24.5 22.5a5 5 0 1 0 0 6.5M16 24.2h7M16.5 27.2h6"/>',
-    ],
-    aide: [
-      't',
-      '<path d="M12 12h22l5 5-5 5H12z"/>',
-      '<path d="M22 4v38"/><path d="M10 10h22l5 5-5 5H10z"/><path d="M34 24H14l-5 5 5 5h20z" fill="var(--ill-fond)"/><path d="M16 42h12"/>',
-    ],
-    attestations: [
-      'm',
-      '<rect x="12" y="8" width="24" height="32" rx="3"/>',
-      '<path d="M30 40H11a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h17l8 8v9"/><path d="M28 6v8h8M14 18h10M14 23h14M14 28h8"/><circle cx="34" cy="31" r="6" fill="var(--ill-fond)"/><path d="m30.5 36-1.5 6 5-2.5 5 2.5-1.5-6"/>',
-    ],
-    categories: [
-      't',
-      '<rect x="7" y="9" width="16" height="22" rx="3"/><rect x="27" y="17" width="14" height="22" rx="3"/>',
-      '<rect x="5" y="7" width="16" height="22" rx="3"/><path d="M11 25h4"/><rect x="25" y="15" width="14" height="22" rx="3"/><path d="M30 33h4M5 38h13M25 42h14M8 34h7"/>',
-    ],
-    commander: [
-      'm',
-      '<rect x="13" y="15" width="26" height="15" rx="3"/>',
-      '<path d="M4 7h6l4 21h22l4-15H12"/><circle cx="17" cy="37" r="3" fill="var(--ill-fond)"/><circle cx="33" cy="37" r="3" fill="var(--ill-fond)"/><path d="M20 20h10M25 15v10"/>',
-    ],
-    commandes: [
-      'm',
-      '<path d="M10 17 24 10l14 7v16l-14 7-14-7z"/>',
-      '<path d="M8 15 22 8l14 7v16l-14 7-14-7z"/><path d="M8 15l14 7 14-7M22 22v16"/><rect x="28" y="26" width="16" height="16" rx="4" fill="var(--ill-fond)"/><path d="m32 34 2.5 2.5L40 31"/>',
-    ],
-    panne: [
-      't',
-      '<rect x="7" y="13" width="24" height="16" rx="3"/><path transform="translate(19 11) scale(1.25)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
-      '<rect x="5" y="11" width="24" height="16" rx="3"/><path d="M2 31h22"/><path vector-effect="non-scaling-stroke" transform="translate(17 9) scale(1.25)" fill="var(--ill-fond)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
-    ],
-    suiviSav: [
-      't',
-      '<rect x="12" y="10" width="26" height="30" rx="3"/>',
-      '<rect x="10" y="8" width="26" height="32" rx="3"/><rect x="17" y="5" width="12" height="6" rx="2" fill="var(--ill-fond)"/><path d="M14 26h5l3-6 4 10 3-6h4"/>',
-    ],
-    passeport: [
-      'm',
-      '<rect x="12" y="8" width="26" height="33" rx="3"/>',
-      '<rect x="10" y="6" width="26" height="33" rx="3"/><circle cx="23" cy="18" r="5"/><path d="M18 18h10M23 13c-2 3-2 7 0 10M23 13c2 3 2 7 0 10M16 30h14M18 34h10"/>',
-    ],
-    enquete: [
-      'm',
-      '<path d="M10 12h30a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H22l-8 7v-7h-4a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3z"/>',
-      '<path d="M8 10h30a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H20l-8 7v-7H8a3 3 0 0 1-3-3V13a3 3 0 0 1 3-3z"/><path d="m23 14.5 2.2 4.4 4.8.6-3.5 3.3.9 4.8L23 25.2l-4.4 2.4.9-4.8-3.5-3.3 4.8-.6z"/>',
-    ],
-    cle: [
-      't',
-      '<circle cx="17" cy="27" r="9"/>',
-      '<circle cx="15" cy="25" r="8"/><circle cx="15" cy="25" r="2.5"/><path d="M21 19 38 8M32 12l4 5M27.5 15l3 4"/>',
-    ],
-    structure: [
-      'm',
-      '<rect x="11" y="12" width="26" height="28" rx="2"/>',
-      '<rect x="9" y="10" width="26" height="28" rx="2"/><path d="M15 16h3M21 16h3M27 16h2M15 22h3M21 22h3M27 22h2M15 28h3M27 28h2M19 38v-7h6v7M4 38h36"/>',
-    ],
-    personne: [
-      't',
-      '<circle cx="25" cy="17" r="8"/><path d="M11 41a14 14 0 0 1 28 0z"/>',
-      '<circle cx="23" cy="15" r="7"/><path d="M9 39a14 14 0 0 1 28 0"/><path d="M33 9l3-3M36 13h4"/>',
-    ],
-    vide: [
-      'm',
-      '<circle cx="21" cy="21" r="12"/>',
-      '<circle cx="19" cy="19" r="12"/><path d="m28 28 12 12"/><path d="M14 19h10"/>',
-    ],
-    tableau: [
-      't',
-      '<rect x="10" y="10" width="30" height="28" rx="3"/>',
-      '<rect x="8" y="8" width="30" height="28" rx="3"/><path d="M8 15h30"/><rect x="12" y="20" width="7" height="12" rx="1.5" fill="var(--ill-fond)"/><rect x="22" y="25" width="5" height="7" rx="1.5"/><rect x="30" y="22" width="4" height="10" rx="1.5"/>',
-    ],
-    facture: [
-      'm',
-      '<path d="M12 8h24v32l-4-3-4 3-4-3-4 3-4-3-4 3z"/>',
-      '<path d="M10 6h24v32l-4-3-4 3-4-3-4 3-4-3-4 3z"/><path d="M15 13h14M15 19h14M15 25h8"/><circle cx="33" cy="31" r="7" fill="var(--ill-fond)"/><path d="M35.5 28.5a3.2 3.2 0 1 0 0 5M30 30.2h4M30 32.2h3.4"/>',
-    ],
-    stock: [
-      't',
-      '<rect x="9" y="24" width="15" height="15" rx="2"/><rect x="26" y="24" width="15" height="15" rx="2"/>',
-      '<rect x="7" y="22" width="15" height="15" rx="2"/><rect x="24" y="22" width="15" height="15" rx="2"/><rect x="15.5" y="5" width="15" height="14" rx="2" fill="var(--ill-fond)"/><path d="M14.5 22v5M31.5 22v5M23 5v5M3 40h40"/>',
-    ],
-    stats: [
-      'm',
-      '<path d="M10 40V26h6v14zM21 40V18h6v22zM32 40V10h6v30z"/>',
-      '<path d="M5 40h38"/><rect x="9" y="26" width="6" height="14" rx="1"/><rect x="20" y="18" width="6" height="22" rx="1" fill="var(--ill-fond)"/><rect x="31" y="10" width="6" height="30" rx="1"/><path d="M8 20l10-8 8 5 13-10"/>',
-    ],
-    reglages: [
-      't',
-      '<circle cx="25" cy="25" r="13"/>',
-      '<circle cx="23" cy="23" r="12"/><circle cx="23" cy="23" r="5" fill="var(--ill-fond)"/><path d="M23 5v5M23 36v5M5 23h5M36 23h5M10.3 10.3l3.5 3.5M32.2 32.2l3.5 3.5M10.3 35.7l3.5-3.5M32.2 13.8l3.5-3.5"/>',
-    ],
-    impact: [
-      't',
-      '<circle cx="25" cy="25" r="16"/>',
-      '<circle cx="23" cy="23" r="16"/><path d="M8 20h8l3 4-2 5 4 4v8M30 8l-2 6 4 3h8"/><path d="M28 40c0-9 5-15 14-16-1 9-6 14-14 16z" fill="var(--ill-fond)"/><path d="M28 40l8-9"/>',
-    ],
-    distribution: [
-      't',
-      '<path d="M9 20 21 14l12 6v14l-12 6-12-6z"/>',
-      '<path d="M7 18 19 12l12 6v14l-12 6-12-6z"/><path d="M7 18l12 6 12-6M19 24v14"/><path d="M34 12h8M38 8l4 4-4 4M34 26h8M38 22l4 4-4 4"/>',
-    ],
-    calendrier: [
-      'm',
-      '<rect x="9" y="12" width="32" height="28" rx="3"/>',
-      '<rect x="7" y="10" width="32" height="28" rx="3"/><path d="M7 18h32M15 6v8M31 6v8"/><rect x="13" y="23" width="6" height="5" rx="1" fill="var(--ill-fond)"/><path d="M24 25.5h9M13 32.5h6M24 32.5h9"/>',
-    ],
-    cloche: [
-      'm',
-      '<path d="M14 18a11 11 0 0 1 22 0c0 12 5 15 5 15H9s5-3 5-15z"/>',
-      '<path d="M12 16a11 11 0 0 1 22 0c0 12 5 15 5 15H7s5-3 5-15z"/><path d="M19 36a4 4 0 0 0 8 0"/><circle cx="36" cy="9" r="5" fill="var(--ill-fond)"/>',
-    ],
-    linux: [
-      't',
-      '<ellipse cx="25" cy="27" rx="12" ry="14"/>',
-      '<path d="M23 6c-5 0-7 4-7 9 0 3-4 7-5 12-1 4 1 8 4 10h16c3-2 5-6 4-10-1-5-5-9-5-12 0-5-2-9-7-9z"/><circle cx="20" cy="15" r="1.5"/><circle cx="26" cy="15" r="1.5"/><path d="M20 20c2 1.5 4 1.5 6 0M14 40l-3 3h8M32 40l3 3h-8"/>',
-    ],
+    flotte:['t','<rect x="8" y="12" width="26" height="18" rx="3"/><rect x="30" y="18" width="12" height="20" rx="3"/>','<rect x="6" y="10" width="26" height="18" rx="3"/><path d="M3 32h32"/><rect x="31" y="16" width="12" height="22" rx="2.5" fill="var(--ill-fond)"/><path d="M35.5 34h3"/>'],
+    partenairesCmd:['m','<path d="M10 18 24 11l14 7v14l-14 7-14-7z"/>','<path d="M8 16 22 9l14 7v14l-14 7-14-7z"/><path d="M8 16l14 7 14-7M22 23v14M15 12.5 29 19.5"/><circle cx="37" cy="36" r="7" fill="var(--ill-fond)"/><path d="M34 36h6M37.5 33.5 40 36l-2.5 2.5"/>'],
+    structures:['t','<rect x="9" y="16" width="14" height="24" rx="2"/><rect x="27" y="10" width="14" height="30" rx="2"/>','<rect x="7" y="14" width="14" height="24" rx="2"/><rect x="25" y="8" width="14" height="30" rx="2"/><path d="M11 20h2M16 20h2M11 26h2M16 26h2M29 14h2M34 14h2M29 20h2M34 20h2M29 26h2M34 26h2M12 38v-5h4v5M30 38v-5h4v5M3 38h40"/>'],
+    tarifs:['m','<path d="M26 8h14v14L22 40 8 26z"/>','<path d="M24 6h14v14L20 38 6 24z"/><circle cx="31.5" cy="12.5" r="2.5"/><path d="M24.5 22.5a5 5 0 1 0 0 6.5M16 24.2h7M16.5 27.2h6"/>'],
+    aide:['t','<path d="M12 12h22l5 5-5 5H12z"/>','<path d="M22 4v38"/><path d="M10 10h22l5 5-5 5H10z"/><path d="M34 24H14l-5 5 5 5h20z" fill="var(--ill-fond)"/><path d="M16 42h12"/>'],
+    attestations:['m','<rect x="12" y="8" width="24" height="32" rx="3"/>','<path d="M30 40H11a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3h17l8 8v9"/><path d="M28 6v8h8M14 18h10M14 23h14M14 28h8"/><circle cx="34" cy="31" r="6" fill="var(--ill-fond)"/><path d="m30.5 36-1.5 6 5-2.5 5 2.5-1.5-6"/>'],
+    categories:['t','<rect x="7" y="9" width="16" height="22" rx="3"/><rect x="27" y="17" width="14" height="22" rx="3"/>','<rect x="5" y="7" width="16" height="22" rx="3"/><path d="M11 25h4"/><rect x="25" y="15" width="14" height="22" rx="3"/><path d="M30 33h4M5 38h13M25 42h14M8 34h7"/>'],
+    commander:['m','<rect x="13" y="15" width="26" height="15" rx="3"/>','<path d="M4 7h6l4 21h22l4-15H12"/><circle cx="17" cy="37" r="3" fill="var(--ill-fond)"/><circle cx="33" cy="37" r="3" fill="var(--ill-fond)"/><path d="M20 20h10M25 15v10"/>'],
+    commandes:['m','<path d="M10 17 24 10l14 7v16l-14 7-14-7z"/>','<path d="M8 15 22 8l14 7v16l-14 7-14-7z"/><path d="M8 15l14 7 14-7M22 22v16"/><rect x="28" y="26" width="16" height="16" rx="4" fill="var(--ill-fond)"/><path d="m32 34 2.5 2.5L40 31"/>'],
+    panne:['t','<rect x="7" y="13" width="24" height="16" rx="3"/><path transform="translate(19 11) scale(1.25)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>','<rect x="5" y="11" width="24" height="16" rx="3"/><path d="M2 31h22"/><path vector-effect="non-scaling-stroke" transform="translate(17 9) scale(1.25)" fill="var(--ill-fond)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>'],
+    suiviSav:['t','<rect x="12" y="10" width="26" height="30" rx="3"/>','<rect x="10" y="8" width="26" height="32" rx="3"/><rect x="17" y="5" width="12" height="6" rx="2" fill="var(--ill-fond)"/><path d="M14 26h5l3-6 4 10 3-6h4"/>'],
+    passeport:['m','<rect x="12" y="8" width="26" height="33" rx="3"/>','<rect x="10" y="6" width="26" height="33" rx="3"/><circle cx="23" cy="18" r="5"/><path d="M18 18h10M23 13c-2 3-2 7 0 10M23 13c2 3 2 7 0 10M16 30h14M18 34h10"/>'],
+    enquete:['m','<path d="M10 12h30a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H22l-8 7v-7h-4a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3z"/>','<path d="M8 10h30a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H20l-8 7v-7H8a3 3 0 0 1-3-3V13a3 3 0 0 1 3-3z"/><path d="m23 14.5 2.2 4.4 4.8.6-3.5 3.3.9 4.8L23 25.2l-4.4 2.4.9-4.8-3.5-3.3 4.8-.6z"/>'],
+    cle:['t','<circle cx="17" cy="27" r="9"/>','<circle cx="15" cy="25" r="8"/><circle cx="15" cy="25" r="2.5"/><path d="M21 19 38 8M32 12l4 5M27.5 15l3 4"/>'],
+    structure:['m','<rect x="11" y="12" width="26" height="28" rx="2"/>','<rect x="9" y="10" width="26" height="28" rx="2"/><path d="M15 16h3M21 16h3M27 16h2M15 22h3M21 22h3M27 22h2M15 28h3M27 28h2M19 38v-7h6v7M4 38h36"/>'],
+    personne:['t','<circle cx="25" cy="17" r="8"/><path d="M11 41a14 14 0 0 1 28 0z"/>','<circle cx="23" cy="15" r="7"/><path d="M9 39a14 14 0 0 1 28 0"/><path d="M33 9l3-3M36 13h4"/>'],
+    vide:['m','<circle cx="21" cy="21" r="12"/>','<circle cx="19" cy="19" r="12"/><path d="m28 28 12 12"/><path d="M14 19h10"/>'],
+    tableau:['t','<rect x="10" y="10" width="30" height="28" rx="3"/>','<rect x="8" y="8" width="30" height="28" rx="3"/><path d="M8 15h30"/><rect x="12" y="20" width="7" height="12" rx="1.5" fill="var(--ill-fond)"/><rect x="22" y="25" width="5" height="7" rx="1.5"/><rect x="30" y="22" width="4" height="10" rx="1.5"/>'],
+    facture:['m','<path d="M12 8h24v32l-4-3-4 3-4-3-4 3-4-3-4 3z"/>','<path d="M10 6h24v32l-4-3-4 3-4-3-4 3-4-3-4 3z"/><path d="M15 13h14M15 19h14M15 25h8"/><circle cx="33" cy="31" r="7" fill="var(--ill-fond)"/><path d="M35.5 28.5a3.2 3.2 0 1 0 0 5M30 30.2h4M30 32.2h3.4"/>'],
+    stock:['t','<rect x="9" y="24" width="15" height="15" rx="2"/><rect x="26" y="24" width="15" height="15" rx="2"/>','<rect x="7" y="22" width="15" height="15" rx="2"/><rect x="24" y="22" width="15" height="15" rx="2"/><rect x="15.5" y="5" width="15" height="14" rx="2" fill="var(--ill-fond)"/><path d="M14.5 22v5M31.5 22v5M23 5v5M3 40h40"/>'],
+    stats:['m','<path d="M10 40V26h6v14zM21 40V18h6v22zM32 40V10h6v30z"/>','<path d="M5 40h38"/><rect x="9" y="26" width="6" height="14" rx="1"/><rect x="20" y="18" width="6" height="22" rx="1" fill="var(--ill-fond)"/><rect x="31" y="10" width="6" height="30" rx="1"/><path d="M8 20l10-8 8 5 13-10"/>'],
+    reglages:['t','<circle cx="25" cy="25" r="13"/>','<circle cx="23" cy="23" r="12"/><circle cx="23" cy="23" r="5" fill="var(--ill-fond)"/><path d="M23 5v5M23 36v5M5 23h5M36 23h5M10.3 10.3l3.5 3.5M32.2 32.2l3.5 3.5M10.3 35.7l3.5-3.5M32.2 13.8l3.5-3.5"/>'],
+    impact:['t','<circle cx="25" cy="25" r="16"/>','<circle cx="23" cy="23" r="16"/><path d="M8 20h8l3 4-2 5 4 4v8M30 8l-2 6 4 3h8"/><path d="M28 40c0-9 5-15 14-16-1 9-6 14-14 16z" fill="var(--ill-fond)"/><path d="M28 40l8-9"/>'],
+    distribution:['t','<path d="M9 20 21 14l12 6v14l-12 6-12-6z"/>','<path d="M7 18 19 12l12 6v14l-12 6-12-6z"/><path d="M7 18l12 6 12-6M19 24v14"/><path d="M34 12h8M38 8l4 4-4 4M34 26h8M38 22l4 4-4 4"/>'],
+    calendrier:['m','<rect x="9" y="12" width="32" height="28" rx="3"/>','<rect x="7" y="10" width="32" height="28" rx="3"/><path d="M7 18h32M15 6v8M31 6v8"/><rect x="13" y="23" width="6" height="5" rx="1" fill="var(--ill-fond)"/><path d="M24 25.5h9M13 32.5h6M24 32.5h9"/>'],
+    cloche:['m','<path d="M14 18a11 11 0 0 1 22 0c0 12 5 15 5 15H9s5-3 5-15z"/>','<path d="M12 16a11 11 0 0 1 22 0c0 12 5 15 5 15H7s5-3 5-15z"/><path d="M19 36a4 4 0 0 0 8 0"/><circle cx="36" cy="9" r="5" fill="var(--ill-fond)"/>'],
+    linux:['t','<ellipse cx="25" cy="27" rx="12" ry="14"/>','<path d="M23 6c-5 0-7 4-7 9 0 3-4 7-5 12-1 4 1 8 4 10h16c3-2 5-6 4-10-1-5-5-9-5-12 0-5-2-9-7-9z"/><circle cx="20" cy="15" r="1.5"/><circle cx="26" cy="15" r="1.5"/><path d="M20 20c2 1.5 4 1.5 6 0M14 40l-3 3h8M32 40l3 3h-8"/>']
   };
 
   /* ── Illustrations « objets » (produits, symptômes SAV) : SVG autonome (couleurs en ligne),
         utilisable aussi dans l'admin qui ne charge pas portail.css.
         window.illustrationCvdl(cle, taille) → chaîne SVG. Clés : prod-… et sym-… ── */
-  const T = 'color-mix(in srgb, #00ACB0 45%, white)',
-    M = 'color-mix(in srgb, #E62460 35%, white)',
-    R = 'color-mix(in srgb, #E5484D 38%, white)';
+  const T = 'color-mix(in srgb, #00ACB0 45%, white)', M = 'color-mix(in srgb, #E62460 35%, white)', R = 'color-mix(in srgb, #E5484D 38%, white)';
   const F = 'var(--ill-fond, #fff)';
   const O = {
-    'prod-laptop': [
-      T,
-      '<rect x="9" y="13" width="30" height="18" rx="3"/>',
-      '<rect x="7" y="11" width="30" height="18" rx="3"/><path d="M3 33h38l-3 4H6z"/>',
-    ],
-    'prod-ecran': [
-      T,
-      '<rect x="9" y="9" width="32" height="22" rx="3"/>',
-      '<rect x="7" y="7" width="32" height="22" rx="3"/><path d="M23 29v7M15 37h16"/>',
-    ],
-    'prod-telephone': [
-      M,
-      '<rect x="17" y="7" width="16" height="33" rx="4"/>',
-      '<rect x="15" y="5" width="16" height="34" rx="4"/><path d="M21 34h4"/>',
-    ],
-    'prod-telephone_touches': [
-      M,
-      '<rect x="17" y="7" width="16" height="33" rx="4"/>',
-      '<rect x="15" y="5" width="16" height="34" rx="4"/><rect x="18" y="9" width="10" height="9" rx="1.5"/><path d="M19 23h.01M23 23h.01M27 23h.01M19 27h.01M23 27h.01M27 27h.01M19 31h.01M23 31h.01M27 31h.01" stroke-width="3"/>',
-    ],
-    'prod-tablette': [
-      T,
-      '<rect x="11" y="7" width="28" height="34" rx="4"/>',
-      '<rect x="9" y="5" width="28" height="36" rx="4"/><path d="M21 36h4"/>',
-    ],
-    'prod-sim': [
-      M,
-      '<path d="M15 8h14l8 8v26H15z"/>',
-      '<path d="M13 6h14l8 8v26a2 2 0 0 1-2 2H13a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><rect x="16" y="21" width="14" height="13" rx="2" fill="' +
-        F +
-        '"/><path d="M23 21v13M16 27.5h14"/>',
-    ],
-    'prod-recharge': [
-      M,
-      '<rect x="11" y="10" width="16" height="30" rx="4"/>',
-      '<rect x="9" y="8" width="16" height="30" rx="4"/><path d="M15 33h4"/><path d="M36 10 29 22h8l-7 12" stroke-width="2.2"/>',
-    ],
-    'prod-souris': [
-      T,
-      '<rect x="17" y="11" width="18" height="29" rx="9"/>',
-      '<rect x="15" y="9" width="18" height="30" rx="9"/><path d="M24 9v10"/>',
-    ],
-    'prod-clavier': [
-      T,
-      '<rect x="6" y="16" width="38" height="18" rx="3"/>',
-      '<rect x="4" y="14" width="38" height="18" rx="3"/><path d="M10 20h2M16 20h2M22 20h2M28 20h2M34 20h2M10 25h2M16 25h2M22 25h2M28 25h2M34 25h2M15 29h16"/>',
-    ],
-    'prod-casque': [
-      M,
-      '<path d="M10 28a14 14 0 0 1 28 0v10H10z"/>',
-      '<path d="M8 30v-4a16 16 0 0 1 32 0v4"/><rect x="6" y="28" width="8" height="12" rx="3" fill="' +
-        F +
-        '"/><rect x="34" y="28" width="8" height="12" rx="3" fill="' +
-        F +
-        '"/>',
-    ],
-    'prod-webcam': [
-      T,
-      '<circle cx="25" cy="21" r="12"/>',
-      '<circle cx="23" cy="19" r="12"/><circle cx="23" cy="19" r="5"/><path d="M23 31v8M15 40h16"/>',
-    ],
-    'prod-station': [
-      T,
-      '<rect x="10" y="18" width="30" height="16" rx="3"/>',
-      '<rect x="8" y="16" width="30" height="16" rx="3"/><path d="M13 24h4M21 24h4M29 24h4M12 37h22"/>',
-    ],
-    'prod-atelier': [
-      M,
-      '<rect x="8" y="8" width="30" height="20" rx="2"/>',
-      '<rect x="6" y="6" width="30" height="20" rx="2"/><path d="M11 12h12M11 17h18"/><circle cx="14" cy="34" r="4"/><circle cx="32" cy="34" r="4"/><path d="M7 44a7 7 0 0 1 14 0M25 44a7 7 0 0 1 14 0"/>',
-    ],
-    'prod-feuille': [
-      T,
-      '<path d="M12 40C12 22 24 10 42 10c0 18-12 30-30 30z"/>',
-      '<path d="M10 38C10 20 22 8 40 8c0 18-12 30-30 30z"/><path d="M10 38 28 20"/>',
-    ],
-    'prod-package': [
-      M,
-      '<path d="M10 17 24 10l14 7v16l-14 7-14-7z"/>',
-      '<path d="M8 15 22 8l14 7v16l-14 7-14-7z"/><path d="M8 15l14 7 14-7M22 22v16"/>',
-    ],
-    'sym-alimentation': [
-      R,
-      '<circle cx="25" cy="27" r="14"/>',
-      '<path d="M23 7v15"/><path d="M14.5 12.5a14 14 0 1 0 17 0"/>',
-    ],
-    'sym-ecran': [
-      R,
-      '<rect x="9" y="9" width="32" height="22" rx="3"/>',
-      '<rect x="7" y="7" width="32" height="22" rx="3"/><path d="M23 29v7M15 37h16"/><path d="M17 11l5 6-4 3 5 6"/>',
-    ],
-    'sym-batterie': [
-      R,
-      '<rect x="7" y="17" width="32" height="16" rx="3"/>',
-      '<rect x="5" y="15" width="32" height="16" rx="3"/><path d="M41 21v6"/><path d="M23 18l-5 5.5h6l-5 5.5" stroke-width="2.2"/>',
-    ],
-    'sym-clavier': [
-      T,
-      '<rect x="6" y="16" width="38" height="18" rx="3"/>',
-      '<rect x="4" y="14" width="38" height="18" rx="3"/><path d="M10 20h2M16 20h2M22 20h2M28 20h2M34 20h2M10 25h2M16 25h2M22 25h2M28 25h2M34 25h2M15 29h16"/>',
-    ],
-    'sym-souris': [
-      T,
-      '<rect x="17" y="11" width="18" height="29" rx="9"/>',
-      '<rect x="15" y="9" width="18" height="30" rx="9"/><path d="M24 9v10"/>',
-    ],
-    'sym-son': [
-      M,
-      '<path d="M10 20h7l9-7v26l-9-7h-7z"/>',
-      '<path d="M8 18h7l9-7v26l-9-7H8z"/><path d="M31 18a8 8 0 0 1 0 12M35.5 13.5a14 14 0 0 1 0 21"/>',
-    ],
-    'sym-internet': [
-      T,
-      '<circle cx="25" cy="35" r="6"/>',
-      '<path d="M6 19a26 26 0 0 1 36 0M12 26a17 17 0 0 1 24 0M18 32a8 8 0 0 1 12 0"/><circle cx="24" cy="37" r="2" fill="#002743"/>',
-    ],
-    'sym-virus': [
-      R,
-      '<circle cx="25" cy="25" r="12"/>',
-      '<circle cx="23" cy="23" r="11"/><path d="M23 7v5M23 34v5M7 23h5M34 23h5M11.5 11.5l3.5 3.5M31 31l3.5 3.5M11.5 34.5 15 31M31 15l3.5-3.5"/><circle cx="19.5" cy="20" r="1.8"/><circle cx="26" cy="26" r="2.4"/>',
-    ],
-    'sym-mise_a_jour': [
-      T,
-      '<circle cx="25" cy="25" r="14"/>',
-      '<path d="M36 17A14 14 0 0 0 10 21M10 29a14 14 0 0 0 26 4"/><path d="M36 9v8h-8M10 39v-8h8"/>',
-    ],
-    'sym-lenteur': [
-      M,
-      '<path d="M8 34a18 18 0 0 1 36 0z"/>',
-      '<path d="M6 32a18 18 0 0 1 36 0"/><path d="M24 32l-8-9"/><circle cx="24" cy="32" r="2.5" fill="#002743"/><path d="M12 32h2M34 32h2M24 16v2"/>',
-    ],
-    'sym-surchauffe': [
-      R,
-      '<circle cx="24" cy="36" r="8"/>',
-      '<path d="M18 30V10a5 5 0 0 1 10 0v20a8 8 0 1 1-10 0z"/><path d="M23 16v16"/><path d="M35 13c2.5 2.5 2.5 5.5 0 8M39.5 9.5c4.5 4.5 4.5 11.5 0 16"/>',
-    ],
-    'sym-mot_de_passe': [
-      M,
-      '<rect x="11" y="23" width="28" height="19" rx="3"/>',
-      '<rect x="9" y="21" width="28" height="19" rx="3"/><path d="M15 21v-6a8 8 0 0 1 16 0v6"/><path d="M23 29v4"/><circle cx="23" cy="28" r="1.8" fill="var(--ill-fond)"/>',
-    ],
-    'sym-camera': [
-      T,
-      '<circle cx="25" cy="21" r="12"/>',
-      '<circle cx="23" cy="19" r="12"/><circle cx="23" cy="19" r="5"/><path d="M23 31v7M15 40h16"/><path d="M8 6l30 30"/>',
-    ],
-    'sym-port': [
-      T,
-      '<path d="M16 18h20v8a10 10 0 0 1-20 0z"/>',
-      '<path d="M18 6v10M28 6v10"/><path d="M13 16h20v8a10 10 0 0 1-20 0z"/><path d="M23 34v9"/>',
-    ],
-    'sym-application': [
-      M,
-      '<rect x="11" y="11" width="30" height="30" rx="5"/>',
-      '<rect x="8" y="8" width="13" height="13" rx="3"/><rect x="25" y="8" width="13" height="13" rx="3"/><rect x="8" y="25" width="13" height="13" rx="3"/><rect x="25" y="25" width="13" height="13" rx="3" fill="var(--ill-fond)"/><path d="M28.5 28.5l6 6M34.5 28.5l-6 6"/>',
-    ],
-    'sym-choc': [
-      T,
-      '<path d="M25 9c6 9 10 14 10 20a10 10 0 0 1-20 0c0-6 4-11 10-20z"/>',
-      '<path d="M23 7c6 9 10 14 10 20a10 10 0 0 1-20 0c0-6 4-11 10-20z"/><path d="M18 28l4 3-2 4 4 3"/>',
-    ],
-    'sym-impression': [
-      T,
-      '<rect x="9" y="19" width="32" height="15" rx="3"/>',
-      '<path d="M14 17V7h18v10"/><rect x="7" y="17" width="32" height="15" rx="3"/><path d="M14 27h18v13H14z" fill="var(--ill-fond)"/><path d="M18 32h10M18 36h7"/><circle cx="33" cy="22" r="1.4" fill="#002743"/>',
-    ],
-    'sym-generique_sav': [
-      R,
-      '<rect x="8" y="12" width="26" height="18" rx="3"/>',
-      '<rect x="6" y="10" width="26" height="18" rx="3"/><path d="M3 32h32"/><path d="M41.5 25.5a6 6 0 0 1-7.8 5.7l-7 7a2.1 2.1 0 0 1-3-3l7-7a6 6 0 0 1 5.7-7.8l-3.4 3.4.6 2.5 2.5.6z" fill="' +
-        F +
-        '"/>',
-    ],
+    'prod-laptop':[T,'<rect x="9" y="13" width="30" height="18" rx="3"/>','<rect x="7" y="11" width="30" height="18" rx="3"/><path d="M3 33h38l-3 4H6z"/>'],
+    'prod-ecran':[T,'<rect x="9" y="9" width="32" height="22" rx="3"/>','<rect x="7" y="7" width="32" height="22" rx="3"/><path d="M23 29v7M15 37h16"/>'],
+    'prod-telephone':[M,'<rect x="17" y="7" width="16" height="33" rx="4"/>','<rect x="15" y="5" width="16" height="34" rx="4"/><path d="M21 34h4"/>'],
+    'prod-telephone_touches':[M,'<rect x="17" y="7" width="16" height="33" rx="4"/>','<rect x="15" y="5" width="16" height="34" rx="4"/><rect x="18" y="9" width="10" height="9" rx="1.5"/><path d="M19 23h.01M23 23h.01M27 23h.01M19 27h.01M23 27h.01M27 27h.01M19 31h.01M23 31h.01M27 31h.01" stroke-width="3"/>'],
+    'prod-tablette':[T,'<rect x="11" y="7" width="28" height="34" rx="4"/>','<rect x="9" y="5" width="28" height="36" rx="4"/><path d="M21 36h4"/>'],
+    'prod-sim':[M,'<path d="M15 8h14l8 8v26H15z"/>','<path d="M13 6h14l8 8v26a2 2 0 0 1-2 2H13a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/><rect x="16" y="21" width="14" height="13" rx="2" fill="' + F + '"/><path d="M23 21v13M16 27.5h14"/>'],
+    'prod-recharge':[M,'<rect x="11" y="10" width="16" height="30" rx="4"/>','<rect x="9" y="8" width="16" height="30" rx="4"/><path d="M15 33h4"/><path d="M36 10 29 22h8l-7 12" stroke-width="2.2"/>'],
+    'prod-souris':[T,'<rect x="17" y="11" width="18" height="29" rx="9"/>','<rect x="15" y="9" width="18" height="30" rx="9"/><path d="M24 9v10"/>'],
+    'prod-clavier':[T,'<rect x="6" y="16" width="38" height="18" rx="3"/>','<rect x="4" y="14" width="38" height="18" rx="3"/><path d="M10 20h2M16 20h2M22 20h2M28 20h2M34 20h2M10 25h2M16 25h2M22 25h2M28 25h2M34 25h2M15 29h16"/>'],
+    'prod-casque':[M,'<path d="M10 28a14 14 0 0 1 28 0v10H10z"/>','<path d="M8 30v-4a16 16 0 0 1 32 0v4"/><rect x="6" y="28" width="8" height="12" rx="3" fill="' + F + '"/><rect x="34" y="28" width="8" height="12" rx="3" fill="' + F + '"/>'],
+    'prod-webcam':[T,'<circle cx="25" cy="21" r="12"/>','<circle cx="23" cy="19" r="12"/><circle cx="23" cy="19" r="5"/><path d="M23 31v8M15 40h16"/>'],
+    'prod-station':[T,'<rect x="10" y="18" width="30" height="16" rx="3"/>','<rect x="8" y="16" width="30" height="16" rx="3"/><path d="M13 24h4M21 24h4M29 24h4M12 37h22"/>'],
+    'prod-atelier':[M,'<rect x="8" y="8" width="30" height="20" rx="2"/>','<rect x="6" y="6" width="30" height="20" rx="2"/><path d="M11 12h12M11 17h18"/><circle cx="14" cy="34" r="4"/><circle cx="32" cy="34" r="4"/><path d="M7 44a7 7 0 0 1 14 0M25 44a7 7 0 0 1 14 0"/>'],
+    'prod-feuille':[T,'<path d="M12 40C12 22 24 10 42 10c0 18-12 30-30 30z"/>','<path d="M10 38C10 20 22 8 40 8c0 18-12 30-30 30z"/><path d="M10 38 28 20"/>'],
+    'prod-package':[M,'<path d="M10 17 24 10l14 7v16l-14 7-14-7z"/>','<path d="M8 15 22 8l14 7v16l-14 7-14-7z"/><path d="M8 15l14 7 14-7M22 22v16"/>'],
+    'sym-alimentation':[R,'<circle cx="25" cy="27" r="14"/>','<path d="M23 7v15"/><path d="M14.5 12.5a14 14 0 1 0 17 0"/>'],
+    'sym-ecran':[R,'<rect x="9" y="9" width="32" height="22" rx="3"/>','<rect x="7" y="7" width="32" height="22" rx="3"/><path d="M23 29v7M15 37h16"/><path d="M17 11l5 6-4 3 5 6"/>'],
+    'sym-batterie':[R,'<rect x="7" y="17" width="32" height="16" rx="3"/>','<rect x="5" y="15" width="32" height="16" rx="3"/><path d="M41 21v6"/><path d="M23 18l-5 5.5h6l-5 5.5" stroke-width="2.2"/>'],
+    'sym-clavier':[T,'<rect x="6" y="16" width="38" height="18" rx="3"/>','<rect x="4" y="14" width="38" height="18" rx="3"/><path d="M10 20h2M16 20h2M22 20h2M28 20h2M34 20h2M10 25h2M16 25h2M22 25h2M28 25h2M34 25h2M15 29h16"/>'],
+    'sym-souris':[T,'<rect x="17" y="11" width="18" height="29" rx="9"/>','<rect x="15" y="9" width="18" height="30" rx="9"/><path d="M24 9v10"/>'],
+    'sym-son':[M,'<path d="M10 20h7l9-7v26l-9-7h-7z"/>','<path d="M8 18h7l9-7v26l-9-7H8z"/><path d="M31 18a8 8 0 0 1 0 12M35.5 13.5a14 14 0 0 1 0 21"/>'],
+    'sym-internet':[T,'<circle cx="25" cy="35" r="6"/>','<path d="M6 19a26 26 0 0 1 36 0M12 26a17 17 0 0 1 24 0M18 32a8 8 0 0 1 12 0"/><circle cx="24" cy="37" r="2" fill="#002743"/>'],
+    'sym-virus':[R,'<circle cx="25" cy="25" r="12"/>','<circle cx="23" cy="23" r="11"/><path d="M23 7v5M23 34v5M7 23h5M34 23h5M11.5 11.5l3.5 3.5M31 31l3.5 3.5M11.5 34.5 15 31M31 15l3.5-3.5"/><circle cx="19.5" cy="20" r="1.8"/><circle cx="26" cy="26" r="2.4"/>'],
+    'sym-mise_a_jour':[T,'<circle cx="25" cy="25" r="14"/>','<path d="M36 17A14 14 0 0 0 10 21M10 29a14 14 0 0 0 26 4"/><path d="M36 9v8h-8M10 39v-8h8"/>'],
+    'sym-lenteur':[M,'<path d="M8 34a18 18 0 0 1 36 0z"/>','<path d="M6 32a18 18 0 0 1 36 0"/><path d="M24 32l-8-9"/><circle cx="24" cy="32" r="2.5" fill="#002743"/><path d="M12 32h2M34 32h2M24 16v2"/>'],
+    'sym-surchauffe':[R,'<circle cx="24" cy="36" r="8"/>','<path d="M18 30V10a5 5 0 0 1 10 0v20a8 8 0 1 1-10 0z"/><path d="M23 16v16"/><path d="M35 13c2.5 2.5 2.5 5.5 0 8M39.5 9.5c4.5 4.5 4.5 11.5 0 16"/>'],
+    'sym-mot_de_passe':[M,'<rect x="11" y="23" width="28" height="19" rx="3"/>','<rect x="9" y="21" width="28" height="19" rx="3"/><path d="M15 21v-6a8 8 0 0 1 16 0v6"/><path d="M23 29v4"/><circle cx="23" cy="28" r="1.8" fill="var(--ill-fond)"/>'],
+    'sym-camera':[T,'<circle cx="25" cy="21" r="12"/>','<circle cx="23" cy="19" r="12"/><circle cx="23" cy="19" r="5"/><path d="M23 31v7M15 40h16"/><path d="M8 6l30 30"/>'],
+    'sym-port':[T,'<path d="M16 18h20v8a10 10 0 0 1-20 0z"/>','<path d="M18 6v10M28 6v10"/><path d="M13 16h20v8a10 10 0 0 1-20 0z"/><path d="M23 34v9"/>'],
+    'sym-application':[M,'<rect x="11" y="11" width="30" height="30" rx="5"/>','<rect x="8" y="8" width="13" height="13" rx="3"/><rect x="25" y="8" width="13" height="13" rx="3"/><rect x="8" y="25" width="13" height="13" rx="3"/><rect x="25" y="25" width="13" height="13" rx="3" fill="var(--ill-fond)"/><path d="M28.5 28.5l6 6M34.5 28.5l-6 6"/>'],
+    'sym-choc':[T,'<path d="M25 9c6 9 10 14 10 20a10 10 0 0 1-20 0c0-6 4-11 10-20z"/>','<path d="M23 7c6 9 10 14 10 20a10 10 0 0 1-20 0c0-6 4-11 10-20z"/><path d="M18 28l4 3-2 4 4 3"/>'],
+    'sym-impression':[T,'<rect x="9" y="19" width="32" height="15" rx="3"/>','<path d="M14 17V7h18v10"/><rect x="7" y="17" width="32" height="15" rx="3"/><path d="M14 27h18v13H14z" fill="var(--ill-fond)"/><path d="M18 32h10M18 36h7"/><circle cx="33" cy="22" r="1.4" fill="#002743"/>'],
+    'sym-generique_sav':[R,'<rect x="8" y="12" width="26" height="18" rx="3"/>','<rect x="6" y="10" width="26" height="18" rx="3"/><path d="M3 32h32"/><path d="M41.5 25.5a6 6 0 0 1-7.8 5.7l-7 7a2.1 2.1 0 0 1-3-3l7-7a6 6 0 0 1 5.7-7.8l-3.4 3.4.6 2.5 2.5.6z" fill="' + F + '"/>'],
   };
-  window.illustrationCvdl = function (cle, taille) {
+  window.illustrationCvdl = function(cle, taille){
     const d = O[cle] || O['prod-package'];
     const t = taille || 40;
     return `<svg class="ill-objet" viewBox="0 0 48 48" width="${t}" height="${t}" aria-hidden="true" style="overflow:visible;flex:none"><g fill="${d[0]}" stroke="none">${d[1]}</g><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d[2]}</g></svg>`;
   };
   /** Clé d'illustration d'un produit (même logique de reconnaissance que l'admin et le portail). */
-  window.cleIllustrationProduit = function (nom, icone) {
-    const alias = {
-      portable: 'laptop',
-      fixe: 'ecran',
-      telephone: 'telephone',
-      telephone_touches: 'telephone_touches',
-      tablette: 'tablette',
-      sim: 'sim',
-      recharge: 'recharge',
-      atelier: 'atelier',
-      souris: 'souris',
-      feuille: 'feuille',
-      laptop: 'laptop',
-      ecran: 'ecran',
-      clavier: 'clavier',
-      casque: 'casque',
-      webcam: 'webcam',
-      station: 'station',
-      package: 'package',
-    };
-    if (icone && alias[icone]) return 'prod-' + alias[icone];
+  window.cleIllustrationProduit = function(nom, icone){
+    const alias = { portable:'laptop', fixe:'ecran', telephone:'telephone', telephone_touches:'telephone_touches', tablette:'tablette', sim:'sim', recharge:'recharge', atelier:'atelier', souris:'souris', feuille:'feuille', laptop:'laptop', ecran:'ecran', clavier:'clavier', casque:'casque', webcam:'webcam', station:'station', package:'package' };
+    if(icone && alias[icone]) return 'prod-' + alias[icone];
     const n = String(nom || '').toLowerCase();
-    if (/(sensibilisation|[ée]cologi|environnement)/.test(n)) return 'prod-feuille';
-    if (/(atelier|animation)/.test(n)) return 'prod-atelier';
-    if (/\bsim\b|carte sim/.test(n)) return 'prod-sim';
-    if (/recharge|forfait/.test(n)) return 'prod-recharge';
-    if (/souris/.test(n)) return 'prod-souris';
-    if (/clavier/.test(n)) return 'prod-clavier';
-    if (/casque/.test(n)) return 'prod-casque';
-    if (/webcam/.test(n)) return 'prod-webcam';
-    if (/station|dock/.test(n)) return 'prod-station';
-    if (/touches?/.test(n)) return 'prod-telephone_touches';
-    if (/(smartphone|t[ée]l[ée]phone|mobile)/.test(n)) return 'prod-telephone';
-    if (/tablet/.test(n)) return 'prod-tablette';
-    if (/([ée]cran|moniteur|fixe|bureau|desktop|tour)/.test(n)) return 'prod-ecran';
-    if (/(portable|ordinateur|laptop|pc)/.test(n)) return 'prod-laptop';
+    if(/(sensibilisation|[ée]cologi|environnement)/.test(n)) return 'prod-feuille';
+    if(/(atelier|animation)/.test(n)) return 'prod-atelier';
+    if(/\bsim\b|carte sim/.test(n)) return 'prod-sim';
+    if(/recharge|forfait/.test(n)) return 'prod-recharge';
+    if(/souris/.test(n)) return 'prod-souris';
+    if(/clavier/.test(n)) return 'prod-clavier';
+    if(/casque/.test(n)) return 'prod-casque';
+    if(/webcam/.test(n)) return 'prod-webcam';
+    if(/station|dock/.test(n)) return 'prod-station';
+    if(/touches?/.test(n)) return 'prod-telephone_touches';
+    if(/(smartphone|t[ée]l[ée]phone|mobile)/.test(n)) return 'prod-telephone';
+    if(/tablet/.test(n)) return 'prod-tablette';
+    if(/([ée]cran|moniteur|fixe|bureau|desktop|tour)/.test(n)) return 'prod-ecran';
+    if(/(portable|ordinateur|laptop|pc)/.test(n)) return 'prod-laptop';
     return 'prod-package';
   };
 
-  function dessiner(el) {
+  function dessiner(el){
     const def = I[el.dataset.ill];
-    if (!def || el.dataset.illOk) return;
+    if(!def || el.dataset.illOk) return;
     el.classList.add('ill', def[0]);
     el.setAttribute('aria-hidden', 'true');
     el.innerHTML = `<svg viewBox="0 0 48 48"><g class="ill-fond">${def[1]}</g><g class="ill-trait">${def[2]}</g></svg>`;
     el.dataset.illOk = '1';
   }
-  function tout(racine) {
-    (racine || document).querySelectorAll('[data-ill]').forEach(dessiner);
-  }
+  function tout(racine){ (racine || document).querySelectorAll('[data-ill]').forEach(dessiner); }
   window.portailIllustrations = tout;
-  function demarrer() {
+  function demarrer(){
     tout();
     // Les pages reconstruisent souvent leur contenu en JS (listes, étapes) : on dessine aussi
     // les illustrations ajoutées après coup.
-    new MutationObserver((mut) => {
-      for (const m of mut)
-        for (const n of m.addedNodes) {
-          if (n.nodeType !== 1) continue;
-          if (n.matches && n.matches('[data-ill]')) dessiner(n);
-          if (n.querySelectorAll) n.querySelectorAll('[data-ill]').forEach(dessiner);
-        }
-    }).observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(mut => {
+      for(const m of mut) for(const n of m.addedNodes){
+        if(n.nodeType !== 1) continue;
+        if(n.matches && n.matches('[data-ill]')) dessiner(n);
+        if(n.querySelectorAll) n.querySelectorAll('[data-ill]').forEach(dessiner);
+      }
+    }).observe(document.body, { childList:true, subtree:true });
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
   else demarrer();
 })();
 
 /* ── Confirmation stylisée (remplace les popups du navigateur) — admin et pages publiques ──
    confirmerCvdl('Supprimer X ?\n\nDétail…') → Promise<boolean>. Le titre est la première phrase,
    le reste devient le texte ; le bouton reprend le verbe (Supprimer, Annuler, Retirer…). */
-(function () {
-  if (window.confirmerCvdl) return;
-  const esc = (v) =>
-    String(v == null ? '' : v).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+(function(){
+  if(window.confirmerCvdl) return;
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const CSS = `
 .cvdl-conf-voile{ position:fixed; inset:0; z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; background:color-mix(in srgb, #002743 45%, transparent); animation:cvdlcf-v .15s ease both; }
 .cvdl-conf{ width:min(480px, 100%); background:#fff; color:#002743; border:1.5px solid #002743; border-radius:22px; box-shadow:8px 8px 0 color-mix(in srgb, #002743 38%, transparent); padding:22px 24px; font-family:Inter, system-ui, sans-serif; animation:cvdlcf-pop .24s cubic-bezier(.3,.7,.3,1) both; }
@@ -448,60 +173,41 @@ window.urlSure = function (u) {
 @media (prefers-reduced-motion:reduce){ .cvdl-conf-voile, .cvdl-conf{ animation:none; } }`;
   /** Pictogramme adapté au message : panneau attention, annulation, suppression, info, saisie. */
   const ICONES_CONF = {
-    attention:
-      '<path class="plein" d="M10.3 3.9 1.8 18.5A2 2 0 0 0 3.5 21.5h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/>',
+    attention: '<path class="plein" d="M10.3 3.9 1.8 18.5A2 2 0 0 0 3.5 21.5h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/>',
     annuler: '<circle class="plein" cx="12" cy="12" r="9.5"/><path d="m15 9-6 6M9 9l6 6"/>',
-    supprimer:
-      '<path class="plein" d="M5.5 7h13l-1 13a2 2 0 0 1-2 1.8h-7a2 2 0 0 1-2-1.8z"/><path d="M3.5 7h17M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M10 11v6M14 11v6"/>',
+    supprimer: '<path class="plein" d="M5.5 7h13l-1 13a2 2 0 0 1-2 1.8h-7a2 2 0 0 1-2-1.8z"/><path d="M3.5 7h17M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7M10 11v6M14 11v6"/>',
     info: '<circle class="plein" cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><path d="M12 7.5h.01"/>',
     ok: '<circle class="plein" cx="12" cy="12" r="9.5"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>',
     saisie: '<path class="plein" d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M14.5 7.5l3 3"/>',
-    question:
-      '<circle class="plein" cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9"/><path d="M12 17.2h.01"/>',
+    question: '<circle class="plein" cx="12" cy="12" r="9.5"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9"/><path d="M12 17.2h.01"/>',
   };
-  function iconeConf(o) {
+  function iconeConf(o){
     const t = String(o.titre || '');
     let cle;
-    if (o.saisie) cle = 'saisie';
-    else if (o.info) cle = o.danger ? 'attention' : /enregistr|envoy|succ|créé|termin/i.test(t) ? 'ok' : 'info';
-    else if (/^(Supprimer|Effacer|Retirer)/i.test(t)) cle = 'supprimer';
-    else if (/^Annuler/i.test(t)) cle = 'annuler';
+    if(o.saisie) cle = 'saisie';
+    else if(o.info) cle = o.danger ? 'attention' : (/enregistr|envoy|succ|créé|termin/i.test(t) ? 'ok' : 'info');
+    else if(/^(Supprimer|Effacer|Retirer)/i.test(t)) cle = 'supprimer';
+    else if(/^Annuler/i.test(t)) cle = 'annuler';
     else cle = o.danger ? 'attention' : 'question';
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONES_CONF[cle]}</svg>`;
   }
-  function injecterStyle() {
-    if (document.getElementById('cvdl-conf-style')) return;
-    const st = document.createElement('style');
-    st.id = 'cvdl-conf-style';
-    st.textContent = CSS;
-    document.head.appendChild(st);
+  function injecterStyle(){
+    if(document.getElementById('cvdl-conf-style')) return;
+    const st = document.createElement('style'); st.id = 'cvdl-conf-style'; st.textContent = CSS; document.head.appendChild(st);
   }
-  function deduire(message) {
+  function deduire(message){
     const txt = String(message || '').trim();
     const i = txt.search(/\?|\n/);
     const titre = i === -1 ? txt : txt.slice(0, i + (txt[i] === '?' ? 1 : 0)).trim();
     const reste = i === -1 ? '' : txt.slice(i + 1).replace(/^\s+/, '');
-    const verbe =
-      (titre.match(
-        /^(Supprimer|Annuler|Retirer|Régénérer|Réinitialiser|Effacer|Transférer|Générer|Remplacer|Envoyer|Dernière confirmation)/i,
-      ) || [])[1] || '';
+    const verbe = (titre.match(/^(Supprimer|Annuler|Retirer|Régénérer|Réinitialiser|Effacer|Transférer|Générer|Remplacer|Envoyer|Dernière confirmation)/i) || [])[1] || '';
     const danger = /^(Supprimer|Annuler|Retirer|Effacer|Réinitialiser|Dernière confirmation)/i.test(titre);
-    return {
-      titre,
-      texte: reste,
-      ok:
-        verbe && !/^Dernière/i.test(verbe)
-          ? verbe.charAt(0).toUpperCase() + verbe.slice(1).toLowerCase()
-          : danger
-            ? 'Confirmer'
-            : 'Confirmer',
-      danger,
-    };
+    return { titre, texte: reste, ok: verbe && !/^Dernière/i.test(verbe) ? verbe.charAt(0).toUpperCase() + verbe.slice(1).toLowerCase() : (danger ? 'Confirmer' : 'Confirmer'), danger };
   }
   /* Fenêtre générique (confirmation, information, saisie) */
-  function fenetre(o) {
+  function fenetre(o){
     injecterStyle();
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const precedent = document.activeElement;
       const v = document.createElement('div');
       v.className = 'cvdl-conf-voile';
@@ -512,50 +218,22 @@ window.urlSure = function (u) {
         <div class="cvdl-conf-actions">${o.info ? '' : '<button type="button" class="retour">Retour</button>'}<button type="button" class="ok">${esc(o.ok)}</button></div>
       </div>`;
       const champ = v.querySelector('input, textarea');
-      if (champ && o.saisie.valeur) champ.value = o.saisie.valeur;
-      const fermer = (val) => {
-        document.removeEventListener('keydown', clavier, true);
-        v.remove();
-        if (precedent && precedent.focus) precedent.focus();
-        resolve(val);
-      };
+      if(champ && o.saisie.valeur) champ.value = o.saisie.valeur;
+      const fermer = val => { document.removeEventListener('keydown', clavier, true); v.remove(); if(precedent && precedent.focus) precedent.focus(); resolve(val); };
       const valider = () => {
-        if (!champ) return fermer(true);
+        if(!champ) return fermer(true);
         const val = champ.value.trim();
-        if (o.saisie.requis && !val) {
-          v.querySelector('.cvdl-conf-err').textContent = 'Ce champ est obligatoire.';
-          champ.focus();
-          return;
-        }
+        if(o.saisie.requis && !val){ v.querySelector('.cvdl-conf-err').textContent = 'Ce champ est obligatoire.'; champ.focus(); return; }
         fermer(val);
       };
-      const annuler = () => fermer(o.saisie ? null : o.info ? true : false);
-      const clavier = (e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          annuler();
-        }
-        if (e.key === 'Enter' && champ && champ.tagName === 'INPUT' && document.activeElement === champ) {
-          e.preventDefault();
-          valider();
-        }
-        if (e.key === 'Tab') {
-          const f = [...v.querySelectorAll('button, input, textarea')];
-          const i = f.indexOf(document.activeElement);
-          if (e.shiftKey && i <= 0) {
-            e.preventDefault();
-            f[f.length - 1].focus();
-          } else if (!e.shiftKey && i === f.length - 1) {
-            e.preventDefault();
-            f[0].focus();
-          }
-        }
+      const annuler = () => fermer(o.saisie ? null : (o.info ? true : false));
+      const clavier = e => {
+        if(e.key === 'Escape'){ e.stopPropagation(); annuler(); }
+        if(e.key === 'Enter' && champ && champ.tagName === 'INPUT' && document.activeElement === champ){ e.preventDefault(); valider(); }
+        if(e.key === 'Tab'){ const f = [...v.querySelectorAll('button, input, textarea')]; const i = f.indexOf(document.activeElement); if(e.shiftKey && i <= 0){ e.preventDefault(); f[f.length - 1].focus(); } else if(!e.shiftKey && i === f.length - 1){ e.preventDefault(); f[0].focus(); } }
       };
-      v.addEventListener('click', (e) => {
-        if (e.target === v) annuler();
-      });
-      const r = v.querySelector('.retour');
-      if (r) r.addEventListener('click', annuler);
+      v.addEventListener('click', e => { if(e.target === v) annuler(); });
+      const r = v.querySelector('.retour'); if(r) r.addEventListener('click', annuler);
       v.querySelector('.ok').addEventListener('click', valider);
       document.addEventListener('keydown', clavier, true);
       document.body.appendChild(v);
@@ -563,46 +241,25 @@ window.urlSure = function (u) {
     });
   }
   /** Information (remplace alert) : alerteCvdl('Suppression impossible.') */
-  window.alerteCvdl = function (message, options) {
+  window.alerteCvdl = function(message, options){
     const d = deduire(message);
     const erreur = /impossible|erreur|échec|réessaie/i.test(message);
-    return fenetre(
-      Object.assign(
-        {
-          titre: d.titre,
-          texte: d.texte,
-          ok: 'Compris',
-          info: true,
-          danger: erreur,
-          k: erreur ? 'Problème' : 'Information',
-        },
-        options || {},
-      ),
-    );
+    return fenetre(Object.assign({ titre: d.titre, texte: d.texte, ok: 'Compris', info: true, danger: erreur, k: erreur ? 'Problème' : 'Information' }, options || {}));
   };
   /** Saisie (remplace prompt) : await demanderCvdl('Motif ?', { requis: true, long: true }) → texte ou null */
-  window.demanderCvdl = function (message, options) {
+  window.demanderCvdl = function(message, options){
     const d = deduire(String(message || '').replace(/\s*:\s*$/, ''));
     const o = options || {};
     const lignes = String(message || '').split(/\n+/);
-    const libelle =
-      lignes.length > 1
-        ? lignes[lignes.length - 1].replace(/\s*:\s*$/, '')
-        : o.libelle || d.titre.replace(/\s*:\s*$/, '');
+    const libelle = lignes.length > 1 ? lignes[lignes.length - 1].replace(/\s*:\s*$/, '') : (o.libelle || d.titre.replace(/\s*:\s*$/, ''));
     const texte = lignes.length > 1 ? lignes.slice(1, -1).join('\n') : '';
-    return fenetre({
-      titre: lignes.length > 1 ? d.titre : libelle,
-      texte,
-      ok: o.ok || d.ok,
-      danger: d.danger,
-      k: d.danger ? 'Action définitive' : 'À compléter',
-      saisie: { libelle, requis: !!o.requis, long: !!o.long, valeur: o.valeur || '' },
-    });
+    return fenetre({ titre: lignes.length > 1 ? d.titre : libelle, texte, ok: o.ok || d.ok, danger: d.danger, k: d.danger ? 'Action définitive' : 'À compléter',
+      saisie: { libelle, requis: !!o.requis, long: !!o.long, valeur: o.valeur || '' } });
   };
-  window.confirmerCvdl = function (message, options) {
+  window.confirmerCvdl = function(message, options){
     injecterStyle();
     const o = Object.assign(deduire(message), options || {});
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const precedent = document.activeElement;
       const v = document.createElement('div');
       v.className = 'cvdl-conf-voile';
@@ -611,21 +268,9 @@ window.urlSure = function (u) {
         ${o.texte ? `<p>${esc(o.texte)}</p>` : ''}
         <div class="cvdl-conf-actions"><button type="button" class="retour">Retour</button><button type="button" class="ok">${esc(o.ok)}</button></div>
       </div>`;
-      const fermer = (val) => {
-        document.removeEventListener('keydown', clavier, true);
-        v.remove();
-        if (precedent && precedent.focus) precedent.focus();
-        resolve(val);
-      };
-      const clavier = (e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          fermer(false);
-        }
-      };
-      v.addEventListener('click', (e) => {
-        if (e.target === v) fermer(false);
-      });
+      const fermer = val => { document.removeEventListener('keydown', clavier, true); v.remove(); if(precedent && precedent.focus) precedent.focus(); resolve(val); };
+      const clavier = e => { if(e.key === 'Escape'){ e.stopPropagation(); fermer(false); } };
+      v.addEventListener('click', e => { if(e.target === v) fermer(false); });
       v.querySelector('.retour').addEventListener('click', () => fermer(false));
       v.querySelector('.ok').addEventListener('click', () => fermer(true));
       document.addEventListener('keydown', clavier, true);
@@ -636,25 +281,25 @@ window.urlSure = function (u) {
 })();
 
 /* Clé d'illustration d'un symptôme SAV (portail et admin) — une seule règle. */
-window.cleSymptomeCvdl = function (texte) {
+window.cleSymptomeCvdl = function(texte){
   const t = String(texte || '').toLowerCase();
-  if (/chauff|surchauff|bruit|ventil/.test(t)) return 'surchauffe';
-  if (/mot de passe|compte|identifiant|code pin|verrouill/.test(t)) return 'mot_de_passe';
-  if (/cam[ée]ra|webcam|micro(?!soft)/.test(t)) return 'camera';
-  if (/port|usb|prise|connecteur|c[âa]ble/.test(t)) return 'port';
-  if (/application|logiciel|appli\b|programme/.test(t)) return 'application';
-  if (/tomb|chute|eau|liquide|renvers|choc/.test(t)) return 'choc';
-  if (/imprim/.test(t)) return 'impression';
-  if (/allum|d[ée]marr|power|mort/.test(t)) return 'alimentation';
-  if (/[ée]cran|affich|cass/.test(t)) return 'ecran';
-  if (/batter|charg|alimentation/.test(t)) return 'batterie';
-  if (/clavier|touche/.test(t)) return 'clavier';
-  if (/souris|pav[ée]|trackpad/.test(t)) return 'souris';
-  if (/\bsons?\b|audio|haut-parleur/.test(t)) return 'son';
-  if (/wi-?fi|internet|r[ée]seau|connexion/.test(t)) return 'internet';
-  if (/virus|pirat|malveill|malware/.test(t)) return 'virus';
-  if (/mise [àa] jour|update/.test(t)) return 'mise_a_jour';
-  if (/lent|rame|bloqu|fig|plant/.test(t)) return 'lenteur';
+  if(/chauff|surchauff|bruit|ventil/.test(t)) return 'surchauffe';
+  if(/mot de passe|compte|identifiant|code pin|verrouill/.test(t)) return 'mot_de_passe';
+  if(/cam[ée]ra|webcam|micro(?!soft)/.test(t)) return 'camera';
+  if(/port|usb|prise|connecteur|c[âa]ble/.test(t)) return 'port';
+  if(/application|logiciel|appli\b|programme/.test(t)) return 'application';
+  if(/tomb|chute|eau|liquide|renvers|choc/.test(t)) return 'choc';
+  if(/imprim/.test(t)) return 'impression';
+  if(/allum|d[ée]marr|power|mort/.test(t)) return 'alimentation';
+  if(/[ée]cran|affich|cass/.test(t)) return 'ecran';
+  if(/batter|charg|alimentation/.test(t)) return 'batterie';
+  if(/clavier|touche/.test(t)) return 'clavier';
+  if(/souris|pav[ée]|trackpad/.test(t)) return 'souris';
+  if(/\bsons?\b|audio|haut-parleur/.test(t)) return 'son';
+  if(/wi-?fi|internet|r[ée]seau|connexion/.test(t)) return 'internet';
+  if(/virus|pirat|malveill|malware/.test(t)) return 'virus';
+  if(/mise [àa] jour|update/.test(t)) return 'mise_a_jour';
+  if(/lent|rame|bloqu|fig|plant/.test(t)) return 'lenteur';
   return 'generique_sav';
 };
 
@@ -665,22 +310,15 @@ window.cleSymptomeCvdl = function (texte) {
    Clic sur la pilule → passeport.html affiché dans une modale (mode intégré, sans en-tête) ;
    Ctrl/Cmd/clic molette → nouvel onglet (le href reste la vraie page). Icône copie : copie seule.
    Les styles sont injectés ici : un seul endroit à modifier pour tout le site. */
-(function () {
-  if (window.piluleSerieCvdl) return;
-  const esc = (v) =>
-    String(v == null ? '' : v).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+(function(){
+  if(window.piluleSerieCvdl) return;
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const SVG = {
     qr: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="15" y="15" width="4" height="4" rx=".8"/></svg>',
-    ticket:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/></svg>',
-    copie:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+    ticket: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/></svg>',
+    copie: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
     go: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
-    onglet:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+    onglet: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>'
   };
   const CSS = `
 html .cvdl-sn{ display:inline-flex; align-items:center; gap:8px; height:30px; box-sizing:border-box; padding:0 8px 0 4px; border-radius:999px; background:#6338F5 !important; border:1.5px solid #6338F5 !important; color:#fff !important; font:700 12.5px ui-monospace, SFMono-Regular, Menlo, monospace !important; letter-spacing:.02em; text-decoration:none !important; cursor:pointer; white-space:nowrap; max-width:100%; vertical-align:middle; transition:transform .16s cubic-bezier(.2,.8,.2,1), box-shadow .16s, background .16s; }
@@ -714,55 +352,40 @@ html.cvdl-contraste .cvdl-sn{ background:#3A1DA8 !important; border:1.5px solid 
 @media (max-width:560px){ .cvdl-pp{ height:92vh; } }
 @media (prefers-reduced-motion:reduce){ .cvdl-sn, .cvdl-pp, .cvdl-pp-voile{ transition:none !important; } }
 html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim .cvdl-pp-voile{ transition:none !important; }`;
-  function injecterStyle() {
-    if (document.getElementById('cvdl-sn-style')) return;
-    const st = document.createElement('style');
-    st.id = 'cvdl-sn-style';
-    st.textContent = CSS;
-    (document.head || document.documentElement).appendChild(st);
+  function injecterStyle(){
+    if(document.getElementById('cvdl-sn-style')) return;
+    const st = document.createElement('style'); st.id = 'cvdl-sn-style'; st.textContent = CSS; (document.head || document.documentElement).appendChild(st);
   }
-  if (document.head) injecterStyle();
-  else document.addEventListener('DOMContentLoaded', injecterStyle);
+  if(document.head) injecterStyle(); else document.addEventListener('DOMContentLoaded', injecterStyle);
 
-  window.piluleSerieCvdl = function (sn, opts) {
+  window.piluleSerieCvdl = function(sn, opts){
     const o = opts || {};
     const n = String(sn == null ? '' : sn).trim();
-    if (!n) return '';
-    if (o.code)
-      return `<span class="cvdl-sn code" data-copier-sn="${esc(n)}" title="Copier le code" tabindex="0" role="button"><span class="cvdl-sn-ic">${SVG.ticket}</span><span class="cvdl-sn-t">${esc(n)}</span></span>`;
+    if(!n) return '';
+    if(o.code) return `<span class="cvdl-sn code" data-copier-sn="${esc(n)}" title="Copier le code" tabindex="0" role="button"><span class="cvdl-sn-ic">${SVG.ticket}</span><span class="cvdl-sn-t">${esc(n)}</span></span>`;
     const url = `passeport.html?sn=${encodeURIComponent(n)}${o.query || ''}`;
     return `<a class="cvdl-sn" href="${esc(url)}" data-passeport-url="${esc(url)}" data-sn="${esc(n)}" title="Ouvrir le passeport de cet appareil"><span class="cvdl-sn-ic">${SVG.qr}</span><span class="cvdl-sn-t">${esc(n)}</span><button type="button" class="cvdl-sn-cp" data-copier-sn="${esc(n)}" title="Copier le numéro de série" aria-label="Copier le numéro de série ${esc(n)}">${SVG.copie}</button><span class="cvdl-sn-go">${SVG.go}</span></a>`;
   };
   /** Plusieurs numéros (texte multiligne ou tableau) → pilules côte à côte. */
-  window.pilulesSeriesCvdl = function (liste, opts) {
+  window.pilulesSeriesCvdl = function(liste, opts){
     const t = Array.isArray(liste) ? liste : String(liste || '').split('\n');
-    const h = t
-      .map((x) => String(x).trim())
-      .filter(Boolean)
-      .map((x) => window.piluleSerieCvdl(x, opts))
-      .join('');
+    const h = t.map(x => String(x).trim()).filter(Boolean).map(x => window.piluleSerieCvdl(x, opts)).join('');
     return h ? `<span style="display:inline-flex;gap:8px;flex-wrap:wrap">${h}</span>` : '';
   };
 
-  function copier(el) {
+  function copier(el){
     const v = el.dataset.copierSn;
     const pil = el.closest('.cvdl-sn') || el;
     // Retour visuel immédiat et court (sans attendre la fin de l'écriture dans le presse-papier,
     // qui pouvait laisser la pilule verte plusieurs secondes) : la pilule « flashe » en vert
     // 0,6 s et l'icône devient une coche ; le survol reste actif pendant ce temps.
     clearTimeout(pil._copieT);
-    pil.classList.remove('copie');
-    void pil.offsetWidth;
-    pil.classList.add('copie');
+    pil.classList.remove('copie'); void pil.offsetWidth; pil.classList.add('copie');
     pil._copieT = setTimeout(() => pil.classList.remove('copie'), 650);
-    try {
-      navigator.clipboard.writeText(v).catch(() => {});
-    } catch (e) {
-      /* presse-papier indisponible */
-    }
+    try{ navigator.clipboard.writeText(v).catch(() => {}); }catch(e){ /* presse-papier indisponible */ }
   }
   /** Ouvre le passeport (url relative passeport.html?…) dans la modale. */
-  window.ouvrirPasseportCvdl = function (url, sn) {
+  window.ouvrirPasseportCvdl = function(url, sn){
     injecterStyle();
     const precedent = document.activeElement;
     const src = url + (url.includes('?') ? '&' : '?') + 'integre=1';
@@ -775,21 +398,10 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       document.removeEventListener('keydown', clavier, true);
       v.classList.remove('vis');
       setTimeout(() => v.remove(), 180);
-      if (precedent && precedent.focus) precedent.focus();
+      if(precedent && precedent.focus) precedent.focus();
     };
-    const clavier = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        e.preventDefault();
-        fermer();
-      }
-    };
-    v.addEventListener('click', (e) => {
-      if (e.target === v || e.target.closest('.cvdl-pp-fermer')) {
-        e.stopPropagation();
-        fermer();
-      }
-    });
+    const clavier = e => { if(e.key === 'Escape'){ e.stopPropagation(); e.preventDefault(); fermer(); } };
+    v.addEventListener('click', e => { if(e.target === v || e.target.closest('.cvdl-pp-fermer')){ e.stopPropagation(); fermer(); } });
     document.addEventListener('keydown', clavier, true);
     document.body.appendChild(v);
     requestAnimationFrame(() => requestAnimationFrame(() => v.classList.add('vis')));
@@ -797,39 +409,18 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   };
 
   // Capture : passe avant les gestionnaires des pages (ouverture de carte, de ligne…).
-  document.addEventListener(
-    'click',
-    (e) => {
-      const cp = e.target.closest('[data-copier-sn]');
-      if (cp) {
-        e.preventDefault();
-        e.stopPropagation();
-        copier(cp);
-        return;
-      }
-      const a = e.target.closest('[data-passeport-url]');
-      if (!a) return;
-      if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; // nouvel onglet volontaire
-      e.preventDefault();
-      e.stopPropagation();
-      window.ouvrirPasseportCvdl(a.dataset.passeportUrl, a.dataset.sn);
-    },
-    true,
-  );
-  document.addEventListener(
-    'keydown',
-    (e) => {
-      if (
-        (e.key === 'Enter' || e.key === ' ') &&
-        e.target.matches &&
-        e.target.matches('.cvdl-sn.code[data-copier-sn]')
-      ) {
-        e.preventDefault();
-        copier(e.target);
-      }
-    },
-    true,
-  );
+  document.addEventListener('click', e => {
+    const cp = e.target.closest('[data-copier-sn]');
+    if(cp){ e.preventDefault(); e.stopPropagation(); copier(cp); return; }
+    const a = e.target.closest('[data-passeport-url]');
+    if(!a) return;
+    if(e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; // nouvel onglet volontaire
+    e.preventDefault(); e.stopPropagation();
+    window.ouvrirPasseportCvdl(a.dataset.passeportUrl, a.dataset.sn);
+  }, true);
+  document.addEventListener('keydown', e => {
+    if((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.cvdl-sn.code[data-copier-sn]')){ e.preventDefault(); copier(e.target); }
+  }, true);
 })();
 
 /* ── Croix de fermeture garantie sur toutes les modales du portail (.voile-modale-qr) ──
@@ -838,24 +429,21 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
    en haut à droite de chaque modale qui n'en a pas ; elle reste visible même si la modale défile
    et déclenche le bouton de fermeture existant de la modale (même logique que « Annuler »).
    Échap ferme aussi la modale ouverte au premier plan. */
-(function () {
-  function boutonFermetureExistant(modale) {
+(function(){
+  function boutonFermetureExistant(modale){
     const boutons = [...modale.querySelectorAll('button')];
-    return (
-      boutons.find((b) => /-fermer$/.test(b.id || '') && !b.classList.contains('cvdl-croix-auto')) ||
-      boutons.find((b) => /^(annuler|fermer)$/i.test((b.textContent || '').trim()))
-    );
+    return boutons.find(b => /-fermer$/.test(b.id || '') && !b.classList.contains('cvdl-croix-auto'))
+      || boutons.find(b => /^(annuler|fermer)$/i.test((b.textContent || '').trim()));
   }
-  function fermer(voile) {
+  function fermer(voile){
     const modale = voile.querySelector('.modale-qr') || voile;
     const b = boutonFermetureExistant(modale);
-    if (b) b.click();
-    else voile.classList.remove('visible');
+    if(b) b.click(); else voile.classList.remove('visible');
   }
-  function equiper() {
-    document.querySelectorAll('.voile-modale-qr').forEach((voile) => {
+  function equiper(){
+    document.querySelectorAll('.voile-modale-qr').forEach(voile => {
       const modale = voile.querySelector('.modale-qr');
-      if (!modale || modale.querySelector('.modale-fermer-rond-qr, .cvdl-croix-auto')) return;
+      if(!modale || modale.querySelector('.modale-fermer-rond-qr, .cvdl-croix-auto')) return;
       const croix = document.createElement('button');
       croix.type = 'button';
       croix.className = 'modale-fermer-rond-qr cvdl-croix-auto';
@@ -865,13 +453,13 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       modale.prepend(croix);
     });
   }
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
+  document.addEventListener('keydown', e => {
+    if(e.key !== 'Escape') return;
     const ouvertes = [...document.querySelectorAll('.voile-modale-qr.visible')];
-    if (!ouvertes.length || document.querySelector('.cvdl-pp-voile')) return;
+    if(!ouvertes.length || document.querySelector('.cvdl-pp-voile')) return;
     fermer(ouvertes[ouvertes.length - 1]);
   });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', equiper);
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', equiper);
   else equiper();
   window.cvdlEquiperModales = equiper;
 })();
@@ -886,32 +474,17 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
    · Contenu : rappel « données fictives », interrupteur « Explications » (explications.js, chargé
      seulement en démo), « Tutoriels », « Changer de profil », « Quitter », et « Replier » (barre
      fine ; l'état est mémorisé). */
-(function () {
+(function(){
   let actif = false;
   // Site de démo dédié (publié dans un dossier « …demo… », ex. ec-cvdl.github.io/cvdl-demo/) : toujours en démo.
   const dossier = location.pathname.split('/')[1] || '';
   const siteDemo = /demo/i.test(dossier) && !/\.html$/i.test(dossier);
-  try {
-    const d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null');
-    actif = siteDemo || !!(d && d.jusqua > Date.now());
-  } catch (e) {
-    actif = siteDemo;
-  }
-  if (!actif || /demo\.html$/.test(location.pathname)) return;
+  try{ const d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); actif = siteDemo || !!(d && d.jusqua > Date.now()); }catch(e){ actif = siteDemo; }
+  if(!actif || /demo\.html$/.test(location.pathname)) return;
   const html = document.documentElement;
   html.classList.add('cvdl-demo');
-  const lireLocal = (k) => {
-    try {
-      return localStorage.getItem(k);
-    } catch (e) {
-      return null;
-    }
-  };
-  const ecrireLocal = (k, v) => {
-    try {
-      localStorage.setItem(k, v);
-    } catch (e) {}
-  };
+  const lireLocal = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+  const ecrireLocal = (k, v) => { try{ localStorage.setItem(k, v); }catch(e){} };
 
   // Styles de la barre : injectés tout de suite (pas d'attente d'une feuille externe).
   const style = document.createElement('style');
@@ -942,20 +515,16 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   document.head.appendChild(style);
 
   // Mode Explications : styles + script chargés uniquement en démo.
-  const css = document.createElement('link');
-  css.rel = 'stylesheet';
-  css.href = 'explications.css?v=2';
+  const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'explications.css?v=2';
   document.head.appendChild(css);
-  const js = document.createElement('script');
-  js.src = 'explications.js?v=4';
-  js.defer = true;
+  const js = document.createElement('script'); js.src = 'explications.js?v=4'; js.defer = true;
   js.onload = () => majBandeau();
   document.head.appendChild(js);
 
-  function majBandeau() {
+  function majBandeau(){
     const b = document.getElementById('cvdl-bandeau-demo');
     const X = window.CvdlExplications;
-    if (!b || !X) return;
+    if(!b || !X) return;
     const on = X.actif();
     const inter = b.querySelector('.xp-inter');
     inter.setAttribute('aria-pressed', String(on));
@@ -965,66 +534,49 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
 
   /* ── Place réservée : aucune fenêtre fixe ne passe sous la barre ── */
   let hauteur = 0;
-  function reserver() {
+  function reserver(){
     const b = document.getElementById('cvdl-bandeau-demo');
-    if (!b) return;
+    if(!b) return;
     const h = Math.ceil(b.getBoundingClientRect().height);
-    if (h !== hauteur) {
-      hauteur = h;
-      html.style.setProperty('--demo-h', h + 'px');
-    }
+    if(h !== hauteur){ hauteur = h; html.style.setProperty('--demo-h', h + 'px'); }
     const vh = innerHeight;
-    for (const el of document.body.querySelectorAll('*')) {
-      if (
-        el === b ||
-        b.contains(el) ||
-        el.closest('.xp-calque, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide, .xp-projecteur')
-      )
-        continue;
+    for(const el of document.body.querySelectorAll('*')){
+      if(el === b || b.contains(el) || el.closest('.xp-calque, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide, .xp-projecteur')) continue;
       // Valeurs d'origine mémorisées une fois : on peut réappliquer sans cumuler.
-      if (el.dataset.demoBas === undefined && el.dataset.demoMaxh === undefined) {
+      if(el.dataset.demoBas === undefined && el.dataset.demoMaxh === undefined){
         const cs = getComputedStyle(el);
-        if (cs.position !== 'fixed' || cs.display === 'none') continue;
+        if(cs.position !== 'fixed' || cs.display === 'none') continue;
         const r = el.getBoundingClientRect();
-        if (r.bottom < vh - 2 && r.height < vh * 0.5) continue; // ne touche pas le bas de l'écran
-        if (cs.bottom !== 'auto')
-          el.dataset.demoBas = parseFloat(cs.bottom) || 0; // ancré en bas (voiles, boutons flottants)
-        else el.dataset.demoMaxh = Math.max(0, r.top); // ancré en haut, pleine hauteur (menu latéral)
+        if(r.bottom < vh - 2 && r.height < vh * 0.5) continue; // ne touche pas le bas de l'écran
+        if(cs.bottom !== 'auto') el.dataset.demoBas = parseFloat(cs.bottom) || 0;   // ancré en bas (voiles, boutons flottants)
+        else el.dataset.demoMaxh = Math.max(0, r.top);                                // ancré en haut, pleine hauteur (menu latéral)
       }
-      if (el.dataset.demoBas !== undefined)
-        el.style.setProperty('bottom', parseFloat(el.dataset.demoBas) + hauteur + 'px', 'important');
-      else
-        el.style.setProperty('max-height', `calc(100vh - ${parseFloat(el.dataset.demoMaxh) + hauteur}px)`, 'important');
+      if(el.dataset.demoBas !== undefined) el.style.setProperty('bottom', (parseFloat(el.dataset.demoBas) + hauteur) + 'px', 'important');
+      else el.style.setProperty('max-height', `calc(100vh - ${parseFloat(el.dataset.demoMaxh) + hauteur}px)`, 'important');
     }
     document.documentElement.classList.toggle('cvdl-demo-modale', modaleOuverte());
   }
-  const SEL_MODALES =
-    '.dialog-backdrop, .rp-drawer-backdrop, .voile-modale-qr.visible, .cvdl-pp-voile, .vg-voile, .idr-voile, dialog[open], [aria-modal="true"]';
-  function modaleOuverte() {
+  const SEL_MODALES = '.dialog-backdrop, .rp-drawer-backdrop, .voile-modale-qr.visible, .cvdl-pp-voile, .vg-voile, .idr-voile, dialog[open], [aria-modal="true"]';
+  function modaleOuverte(){
     const zone = document.getElementById('rp-modal-zone'); // admin : fenêtres rendues dans cette zone
-    if (zone && [...zone.children].some((e) => e.getBoundingClientRect().width > 0)) return true;
-    return [...document.querySelectorAll(SEL_MODALES)].some(
-      (e) =>
-        !e.closest('#cvdl-bandeau-demo, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide') &&
-        e.getBoundingClientRect().width > 0,
-    );
+    if(zone && [...zone.children].some(e => e.getBoundingClientRect().width > 0)) return true;
+    return [...document.querySelectorAll(SEL_MODALES)].some(e => !e.closest('#cvdl-bandeau-demo, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide') && e.getBoundingClientRect().width > 0);
   }
 
-  function poser() {
-    if (document.getElementById('cvdl-bandeau-demo')) return;
+  function poser(){
+    if(document.getElementById('cvdl-bandeau-demo')) return;
     const b = document.createElement('div');
     b.id = 'cvdl-bandeau-demo';
     b.setAttribute('role', 'region');
     b.setAttribute('aria-label', 'Mode démo');
-    b.innerHTML =
-      '<span class="bd-marque"><span class="bd-point"></span>Démo<span class="bd-long"> · données fictives</span></span>' +
-      '<span class="bd-actions">' +
-      '<button type="button" class="xp-inter" aria-pressed="true"><i aria-hidden="true"></i>Explications</button>' +
-      '<button type="button" class="xp-tutos">Tutoriels</button>' +
-      '<a class="bd-profil" href="demo.html">Changer de profil</a>' +
-      (siteDemo ? '' : '<a class="bd-quitter" href="demo.html?quitter=1">Quitter</a>') +
-      '</span>' +
-      '<button type="button" class="bd-replier" aria-expanded="true">Replier ▾</button>';
+    b.innerHTML = '<span class="bd-marque"><span class="bd-point"></span>Démo<span class="bd-long"> · données fictives</span></span>'
+      + '<span class="bd-actions">'
+      + '<button type="button" class="xp-inter" aria-pressed="true"><i aria-hidden="true"></i>Explications</button>'
+      + '<button type="button" class="xp-tutos">Tutoriels</button>'
+      + '<a class="bd-profil" href="demo.html">Changer de profil</a>'
+      + (siteDemo ? '' : '<a class="bd-quitter" href="demo.html?quitter=1">Quitter</a>')
+      + '</span>'
+      + '<button type="button" class="bd-replier" aria-expanded="true">Replier ▾</button>';
     const replier = (oui) => {
       b.classList.toggle('replie', oui);
       const r = b.querySelector('.bd-replier');
@@ -1035,38 +587,17 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       requestAnimationFrame(reserver);
     };
     b.querySelector('.bd-replier').addEventListener('click', () => replier(!b.classList.contains('replie')));
-    b.querySelector('.xp-inter').addEventListener('click', () => {
-      const X = window.CvdlExplications;
-      if (X) {
-        X.definirActif(!X.actif());
-        majBandeau();
-      }
-    });
-    b.querySelector('.xp-tutos').addEventListener('click', () => {
-      const X = window.CvdlExplications;
-      if (X) X.ouvrirPanneau();
-    });
+    b.querySelector('.xp-inter').addEventListener('click', () => { const X = window.CvdlExplications; if(X){ X.definirActif(!X.actif()); majBandeau(); } });
+    b.querySelector('.xp-tutos').addEventListener('click', () => { const X = window.CvdlExplications; if(X) X.ouvrirPanneau(); });
     document.body.appendChild(b);
     replier(lireLocal('cvdl-demo-barre-repliee') === '1');
     majBandeau();
     let attente = 0;
-    const planifier = () => {
-      if (!attente)
-        attente = setTimeout(() => {
-          attente = 0;
-          reserver();
-        }, 60);
-    };
-    new MutationObserver(planifier).observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'hidden', 'open'],
-    });
+    const planifier = () => { if(!attente) attente = setTimeout(() => { attente = 0; reserver(); }, 60); };
+    new MutationObserver(planifier).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden', 'open'] });
     addEventListener('resize', planifier);
-    if (window.ResizeObserver) new ResizeObserver(planifier).observe(b);
+    if(window.ResizeObserver) new ResizeObserver(planifier).observe(b);
     reserver();
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser);
-  else poser();
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser); else poser();
 })();

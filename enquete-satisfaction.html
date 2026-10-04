@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="api.js?v=1"></script>
+<script>
+const API = (function(){ var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api'; try{ var dossier = location.pathname.split('/')[1] || ''; if(/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo'; var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null'); if(d && d.jusqua > Date.now()) return prod + '-demo'; }catch(e){} return prod; })(); // démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère posé par demo.html → cvdl-api-demo
+</script>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,7 +25,7 @@ main{ padding:var(--space-6) var(--space-4); }
 .legende-notation{ max-width:236px; }
 </style>
 <script src="portail-ui.js?v=24" defer></script>
-<script src="cvdl-ui.js?v=12" defer></script>
+<script src="cvdl-ui.js?v=11" defer></script>
 <link rel="stylesheet" href="retours.css?v=1">
 <script src="retours.js?v=1" defer></script>
 </head>
@@ -96,6 +98,72 @@ main{ padding:var(--space-6) var(--space-4); }
   </div>
 </main>
 
-<script src="pages/enquete-satisfaction.js?v=1"></script>
+<script>
+const $ = id => document.getElementById(id);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+
+function echapper(s){
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function poster(data){
+  return fetch(API, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(data)
+  }).then(r => r.json());
+}
+
+const params = new URLSearchParams(location.search);
+const reference = params.get('ref') || '';
+const jetonEnquete = params.get('t') || '';
+const dateLivraison = params.get('date') || '';
+$('reference-affichee').textContent = reference ? `${reference}${dateLivraison ? ` · livrée le ${dateLivraison}` : ''}` : '';
+
+const notes = {};
+$$('.notation').forEach(groupe => {
+  const cle = groupe.dataset.note;
+  groupe.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      notes[cle] = b.dataset.valeur;
+      groupe.querySelectorAll('button').forEach(x => x.classList.toggle('actif', x === b));
+    });
+  });
+});
+
+$('btn-envoyer-enquete').addEventListener('click', async () => {
+  if(!reference){
+    $('retour-enquete').innerHTML = '<div class="msg msg-erreur">Lien invalide — référence de commande manquante.</div>';
+    return;
+  }
+  $('btn-envoyer-enquete').disabled = true;
+  $('btn-envoyer-enquete').textContent = 'Envoi…';
+  try{
+    const r = await poster({
+      action: 'enquete-repondre',
+      reference: reference,
+      jeton: jetonEnquete,
+      noteGlobale: notes.noteGlobale || '',
+      noteDelai: notes.noteDelai || '',
+      noteMateriel: notes.noteMateriel || '',
+      commentaire: $('commentaire').value.trim()
+    });
+    if(r.ok){
+      $('etape-formulaire').hidden = true;
+      $('etape-merci').hidden = false;
+    }else{
+      $('retour-enquete').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Envoi impossible.')}</div>`;
+      $('btn-envoyer-enquete').disabled = false;
+      $('btn-envoyer-enquete').textContent = 'Envoyer mon avis';
+    }
+  }catch(e){
+    $('retour-enquete').innerHTML = '<div class="msg msg-erreur">Envoi impossible — réessaie.</div>';
+    $('btn-envoyer-enquete').disabled = false;
+    $('btn-envoyer-enquete').textContent = 'Envoyer mon avis';
+  }
+});
+</script>
 </body>
 </html>

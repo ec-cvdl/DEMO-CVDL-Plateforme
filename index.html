@@ -5,7 +5,13 @@
 <title>CVDL</title>
 <meta name="robots" content="noindex">
 <!-- Page d'arrivée : sur le site de démo (dossier « …demo… »), ouvre demo.html ; sinon l'accueil public. -->
-<script src="pages/index.js?v=1"></script>
+<script>
+(function(){
+  var dossier = location.pathname.split('/')[1] || '';
+  var demo = /demo/i.test(dossier) && !/\.html$/i.test(dossier);
+  location.replace(demo ? 'demo.html' : 'portail.html');
+})();
+</script>
 <noscript><meta http-equiv="refresh" content="0; url=portail.html"></noscript>
 </head>
 <body></body>
