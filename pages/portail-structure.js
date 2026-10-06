@@ -25,6 +25,7 @@ function jsonp(params) {
   return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
 }
 
+let derniereVerification = null; // réponse de « check », pour « Revoir la présentation »
 async function verifierCodePortail(code) {
   if (!code) {
     $('retour-code-portail').innerHTML = '<div class="msg msg-erreur">Merci de saisir un code.</div>';
@@ -50,14 +51,19 @@ async function verifierCodePortail(code) {
       const conseiller = r.role === 'conseiller';
       document.documentElement.classList.toggle('role-conseiller', conseiller);
       $('etape-code').hidden = true;
-      // Le voile reste affiché tant que les données du tableau de bord n'ont pas fini de
-      // charger — avant, la grille de cartes s'affichait immédiatement (vide), le temps que
-      // les stats/message contextuel arrivent en tâche de fond derrière.
-      $('voile-verification-precoce').style.display = 'flex';
+      derniereVerification = { r, code };
+      // Première connexion : présentation plein écran (embarquement.js) pendant que le tableau de
+      // bord charge derrière ; sinon le voile reste affiché le temps du chargement.
+      const embarquement = window.CvdlEmbarquement ? CvdlEmbarquement.preparer(r, code, { api: API }) : null;
+      let finChargement = () => {};
+      if (embarquement) embarquement.afficher(new Promise((res) => (finChargement = res)));
+      else $('voile-verification-precoce').style.display = 'flex';
       if (!conseiller) await chargerTableauBordPortail(code);
       $('voile-verification-precoce').style.display = 'none';
       $('etape-portail').hidden = false;
       $('btn-deconnexion-portail').hidden = false;
+      finChargement();
+      if (embarquement) await embarquement.termine;
       demarrerTutoPortailSiDemande();
       if (!tutoPortailDejaLance) lancerVisiteGuidee(code, r.nom, false);
     } else if (code.startsWith('j3.')) {
@@ -313,6 +319,13 @@ document.addEventListener('click', (e) => {
     code = sessionStorage.getItem('cvdl-code-structure') || '';
   } catch (err) {}
   lancerVisiteGuidee(code, '', true);
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#lien-revoir-presentation') || !derniereVerification || !window.CvdlEmbarquement) return;
+  e.preventDefault();
+  const emb = CvdlEmbarquement.preparer(derniereVerification.r, derniereVerification.code, { forcer: true });
+  if (emb) emb.afficher();
 });
 
 $('btn-verifier-code-portail').addEventListener('click', () => verifierCodePortail($('code-portail').value.trim()));

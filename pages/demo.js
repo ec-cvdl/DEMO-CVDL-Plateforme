@@ -10,6 +10,7 @@
     'cvdl-support-compte',
     'cvdl-portail-google-off',
     'cvdl-passeport-admin',
+    'cvdl-embarquement-session',
     'cvdl-numero-serie-sav',
     'cvdl-numero-serie-suivi',
   ];
@@ -200,9 +201,22 @@
       points: [],
     },
   ];
+  // Résumé court affiché dans les cartes de la modale (le texte complet reste dans la fiche).
+  const RESUMES = {
+    admin: 'Toutes les commandes, les structures, le stock et les statistiques.',
+    compta: 'Facturé, encaissé, impayés, relances.',
+    support: 'Diagnostics, statuts, échanges, bons de retour.',
+    interne: 'Flotte, équipe, partenaires et projets.',
+    conseiller: 'Remettre du matériel, éditer une attestation.',
+    esn: 'Commandes en volume, flotte suivie.',
+    projets: 'Commandes financées, devis, impact.',
+    bo: 'Commander pour une personne, validation par l’Interne.',
+    rn: 'Tarif de convention, devis et factures.',
+    depot: 'Déclarer ses ventes, voir son stock.',
+    personne: 'Dépannage guidé et suivi de réparation.',
+  };
   let profils = {};
   let choisie = null;
-  let actif = -1;
 
   function libelleVue(v) {
     return `<b>${echapper(v.titre)}</b><span>${echapper(v.role)}</span>`;
@@ -210,36 +224,28 @@
 
   function construireListe() {
     let groupe = '';
-    $('liste').innerHTML = VUES.map((v, i) => {
-      const tete =
-        v.groupe !== groupe
-          ? `<div class="demo-groupe" role="presentation">${echapper((groupe = v.groupe))}</div>`
-          : '';
-      return `${tete}<div class="demo-option" role="option" id="opt-${v.id}" data-i="${i}" aria-selected="${choisie === v}">
-        <span class="ill" data-ill="${v.ill}"></span><span><b>${echapper(v.titre)}</b><small>${echapper(v.role)}</small></span></div>`;
-    }).join('');
+    let html = '';
+    VUES.forEach((v, i) => {
+      if (v.groupe !== groupe) {
+        html += `${groupe ? '</div>' : ''}<div class="demo-groupe" id="grp-${i}">${echapper((groupe = v.groupe))}</div><div class="demo-cartes" role="group" aria-labelledby="grp-${i}">`;
+      }
+      html += `<button type="button" class="demo-carte" data-i="${i}" aria-pressed="${choisie === v}">
+        <span class="ill" data-ill="${v.ill}"></span><b>${echapper(v.titre)}</b><small>${echapper(v.role)}</small>
+        <p>${echapper(RESUMES[v.id] || v.texte)}</p></button>`;
+    });
+    $('liste').innerHTML = html + '</div>';
     illustrer($('liste'));
   }
 
+  // Modale des vues : Échap, clic sur le fond ou ✕ la ferment ; flèches pour passer d'une carte à l'autre.
   function ouvrir(o) {
-    $('liste').hidden = !o;
-    $('choix').classList.toggle('ouvert', o);
+    $('voile-vues').hidden = !o;
     $('bouton-choix').setAttribute('aria-expanded', String(o));
+    document.body.style.overflow = o ? 'hidden' : '';
     if (o) {
-      actif = Math.max(0, VUES.indexOf(choisie));
-      surligner();
-      $('liste').focus();
-    }
-  }
-  function surligner() {
-    $('liste')
-      .querySelectorAll('.demo-option')
-      .forEach((el) => el.classList.toggle('actif', Number(el.dataset.i) === actif));
-    const el = $('liste').querySelector(`[data-i="${actif}"]`);
-    if (el) {
-      el.scrollIntoView({ block: 'nearest' });
-      $('liste').setAttribute('aria-activedescendant', el.id);
-    }
+      const c = $('liste').querySelector('[aria-pressed="true"]') || $('liste').querySelector('.demo-carte');
+      if (c) c.focus();
+    } else $('bouton-choix').focus();
   }
 
   function structurePour(v) {
@@ -255,8 +261,9 @@
 
   function choisir(i) {
     choisie = VUES[i];
-    ouvrir(false);
-    $('bouton-choix').focus();
+    if (!$('voile-vues').hidden) ouvrir(false);
+    $('choix').classList.add('choisi');
+    $('choix-go').firstChild.textContent = 'Changer ';
     const ill = document.createElement('span'); // nouvel élément : l'illustration se dessine une seule fois par élément
     ill.className = 'ill';
     ill.id = 'choix-ill';
@@ -344,51 +351,39 @@
   }
 
   /* ── Interactions ── */
-  $('bouton-choix').addEventListener('click', () => ouvrir($('liste').hidden));
-  $('bouton-choix').addEventListener('keydown', (e) => {
-    if (['ArrowDown', 'ArrowUp'].includes(e.key)) {
-      e.preventDefault();
-      ouvrir(true);
-    }
+  $('bouton-choix').addEventListener('click', () => ouvrir(true));
+  $('btn-fermer-vues').addEventListener('click', () => ouvrir(false));
+  $('voile-vues').addEventListener('click', (e) => {
+    if (e.target === $('voile-vues')) ouvrir(false);
   });
   $('liste').addEventListener('click', (e) => {
-    const o = e.target.closest('.demo-option');
-    if (o) choisir(Number(o.dataset.i));
+    const c = e.target.closest('.demo-carte');
+    if (c) choisir(Number(c.dataset.i));
   });
-  $('liste').addEventListener('mousemove', (e) => {
-    const o = e.target.closest('.demo-option');
-    if (o && Number(o.dataset.i) !== actif) {
-      actif = Number(o.dataset.i);
-      surligner();
-    }
-  });
-  $('liste').addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown') {
+  $('voile-vues').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
       e.preventDefault();
-      actif = Math.min(VUES.length - 1, actif + 1);
-      surligner();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      actif = Math.max(0, actif - 1);
-      surligner();
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      actif = 0;
-      surligner();
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      actif = VUES.length - 1;
-      surligner();
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      choisir(actif);
-    } else if (e.key === 'Escape' || e.key === 'Tab') {
       ouvrir(false);
-      if (e.key === 'Escape') $('bouton-choix').focus();
+      return;
+    }
+    const elements = [...$('voile-vues').querySelectorAll('.demo-fermer, .demo-carte')];
+    const i = elements.indexOf(document.activeElement);
+    if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key) && i > -1) {
+      e.preventDefault();
+      const pas = ['ArrowRight', 'ArrowDown'].includes(e.key) ? 1 : -1;
+      elements[(i + pas + elements.length) % elements.length].focus();
+    } else if (e.key === 'Tab') {
+      // Focus gardé dans la modale (✕ en premier, dernière carte en dernier).
+      if (e.shiftKey && i === 0) {
+        e.preventDefault();
+        elements[elements.length - 1].focus();
+      } else if (!e.shiftKey && i === elements.length - 1) {
+        e.preventDefault();
+        elements[0].focus();
+      }
     }
   });
   document.addEventListener('click', (e) => {
-    if (!$('liste').hidden && !e.target.closest('#choix')) ouvrir(false);
     if (e.target.closest('#btn-entrer')) entrer();
   });
   $('btn-reinit').addEventListener('click', async () => {
