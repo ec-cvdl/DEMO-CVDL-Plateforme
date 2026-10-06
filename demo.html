@@ -9,12 +9,61 @@
 <link rel="stylesheet" href="cvdl-ui.css?v=32">
 <style>
 [hidden]{ display:none!important; }
-.demo-page{ width:100%; max-width:640px; margin:4vh auto 0; display:flex; flex-direction:column; gap:22px; }
+.demo-page{ width:100%; max-width:880px; margin:4vh auto 0; display:flex; flex-direction:column; gap:22px; }
 .demo-tete{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.demo-sauter{ font-size:13.5px; font-weight:600; color:var(--navy); text-decoration:underline; text-underline-offset:3px; white-space:nowrap; }
+.demo-sauter:hover{ color:var(--acc); }
+.demo-titre{ max-width:680px; }
 .demo-titre h1{ margin:0; font-size:clamp(30px, 6vw, 40px); line-height:1.05; }
-.demo-titre p{ margin:10px 0 0; font-size:15.5px; opacity:.75; line-height:1.5; }
+.demo-titre p{ margin:12px 0 0; font-size:16px; line-height:1.55; }
 
-/* Sélecteur de vue : grand bouton mis en valeur + modale de cartes (clavier compris) */
+/* Contexte : démo → CVDL → plateforme nationale */
+.demo-contexte{ display:flex; flex-direction:column; gap:16px; padding:22px; background:var(--fond-doux); border-radius:var(--r-l); }
+.demo-chaine{ display:flex; align-items:stretch; gap:10px; }
+.demo-chaine .etape{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; padding:12px 14px; background:#fff; border:var(--trait); border-radius:var(--r-m); box-shadow:3px 3px 0 var(--aplat); }
+.demo-chaine .etape.ici{ border-color:var(--tur); box-shadow:3px 3px 0 color-mix(in srgb, var(--tur) 35%, transparent); }
+.demo-chaine .etape.futur{ border-style:dashed; box-shadow:none; background:transparent; }
+.demo-chaine .k{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; opacity:.6; }
+.demo-chaine .etape.ici .k{ color:color-mix(in srgb, var(--tur) 60%, var(--navy)); opacity:1; }
+.demo-chaine b{ font-family:var(--police-titre); font-size:16.5px; line-height:1.2; }
+.demo-chaine small{ font-size:12.5px; opacity:.72; line-height:1.4; }
+.demo-fleche{ flex:none; align-self:center; color:var(--navy); opacity:.45; }
+.demo-contexte p{ margin:0; font-size:14.5px; line-height:1.6; }
+.demo-garanties{ display:flex; flex-wrap:wrap; gap:8px 18px; margin:0; padding:0; list-style:none; font-size:13.5px; }
+.demo-garanties li{ display:inline-flex; align-items:center; gap:7px; }
+.demo-garanties svg{ flex:none; color:color-mix(in srgb, var(--tur) 70%, var(--navy)); }
+
+/* Fonctionnalités */
+.demo-section{ display:flex; flex-direction:column; gap:14px; }
+/* Respiration entre les grandes parties (contexte, 1, 2, pied de page). */
+.demo-contexte, .demo-section{ margin-top:34px; }
+.demo-pied{ margin-top:26px; }
+@media (max-width:640px){ .demo-contexte, .demo-section{ margin-top:18px; } .demo-pied{ margin-top:14px; } }
+.demo-section-tete{ display:flex; align-items:baseline; gap:12px; }
+.demo-section-tete h2{ margin:0; font-size:clamp(21px, 3.4vw, 25px); }
+.demo-section-tete .num{ flex:none; display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%; background:var(--navy); color:#fff; font-family:var(--police-titre); font-weight:700; font-size:14px; transform:translateY(-2px); }
+.demo-section-intro{ margin:-6px 0 0; font-size:14.5px; opacity:.75; line-height:1.5; }
+.demo-cartes{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:14px; margin:0; padding:0; list-style:none; }
+.demo-carte{ display:flex; flex-direction:column; gap:8px; padding:18px; background:#fff; border:var(--trait); border-radius:var(--r-l); box-shadow:4px 4px 0 var(--aplat); }
+.demo-carte .ill{ width:44px; height:44px; margin-bottom:2px; }
+.demo-carte h3{ margin:0; font-size:17px; line-height:1.25; }
+.demo-carte p{ margin:0; font-size:13.5px; line-height:1.55; flex:1; }
+.demo-pour{ display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-top:10px; border-top:var(--pointille); }
+.demo-pour > span:first-child{ font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; opacity:.55; margin-right:2px; }
+.demo-pour .pil{ font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--fond-doux); white-space:nowrap; }
+.demo-pour .pil.equipe{ background:color-mix(in srgb, var(--mag) 12%, #fff); }
+.demo-pour .pil.struct{ background:color-mix(in srgb, var(--tur) 14%, #fff); }
+.demo-pour .pil.public{ background:color-mix(in srgb, var(--jaune) 24%, #fff); }
+
+.demo-choix-zone{ display:flex; flex-direction:column; gap:14px; scroll-margin-top:20px; }
+
+@media (max-width:640px){
+  .demo-chaine{ flex-direction:column; }
+  .demo-fleche{ transform:rotate(90deg); }
+  .demo-contexte{ padding:18px 16px; }
+}
+
+/* Sélecteur de vue (menu déroulant maison, clavier compris) */
 .demo-choix{ position:relative; }
 .demo-choix-lab{ display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; margin-bottom:8px; opacity:.7; }
 .demo-bouton{ width:100%; display:flex; align-items:center; gap:18px; padding:18px 22px; min-height:96px; text-align:left; font:inherit; color:var(--navy); cursor:pointer;
@@ -26,18 +75,21 @@
 .demo-bouton-txt b{ font-family:var(--police-titre); font-size:21px; line-height:1.2; }
 .demo-bouton-txt span{ font-size:14px; opacity:.75; }
 .demo-bouton-txt .vide{ font-family:var(--police-titre); font-size:21px; font-weight:700; opacity:1; }
-.demo-bouton-go{ flex:none; display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:99px; background:var(--acc); color:#fff; font-weight:700; font-size:14.5px;
-  border:var(--trait); box-shadow:3px 3px 0 var(--aplat-fort); position:relative; }
+/* Pastille d'appel : pulse tant qu'aucune vue n'est choisie. */
+.demo-bouton-go{ flex:none; position:relative; display:inline-flex; align-items:center; gap:6px; padding:10px 14px 10px 16px; border-radius:99px; background:var(--acc); color:#fff;
+  font-weight:700; font-size:14.5px; border:var(--trait); box-shadow:3px 3px 0 var(--aplat-fort); }
 .demo-choix:not(.choisi) .demo-bouton-go::after{ content:""; position:absolute; inset:-5px; border-radius:inherit; border:2px solid var(--acc); opacity:0; animation:demo-pulse 2.4s ease-out infinite; }
 @keyframes demo-pulse{ 0%{ opacity:.55; transform:scale(.96); } 70%,100%{ opacity:0; transform:scale(1.18); } }
 @media (prefers-reduced-motion: reduce){ .demo-bouton-go::after{ animation:none !important; } }
 @media (max-width:560px){ .demo-bouton{ flex-wrap:wrap; gap:12px; padding:16px; } .demo-bouton .ill{ width:46px; height:46px; } .demo-bouton-txt{ flex:1 1 60%; } .demo-bouton-go{ width:100%; justify-content:center; } }
 
+/* Modale des vues : cartes par groupe */
 .demo-voile{ position:fixed; inset:0; z-index:200; display:grid; place-items:center; padding:20px; background:color-mix(in srgb, var(--navy) 55%, transparent); animation:demo-fondu .18s ease-out; }
 .demo-voile[hidden]{ display:none; }
 .demo-modale{ width:min(1040px,100%); max-height:min(90vh,900px); display:flex; flex-direction:column; background:#fff; border:var(--trait); border-radius:var(--r-xl); box-shadow:8px 8px 0 var(--aplat); animation:demo-monte .22s ease-out; }
 @keyframes demo-fondu{ from{ opacity:0; } }
 @keyframes demo-monte{ from{ opacity:0; transform:translateY(14px) scale(.98); } }
+@media (prefers-reduced-motion: reduce){ .demo-voile, .demo-modale{ animation:none; } }
 .demo-modale-tete{ display:flex; align-items:flex-start; gap:12px; padding:22px 24px 8px; }
 .demo-modale-tete h2{ margin:0; font-size:24px; }
 .demo-modale-tete p{ margin:4px 0 0; font-size:14px; opacity:.7; }
@@ -47,7 +99,7 @@
 .demo-groupe{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; opacity:.55; margin:16px 0 8px; }
 .demo-cartes{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px; }
 .demo-carte{ position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:5px; padding:14px; text-align:left; font:inherit; color:var(--navy); cursor:pointer;
-  background:#fff; border:var(--trait-doux); border-radius:var(--r-l); transition:transform .12s, box-shadow .12s, border-color .12s; }
+  background:#fff; border:var(--trait-doux); border-radius:var(--r-l); transition:transform .12s, box-shadow .12s; }
 .demo-carte:hover{ border:var(--trait); transform:translate(-2px,-2px); box-shadow:4px 4px 0 var(--aplat); }
 .demo-carte:focus-visible{ outline:2px solid var(--tur); outline-offset:2px; }
 .demo-carte .ill{ width:40px; height:40px; }
@@ -78,12 +130,78 @@
 <main class="demo-page" id="contenu-principal">
   <div class="demo-tete">
     <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+    <a class="demo-sauter" href="#choix-vue">Aller directement au choix de la vue ↓</a>
   </div>
   <div class="demo-titre">
     <div class="cvdl-surtitre">Plateforme de démonstration</div>
     <h1>Explorez CVDL <em>de l’intérieur</em></h1>
-    <p>Choisissez une vue : vous entrez directement, sans mot de passe. Tout est fictif et aucun e-mail n’est envoyé.</p>
+    <p>CVDL est l’outil d’Emmaüs Connect qui organise la distribution de matériel numérique reconditionné : de la commande d’une structure jusqu’à l’appareil remis à une personne, puis son suivi et sa réparation.</p>
   </div>
+
+  <section class="demo-contexte" aria-labelledby="titre-contexte">
+    <h2 class="cvdl-surtitre" id="titre-contexte" style="margin:0">Où êtes-vous ?</h2>
+    <div class="demo-chaine">
+      <div class="etape ici"><span class="k">Vous êtes ici</span><b>Plateforme de test</b><small>Une copie de CVDL avec des données fictives, pour découvrir et essayer.</small></div>
+      <svg class="demo-fleche" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <div class="etape"><span class="k">L’outil</span><b>CVDL</b><small>La plateforme utilisée par les équipes et les structures.</small></div>
+      <svg class="demo-fleche" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <div class="etape futur"><span class="k">À venir</span><b>Plateforme nationale de distribution</b><small>CVDL viendra l’alimenter : ce qui est éprouvé ici servira à la construire.</small></div>
+    </div>
+    <p>Cette démonstration sert à <b>présenter le projet</b> et à <b>le tester en conditions réelles</b> : vous pouvez cliquer partout, passer une commande, ouvrir un SAV… sans aucune conséquence.</p>
+    <ul class="demo-garanties">
+      <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Sans mot de passe</li>
+      <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Personnes, structures et commandes fictives</li>
+      <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Aucun e-mail envoyé</li>
+      <li><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>Données remises à zéro en un clic</li>
+    </ul>
+  </section>
+
+  <section class="demo-section" aria-labelledby="titre-fonctions">
+    <div class="demo-section-tete"><span class="num" aria-hidden="true">1</span><h2 id="titre-fonctions">Ce que permet la plateforme</h2></div>
+    <p class="demo-section-intro">Les grandes fonctionnalités, et à qui elles s’adressent.</p>
+    <ul class="demo-cartes">
+      <li class="demo-carte">
+        <span class="ill" data-ill="commander"></span>
+        <h3>Commander du matériel</h3>
+        <p>Ordinateurs, tablettes et smartphones reconditionnés, au tarif de chaque structure. La commande est suivie étape par étape, de la validation à la livraison.</p>
+        <div class="demo-pour"><span>Pour</span><span class="pil struct">Structures</span><span class="pil struct">Partenaires</span></div>
+      </li>
+      <li class="demo-carte">
+        <span class="ill" data-ill="tableau"></span>
+        <h3>Piloter la distribution</h3>
+        <p>Toutes les commandes au même endroit, le calendrier des livraisons, le stock, les structures et les statistiques d’activité.</p>
+        <div class="demo-pour"><span>Pour</span><span class="pil equipe">Équipe CVDL</span></div>
+      </li>
+      <li class="demo-carte">
+        <span class="ill" data-ill="passeport"></span>
+        <h3>Suivre chaque appareil</h3>
+        <p>La flotte de chaque structure, appareil par appareil (numéro de série), avec son passeport : d’où il vient, qui l’a reconditionné, à qui il a été remis.</p>
+        <div class="demo-pour"><span>Pour</span><span class="pil struct">Structures</span><span class="pil equipe">Équipe CVDL</span></div>
+      </li>
+      <li class="demo-carte">
+        <span class="ill" data-ill="suiviSav"></span>
+        <h3>Dépanner et réparer</h3>
+        <p>Un dépannage guidé pour les petits soucis, puis la déclaration de panne, un fil d’échanges et le suivi de la réparation jusqu’au retour de l’appareil.</p>
+        <div class="demo-pour"><span>Pour</span><span class="pil public">Personnes accompagnées</span><span class="pil struct">Structures</span><span class="pil equipe">Logistique</span></div>
+      </li>
+      <li class="demo-carte">
+        <span class="ill" data-ill="facture"></span>
+        <h3>Devis, factures et finances</h3>
+        <p>Devis et factures générés automatiquement, paiements, relances des impayés et vue d’ensemble par territoire ou par type de structure.</p>
+        <div class="demo-pour"><span>Pour</span><span class="pil equipe">Comptabilité</span><span class="pil struct">Structures</span></div>
+      </li>
+      <li class="demo-carte">
+        <span class="ill" data-ill="distribution"></span>
+        <h3>Partenaires, projets et impact</h3>
+        <p>Un territoire peut créer ses associations partenaires, valider leurs commandes, leur confier des appareils, suivre ses projets financés et leur impact environnemental.</p>
+        <div class="demo-pour"><span>Pour</span><span class="pil struct">Territoires Emmaüs Connect</span><span class="pil struct">Projets</span></div>
+      </li>
+    </ul>
+  </section>
+
+  <section class="demo-section demo-choix-zone" id="choix-vue" aria-labelledby="titre-choix">
+    <div class="demo-section-tete"><span class="num" aria-hidden="true">2</span><h2 id="titre-choix">Choisissez votre point de vue</h2></div>
+    <p class="demo-section-intro">Chaque vue montre la plateforme telle que la voit une personne précise. Vous pourrez en changer à tout moment depuis la barre « Démo » en bas de l’écran.</p>
 
   <div id="msg"></div>
 
@@ -93,7 +211,7 @@
       <span class="ill" data-ill="cle" id="choix-ill"></span>
       <span class="demo-bouton-txt" id="choix-txt"><span class="vide">Choisir une vue</span><span>Équipe CVDL, structures, personne accompagnée : 11 points de vue</span></span>
       <span class="demo-bouton-go" id="choix-go">Voir les vues
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
     </button>
   </div>
 
@@ -110,6 +228,7 @@
   </div>
 
   <section class="demo-fiche" id="fiche" hidden aria-live="polite"></section>
+  </section>
 
   <div class="demo-pied">
     <span id="genere">Chargement de la démo…</span>
@@ -120,6 +239,6 @@
   </div>
 </main>
 
-<script src="pages/demo.js?v=2"></script>
+<script src="pages/demo.js?v=4"></script>
 </body>
 </html>
