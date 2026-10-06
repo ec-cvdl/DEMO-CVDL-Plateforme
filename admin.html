@@ -5,10 +5,9 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net https://accounts.google.com/gsi/; frame-src 'self' https://ec-cvdl.github.io https://accounts.google.com/gsi/; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<script>/* Anti-clickjacking : cette page ne s'affiche jamais dans un cadre d'un autre site. */
-(function(){ if(window.top === window.self) return; var ok = false; try{ ok = window.top.location.origin === window.location.origin; }catch(e){} if(!ok){ document.documentElement.style.display = 'none'; try{ window.top.location = window.location.href; }catch(e){} } })();</script>
+<script src="anti-cadre.js?v=1"></script>
 <title>CVDL — Suivi des commandes</title>
-<!-- ⚠️ Le numéro après "?v=" doit être incrémenté à CHAQUE déploiement où reparc.css ou app.js
+<!-- ⚠️ Le numéro après "?v=" doit être incrémenté à CHAQUE déploiement où un CSS ou un script
      change — sans ça, les navigateurs déjà passés une fois sur l'admin peuvent continuer à
      exécuter une version en cache indéfiniment (aucune date d'expiration explicite côté
      serveur ne semble configurée), même après un redéploiement complet. Pensez à vider aussi le
@@ -40,27 +39,8 @@
   html.rp-reconnexion #rp-connexion-formulaire{ display:none; }
   html.rp-reconnexion #rp-connexion-spinner{ display:flex; }
 </style>
-<script>
-  // Décidé avant le rendu du <body> : si un mot de passe est déjà en mémoire pour cet onglet
-  // (reconnexion silencieuse en bas d'app.js), on affiche uniquement un spinner — jamais le
-  // formulaire, même un court instant, le temps que la vérification réponde.
-  try{
-    if(sessionStorage.getItem('cvdl-admin-jeton')) document.documentElement.classList.add('rp-reconnexion');
-  }catch(e){}
-</script>
-<script>
-  // Décidé avant le rendu du <body>, comme pour la reconnexion silencieuse plus haut : évite
-  // un flash clair→sombre au chargement pour qui a déjà choisi le mode sombre.
-  try{
-    if(localStorage.getItem('cvdl-theme') === 'dark') document.documentElement.classList.add('rp-dark');
-    if(localStorage.getItem('cvdl-noel') === '1') document.documentElement.classList.add('rp-noel');
-  }catch(e){}
-  // Style unifié (admin-unifie.css) actif par défaut ; « ancien » ramène l'ancien style en secours.
-  try{
-    if(localStorage.getItem('cvdl-style') !== 'ancien') document.documentElement.classList.add('rp-unifie');
-    if(localStorage.getItem('cvdl-largeur') === 'pleine') document.documentElement.classList.add('rp-pleine');
-  }catch(e){ document.documentElement.classList.add('rp-unifie'); }
-</script>
+<script src="pages/admin-tete.js?v=1"></script>
+
 </head>
 <body>
 
@@ -106,6 +86,10 @@
     </button>
     <nav class="rp-nav" id="rp-nav"></nav>
     <div style="margin-top:auto;padding-top:var(--space-3);border-top:1px solid var(--th-bd-ffffff24, rgba(255,255,255,.14))">
+      <a href="projet.html" id="rp-lien-projet" title="Rétroplanning et journal des mises à jour (page publique)" style="all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:11px var(--space-3);border-radius:var(--radius-md);cursor:pointer;font-weight:600;font-size:14px;color:rgba(255,255,255,.75)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 6h10M7 12h12M5 18h8"/><circle cx="17" cy="6" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg>
+        <span class="rp-label">Pilotage du projet</span>
+      </a>
       <button type="button" id="rp-copier-lien-portail" data-copier-lien-portail title="Lien du portail public" style="all:unset;box-sizing:border-box;display:flex;align-items:center;width:100%;padding:11px var(--space-3);border-radius:var(--radius-md);cursor:pointer;font-weight:600;font-size:14px;color:rgba(255,255,255,.75)">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L12.5 19.5"/></svg>
         <span class="rp-label">Lien du portail public</span>
@@ -137,17 +121,48 @@
 <div id="rp-modal-zone"></div>
 <div id="rp-etat" class="rp-etat"></div>
 
+<script src="api.js?v=1"></script>
 <script src="portail-ui.js?v=24"></script>
 <script src="fiche-commande.js?v=1"></script>
 <script src="depannage.js?v=1"></script>
-<script src="app.js?v=103"></script>
-<script src="depannage-admin.js?v=1"></script>
-<script src="retours-admin.js?v=1"></script>
-<script src="identite-admin.js?v=1"></script>
-<script src="sav-fil-admin.js?v=1"></script>
-<script src="equipe-admin.js?v=1"></script>
-<script src="finance-admin.js?v=1"></script>
-<script src="liens-admin.js?v=1"></script>
+<script src="admin/01-socle.js?v=1"></script>
+<script src="admin/02-icones.js?v=1"></script>
+<script src="admin/03-referentiels.js?v=1"></script>
+<script src="admin/04-etat-navigation.js?v=2"></script>
+<script src="admin/05-actions.js?v=1"></script>
+<script src="admin/06-tableau-de-bord.js?v=1"></script>
+<script src="admin/07-commandes.js?v=1"></script>
+<script src="admin/08-sav.js?v=1"></script>
+<script src="admin/09-factures.js?v=1"></script>
+<script src="admin/10-stock.js?v=1"></script>
+<script src="admin/11-reglages.js?v=1"></script>
+<script src="admin/12-passeport.js?v=1"></script>
+<script src="admin/13-statistiques.js?v=1"></script>
+<script src="admin/14-structures.js?v=1"></script>
+<script src="admin/15-modales.js?v=1"></script>
+<script src="admin/16-dossier-commande.js?v=1"></script>
+<script src="admin/17-dossier-sav.js?v=1"></script>
+<script src="admin/18-etapes-commande.js?v=1"></script>
+<script src="admin/19-reglages-statuts-modeles.js?v=1"></script>
+<script src="admin/20-factures-mensuelles.js?v=1"></script>
+<script src="admin/21-assistant-structure.js?v=1"></script>
+<script src="admin/22-assistant-commande.js?v=1"></script>
+<script src="admin/23-assistant-sav.js?v=1"></script>
+<script src="admin/24-assistant-produit.js?v=1"></script>
+<script src="admin/25-creation-devis-facture.js?v=1"></script>
+<script src="admin/26-impact-structure360.js?v=1"></script>
+<script src="admin/27-distribution.js?v=1"></script>
+<script src="admin/28-depot-vente-stock.js?v=1"></script>
+<script src="admin/29-calendrier.js?v=1"></script>
+<script src="admin/30-statistiques-filtres.js?v=1"></script>
+<script src="admin/31-depannage.js?v=1"></script>
+<script src="admin/32-retours.js?v=1"></script>
+<script src="admin/33-identite.js?v=1"></script>
+<script src="admin/34-sav-fil.js?v=1"></script>
+<script src="admin/35-equipe.js?v=1"></script>
+<script src="admin/36-finance.js?v=1"></script>
+<script src="admin/37-liens.js?v=1"></script>
+<script src="admin/99-demarrage.js?v=1"></script>
 <script src="theme-noel.js?v=1"></script>
 </body>
 </html>

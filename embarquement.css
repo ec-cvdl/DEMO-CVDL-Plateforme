@@ -1,0 +1,295 @@
+/* embarquement.css — présentation plein écran de la première connexion (embarquement.js). */
+html.emb-ouvert,
+html.emb-ouvert body {
+  overflow: hidden;
+}
+.emb {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--fond-doux, #f3f6f8);
+  color: var(--navy, #002743);
+  overflow: auto;
+}
+.emb-haut {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 28px;
+}
+.emb-logo {
+  height: 34px;
+  width: auto;
+}
+.emb-pil {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: var(--trait-doux);
+  background: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.emb-passer {
+  margin-left: auto;
+  flex: none;
+  font: inherit;
+  font-size: 14px;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 6px 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.emb-passer:focus-visible,
+.emb-btn:focus-visible {
+  outline: 2px solid var(--tur);
+  outline-offset: 3px;
+}
+
+.emb-scene {
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 8px 28px;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 56px;
+  align-items: center;
+}
+.emb-cote-ill {
+  display: grid;
+  place-items: center;
+}
+.emb-ill {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: var(--trait);
+  border-radius: 32px;
+  box-shadow: 10px 10px 0 var(--aplat);
+}
+.emb-ill .ill {
+  width: 58%;
+  height: 58%;
+}
+.emb-badge {
+  position: absolute;
+  left: 24px;
+  bottom: -15px;
+  padding: 6px 13px;
+  border-radius: 99px;
+  border: var(--trait);
+  background: var(--tur);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.emb-badge-test {
+  background: var(--jaune);
+  color: var(--navy);
+}
+.emb-vol {
+  position: fixed;
+  z-index: 1001;
+  margin: 0;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+.emb-sur {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--mag);
+}
+.emb-txt h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+  margin: 8px 0 14px;
+  outline: none;
+}
+.emb-txt p {
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0 0 14px;
+  max-width: 52ch;
+}
+.emb-parcours {
+  list-style: none;
+  margin: 4px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.emb-parcours li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.emb-parcours li + li::before {
+  content: '→';
+  opacity: 0.5;
+  font-weight: 400;
+}
+.emb-parcours li span {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: var(--trait-doux);
+  background: #fff;
+}
+.emb-parcours li:first-child span {
+  background: var(--color-accent-100);
+  border: var(--trait);
+}
+.emb-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 9px;
+}
+.emb-points li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 15.5px;
+  line-height: 1.45;
+}
+.emb-points li::before {
+  content: '✓';
+  color: var(--tur);
+  font-weight: 700;
+}
+.emb-avis {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 4px;
+  padding: 12px 16px;
+  background: #fff;
+  border: var(--trait-doux);
+  border-radius: var(--r-l, 18px);
+  font-size: 14.5px;
+  line-height: 1.4;
+  max-width: 52ch;
+}
+.emb-visages {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+
+.emb-bas {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px 28px 26px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.emb-pts {
+  display: flex;
+  gap: 8px;
+}
+.emb-pts i {
+  width: 10px;
+  height: 10px;
+  border-radius: 99px;
+  background: var(--aplat-fort);
+  transition:
+    width 0.25s,
+    background 0.25s;
+}
+.emb-pts i.on {
+  width: 30px;
+  background: var(--mag);
+}
+.emb-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+.emb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  padding: 13px 22px;
+}
+.emb-btn[aria-busy='true'] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .emb-haut {
+    padding: 14px 16px;
+  }
+  .emb-pil {
+    display: none;
+  }
+  .emb-scene {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 8px 16px;
+    align-content: center;
+  }
+  .emb-ill {
+    max-width: 170px;
+    border-radius: 26px;
+    box-shadow: 6px 6px 0 var(--aplat);
+  }
+  .emb-badge {
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+  }
+  .emb-txt p {
+    font-size: 16px;
+  }
+  .emb-bas {
+    padding: 14px 16px 18px;
+    flex-wrap: wrap;
+  }
+  .emb-pts {
+    width: 100%;
+    justify-content: center;
+  }
+  .emb-actions {
+    width: 100%;
+  }
+  .emb-actions .btn-primary {
+    flex: 1;
+    justify-content: center;
+  }
+}
+.emb .emb-txt h1:focus,
+.emb .emb-txt h1:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+html.cvdl-demo .emb {
+  padding-bottom: 44px;
+} /* place de la barre « Démo » */
