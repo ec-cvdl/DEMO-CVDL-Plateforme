@@ -1,11 +1,3 @@
-const $ = (id) => document.getElementById(id);
-
-function echapper(s) {
-  return String(s ?? '').replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-  );
-}
 function afficherMsg(id, texte, type) {
   $(id).innerHTML = texte ? `<div class="msg msg-${type}">${echapper(texte)}</div>` : '';
 }
@@ -38,10 +30,6 @@ function badgeGarantiePublicSav(dateAchatFormatee) {
     cfg.texte +
     '</span>'
   );
-}
-
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
 }
 
 /* Mêmes teintes que le back-office, pour que la couleur du statut reste cohérente partout */

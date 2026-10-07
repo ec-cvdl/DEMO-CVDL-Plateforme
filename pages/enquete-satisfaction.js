@@ -1,19 +1,4 @@
-const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-function poster(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-}
 
 const params = new URLSearchParams(location.search);
 const reference = params.get('ref') || '';

@@ -29,12 +29,6 @@ const ZOOMS = { semaines: 22, mois: 7 }; // pixels par jour
 const H_LIGNE = 46; // hauteur d'une ligne de barres dans un couloir
 const MARGE_COULOIR = 14;
 
-const $ = (id) => document.getElementById(id);
-const echapper = (v) =>
-  String(v ?? '').replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-  );
 const JOUR = 864e5;
 const enJours = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / JOUR;
 const versIso = (n) => new Date(n * JOUR).toISOString().slice(0, 10);
@@ -289,7 +283,6 @@ function htmlBlocs(blocs) {
 /* ════════════════ Rétroplanning : calculs ════════════════ */
 
 const tache = (id) => P.taches.find((t) => t.id === id);
-const couleurCouloir = (id) => COULEURS[(P.couloirs.find((c) => c.id === id) || {}).couleur] || COULEURS.navy;
 const enRetard = (t) => t.type === 'tache' && t.statut !== 'termine' && t.fin < auj();
 
 /** Pousse les tâches liées (« doit être fini avant ») qui commenceraient avant la fin de leur

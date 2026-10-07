@@ -1,16 +1,5 @@
-const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
-function poster(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-}
 function posterAvecProgression(data, onProgression) {
   let annule = false;
   let pourcentage = 0;
@@ -81,12 +70,7 @@ function afficherMsg(cible, texte, type) {
   $(cible).innerHTML = texte ? '<div class="msg msg-' + type + '">' + texte + '</div>' : '';
   if (texte && type === 'erreur') analytique.erreursEtapeActuelle++;
 }
-function echapper(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
-}
-/** Champ "responsable" scindé en Prénom/NOM (comme le bon d'orientation de commande.html) —
+/** Champ "responsable" scindé en Prénom/NOM (comme commande.html) —
  *  ces deux fonctions font le pont avec le champ unique attendu par le backend. */
 // Le prénom, lui, ne passe en majuscule que sur la première lettre de chaque mot (pas tout le
 // champ comme le nom) — même règle que commande.html, pour distinguer les deux côté back rien

@@ -1,15 +1,3 @@
-const $ = (id) => document.getElementById(id);
-
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
-function poster(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-}
 /** Même principe que posterAvecProgression() de sav.html — la durée réelle de l'envoi n'est
  *  pas connue à l'avance, donc la progression est estimée : elle avance vite au début puis
  *  ralentit en s'approchant de 90%, et saute à 100% une fois la réponse reçue. */
@@ -34,17 +22,6 @@ function posterAvecProgressionCommande(data, onProgression) {
       clearInterval(minuteur);
       throw erreur;
     });
-}
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = String(s == null ? '' : s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function isoVersDateFr(iso) {
-  if (!iso) return '';
-  const [a, m, j] = iso.split('-');
-  if (!a || !m || !j) return '';
-  return `${j}/${m}/${a}`;
 }
 // Date de livraison souhaitée (structures Internes) : pas de date dans le passé
 $('champ-date-livraison-souhaitee').min = new Date().toISOString().slice(0, 10);
@@ -329,6 +306,14 @@ document.addEventListener('keydown', (e) => {
   if (el) el.scrollIntoView({ block: 'nearest' });
 });
 
+const NOMS_ETAPES = {
+  0: 'Structure',
+  1: 'Matériel',
+  quantites: 'Quantités',
+  personnes: 'Personnes',
+  paiement: 'Paiement',
+  recap: 'Envoi',
+};
 function etapesActives() {
   const actives = etapeIdentificationVisible ? ['0', '1', 'quantites'] : ['1', 'quantites'];
   const necessitePersonnes = unitesCommandees().length > 0 || (etat.estProjets && etat.projetsNominatif);
@@ -343,14 +328,6 @@ function majProgression() {
   const actives = etapesActives();
   const etapeAffichee = indexEtapeActuelle + 1;
   document.querySelector('.compte').textContent = `${etapeAffichee}/${actives.length}`;
-  const NOMS_ETAPES = {
-    0: 'Structure',
-    1: 'Matériel',
-    quantites: 'Quantités',
-    personnes: 'Personnes',
-    paiement: 'Paiement',
-    recap: 'Envoi',
-  };
   $('progression').innerHTML = actives
     .map((cle, idx) => {
       const cls = idx < indexEtapeActuelle ? 'fait' : idx === indexEtapeActuelle ? 'cours' : 'avenir';
@@ -390,6 +367,10 @@ function majRecapLateral() {
 }
 function afficherEtape() {
   const cle = etapesActives()[indexEtapeActuelle];
+  if (window.CvdlRetours) {
+    CvdlRetours.commencerParcours('commande', NOMS_ETAPES[cle]);
+    CvdlRetours.etapeParcours('commande', NOMS_ETAPES[cle]);
+  }
   document.querySelectorAll('.etape').forEach((s) => s.classList.toggle('active', s.dataset.etape === cle));
   $('btn-retour').hidden = indexEtapeActuelle === 0;
   $('btn-suivant').hidden = cle === 'recap';
@@ -544,8 +525,7 @@ function svgIcone(nomIcone) {
     sim: '<path d="M5 2h6l3 3v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.4"/><rect x="6" y="8" width="5" height="4.5" rx=".8" stroke="currentColor" stroke-width="1.3"/>',
     recharge:
       '<rect x="1.5" y="6" width="13" height="7" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M16.5 8.2v3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M9 7.3 6.8 10h1.6l-.6 2.2L10 9.5H8.4z" fill="currentColor" stroke="none"/>',
-    // Manquaient jusqu'ici : tablette, smartphone, atelier — tout produit de ces catégories
-    // retombait donc systématiquement sur l'icône par défaut (laptop), quel que soit son nom.
+    // catégories tablette, smartphone et atelier
     tablette:
       '<rect x="3" y="1.5" width="12" height="15" rx="1.6" stroke="currentColor" stroke-width="1.4"/><line x1="7.5" y1="14" x2="10.5" y2="14" stroke="currentColor" stroke-width="1.4"/>',
     telephone:
@@ -739,8 +719,8 @@ $('toggle-urgent').addEventListener('change', () => {
 });
 
 function unitesCommandees() {
-  // RNum, comme ESN/Interne, ne déclare jamais de bénéficiaire nominatif à la commande —
-  // contrairement à BO (bons d'orientation) qui en a besoin pour chaque unité.
+  // Relais Numérique, comme ESN/Interne, ne déclare jamais de bénéficiaire nominatif à la commande —
+  // contrairement à Vente solidaire qui en a besoin pour chaque unité.
   if (etat.estSansPaiement || etat.estRN) return [];
   if (etat.estProjets && !etat.projetsNominatif) return [];
   const unites = [];
@@ -1106,6 +1086,7 @@ async function envoyerCommande() {
       })();
       $('confirmation-2fa').hidden = etat.moyenPaiement !== 'Paiement en ligne (CB)';
       // Avis rapide (retours.js) : une seule question, une fois la commande envoyée.
+      if (window.CvdlRetours) CvdlRetours.terminerParcours('commande', 'reussi');
       if (window.CvdlRetours)
         CvdlRetours.demanderAvis(document.querySelector('#ecran-confirmation .card'), {
           parcours: 'commande',
@@ -1137,8 +1118,8 @@ try {
     verifierCode()
       .then((succes) => {
         if (!succes) {
-          // Code invalide/expiré malgré la mémorisation : on revient à une vraie étape 0,
-          // comptée normalement, plutôt que de laisser l'affichage dans un état incohérent.
+          // code invalide ou expiré malgré la mémorisation : retour à l'étape 0, comptée
+          // normalement
           etapeIdentificationVisible = true;
           afficherEtape();
         }
@@ -1167,4 +1148,10 @@ document.addEventListener('click', (e) => {
   }
   if (e.target.id === 'integre-fermer' || e.target.id === 'voile-integre')
     $('voile-integre').classList.remove('visible');
+});
+
+// Retours (retours.js, chargé après ce script) : la commande commence à l'ouverture de la page.
+document.addEventListener('DOMContentLoaded', () => {
+  const cle = etapesActives()[indexEtapeActuelle];
+  if (window.CvdlRetours) CvdlRetours.commencerParcours('commande', NOMS_ETAPES[cle]);
 });

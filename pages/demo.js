@@ -26,11 +26,19 @@
         sessionStorage.removeItem(k);
       } catch (e) {}
     });
+  // Clé d'accès équipe (lien ?cle=…) : mémorisée dans ce navigateur, retirée de l'adresse.
+  const lireCle = () => {
+    try {
+      return localStorage.getItem('cvdl-demo-cle') || '';
+    } catch (e) {
+      return '';
+    }
+  };
   const appel = (donnees) =>
     fetch(API_DEMO, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(donnees),
+      body: JSON.stringify(Object.assign({ cle: lireCle() }, donnees)),
     }).then((r) => r.json());
   const message = (texte, type) => {
     $('msg').innerHTML = texte ? `<div class="msg msg-${type || 'erreur'}">${echapper(texte)}</div>` : '';
@@ -60,6 +68,41 @@
   } catch (e) {
     message('Le stockage du navigateur est bloqué : impossible d’activer le mode démo (navigation privée stricte ?).');
   }
+
+  /* Démo présentée aux structures (lien ?pour=structures, mémorisé pour « Changer de profil ») :
+     seulement les vues structure du lancement, sur l'Association Le Tremplin. */
+  const params = new URLSearchParams(location.search);
+  // Lien d'une structure (?vue=rn|vs|interne|conseiller) : la démo reste sur cette vue, sans
+  // changement de profil (mémorisé ; ?cle=… ou ?pour=equipe le lève).
+  let vueVerrouillee = '';
+  try {
+    if (params.get('cle') || params.get('pour') === 'equipe') localStorage.removeItem('cvdl-demo-vue');
+    else if (params.get('vue')) localStorage.setItem('cvdl-demo-vue', params.get('vue').toLowerCase());
+    vueVerrouillee = localStorage.getItem('cvdl-demo-vue') || '';
+  } catch (e) {}
+  if (vueVerrouillee) {
+    $('btn-quitter').hidden = true;
+    $('sep-quitter').hidden = true;
+  }
+  if (params.get('cle')) {
+    try {
+      localStorage.setItem('cvdl-demo-cle', params.get('cle'));
+    } catch (e) {}
+    params.delete('cle');
+    history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : ''));
+  }
+  if (params.get('pour')) {
+    try {
+      if (params.get('pour') === 'structures') localStorage.setItem('cvdl-demo-pour', 'structures');
+      else localStorage.removeItem('cvdl-demo-pour');
+    } catch (e) {}
+  }
+  // Lien direct vers une vue (?vue=rn|vs|interne|conseiller) : démo structures.
+  let pourStructures =
+    !!vueVerrouillee || params.get('pour') === 'structures' || (!!params.get('vue') && params.get('pour') !== 'equipe');
+  try {
+    pourStructures = pourStructures || (!params.get('pour') && localStorage.getItem('cvdl-demo-pour') === 'structures');
+  } catch (e) {}
 
   /* ── Les vues proposées ──
      profil : action demo-connexion ; type : structure d'exemple choisie dans la liste du serveur. */
@@ -139,8 +182,7 @@
       ill: 'flotte',
       titre: 'Structure ESN',
       role: 'Responsable ESN',
-      texte:
-        'Un reconditionneur partenaire : commandes en volume, sans paiement, flotte suivie dans son propre tableau.',
+      texte: 'Un reconditionneur partenaire : commandes en volume, sans paiement, flotte suivie dans la plateforme.',
       points: ['Commander en volume', 'Suivre sa flotte', 'Déclarer une panne'],
     },
     {
@@ -161,8 +203,8 @@
       type: 'bo',
       code: 'BOGERL26',
       ill: 'partenairesCmd',
-      titre: 'Structure partenaire',
-      role: 'Bon d’orientation',
+      titre: 'Vente solidaire',
+      role: 'Structure partenaire d’une Interne',
       texte:
         'Une association partenaire d’une Interne : elle commande pour des personnes nommées, paie sur place, et l’Interne valide.',
       points: ['Commander pour une personne', 'Suivre la validation par l’Interne', 'Voir les appareils attribués'],
@@ -173,10 +215,10 @@
       type: 'rn',
       code: 'MLNI2026',
       ill: 'commander',
-      titre: 'Vente solidaire',
-      role: 'RNum (Mission Locale, CCAS…)',
+      titre: 'Relais Numérique',
+      role: 'Mission Locale, CCAS…',
       texte:
-        'Une structure qui achète au tarif solidaire : virement, devis et factures, tarif de convention, flotte dans son propre tableau.',
+        'Une structure qui achète au tarif solidaire : virement, devis et factures, tarif de convention, flotte suivie dans la plateforme.',
       points: ['Passer une commande au tarif négocié', 'Suivre sa livraison', 'Déclarer une panne'],
     },
     {
@@ -234,6 +276,8 @@
         <p>${echapper(RESUMES[v.id] || v.texte)}</p></button>`;
     });
     $('liste').innerHTML = html + '</div>';
+    if ($('choix-nombre'))
+      $('choix-nombre').textContent = `Équipe CVDL, structures, personne accompagnée : ${VUES.length} points de vue`;
     illustrer($('liste'));
   }
 
@@ -253,15 +297,22 @@
     const liste = profils.structures || [];
     const trouvee =
       liste.find((s) => s.code === v.code) ||
-      (v.type === 'depot'
-        ? liste.find((s) => s.depotVente)
-        : liste.find((s) => s.type === v.type && !s.depotVente && (v.type !== 'bo' || s.partenaireDe)));
+      (v.type === 'depot' ? liste.find((s) => s.depotVente) : liste.find((s) => s.type === v.type && !s.depotVente));
     return trouvee || (v.code ? { code: v.code, nom: '' } : null);
   }
 
-  function choisir(i) {
-    choisie = VUES[i];
-    if (!$('voile-vues').hidden) ouvrir(false);
+  /** Deuxième modale : la vue choisie, à confirmer (« Entrer dans la démo ») ou à changer. */
+  function ouvrirFiche(o) {
+    $('voile-fiche').hidden = !o;
+    document.body.style.overflow = o ? 'hidden' : '';
+    if (o) $('btn-entrer').focus();
+  }
+
+  function choisir(i, confirmer = true) {
+    if (!VUES.at(i)) return;
+    choisie = VUES.at(i);
+    $('voile-vues').hidden = true;
+    $('bouton-choix').setAttribute('aria-expanded', 'false');
     $('choix').classList.add('choisi');
     $('choix-go').firstChild.textContent = 'Changer ';
     const ill = document.createElement('span'); // nouvel élément : l'illustration se dessine une seule fois par élément
@@ -290,13 +341,22 @@
         ? `<div class="demo-indice"><span>N° de série&nbsp;: <code>${echapper(profils.numeroSerieSav)}</code></span><span>Référence de suivi&nbsp;: <code>${echapper(profils.referenceSav)}</code></span></div>`
         : '';
     $('fiche').innerHTML = `
+      <div class="demo-confirm-tete"><span class="ill" data-ill="${v.ill}"></span>
+        <div id="titre-fiche"><b>${echapper(v.titre)}</b><span>${echapper(v.role)}</span></div>
+        <button type="button" class="demo-fermer" id="btn-fermer-fiche" aria-label="Fermer">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
       <p>${echapper(v.texte)}${detail ? ` <b>${echapper(detail)}</b>` : ''}</p>
       ${v.points.length ? `<ul>${v.points.map((p) => `<li>${echapper(p)}</li>`).join('')}</ul>` : ''}
       ${indice}
-      <button type="button" class="btn btn-primary demo-entrer" id="btn-entrer">Entrer dans la démo
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>`;
-    $('fiche').hidden = false;
+      <div id="msg-fiche"></div>
+      <div class="demo-actions">
+        ${VUES.length > 1 ? '<button type="button" class="btn btn-secondary" id="btn-autre-vue">Choisir une autre vue</button>' : ''}
+        <button type="button" class="btn btn-primary demo-entrer" id="btn-entrer">Entrer dans la démo
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>`;
+    illustrer($('fiche'));
     message('');
+    if (confirmer) ouvrirFiche(true);
   }
 
   async function entrer() {
@@ -327,12 +387,114 @@
       location.href = r.page;
     } catch (e) {
       b.removeAttribute('aria-busy');
-      message(
+      $('msg-fiche').innerHTML = `<div class="msg msg-erreur">${echapper(
         e.message === 'Failed to fetch'
           ? 'La plateforme de démonstration ne répond pas pour le moment.'
           : e.message || 'Connexion impossible.',
-      );
+      )}</div>`;
     }
+  }
+
+  const VUES_STRUCTURES = {
+    rn: {
+      code: 'TREMP2026',
+      titre: 'Relais Numérique',
+      role: 'Association Le Tremplin',
+      texte:
+        'Votre structure achète le matériel pour son public, au tarif de votre convention : commande, devis puis facture, paiement par virement, et chaque appareil suivi dans votre flotte.',
+      points: [
+        'Passer une commande au tarif de la convention',
+        'Suivre la commande et ses documents',
+        'Remettre un appareil et déclarer une panne',
+      ],
+    },
+    bo: {
+      code: 'TREMPVS26',
+      ill: 'personne',
+      titre: 'Vente solidaire',
+      role: 'Association Le Tremplin',
+      texte:
+        'Votre structure oriente des personnes vers un achat à prix solidaire : une personne nommée par appareil, le moyen de paiement choisi pour votre structure, et le suivi jusqu’à la remise.',
+      points: ['Commander pour une personne', 'Suivre la commande', 'Retrouver les appareils remis'],
+    },
+    interne: {
+      titre: 'Structure Interne',
+      role: 'Responsable de territoire',
+      texte:
+        'Un territoire Emmaüs Connect : commandes sans prix ni paiement, flotte, équipe et projets de distribution.',
+      points: ['Commander pour le territoire', 'Suivre la flotte et son impact', 'Gérer l’équipe (accès Google)'],
+    },
+    conseiller: {
+      titre: 'Conseiller numérique',
+      role: 'Équipe d’une structure Interne',
+      texte: 'Sur le terrain : remettre un appareil à une personne, éditer son attestation, consulter les projets.',
+      points: ['Remettre un appareil', 'Éditer une attestation', 'Consulter les projets'],
+    },
+  };
+  const ALIAS_VUES = {
+    rn: 'rn',
+    'relais-numerique': 'rn',
+    vs: 'bo',
+    bo: 'bo',
+    'vente-solidaire': 'bo',
+    interne: 'interne',
+    conseiller: 'conseiller',
+  };
+
+  function appliquerModeStructures() {
+    if (!pourStructures) return;
+    for (let i = VUES.length - 1; i >= 0; i--) if (!VUES_STRUCTURES[VUES.at(i).id]) VUES.splice(i, 1);
+    const ordre = ['rn', 'bo', 'interne', 'conseiller'];
+    VUES.sort((a, b) => ordre.indexOf(a.id) - ordre.indexOf(b.id));
+    VUES.forEach((v) => Object.assign(v, VUES_STRUCTURES[v.id], { groupe: 'Votre structure' }));
+    Object.assign(RESUMES, {
+      rn: 'Tarif de convention, devis puis facture, virement.',
+      bo: 'Une personne par appareil, paiement au choix.',
+      interne: 'Sans prix ni paiement : flotte, équipe, projets.',
+      conseiller: 'Remettre un appareil, éditer une attestation.',
+    });
+    $('btn-reinit').hidden = true;
+    const sep = $('btn-reinit').previousElementSibling;
+    if (sep && sep.classList.contains('sep')) sep.hidden = true;
+    // Fonctionnalités réservées à l'équipe CVDL : masquées.
+    document.querySelectorAll('ul.demo-cartes > li.demo-carte').forEach((li) => {
+      if (!li.querySelector('.pil.struct, .pil.public')) li.hidden = true;
+    });
+  }
+
+  /* Périmètre du lancement (Réglages → Périmètre) : seuls les types ouverts sont proposés ;
+     partenaires fermés → Vente solidaire autonome, Interne sans partenaires. */
+  function appliquerPerimetre(p) {
+    if (!p) return;
+    const actifs = p.typesActifs || [];
+    for (let i = VUES.length - 1; i >= 0; i--) {
+      const t = VUES.at(i).type;
+      if (t && t !== 'depot' && !actifs.includes(t)) VUES.splice(i, 1);
+    }
+    if (p.partenaires) return;
+    const bo = VUES.find((v) => v.id === 'bo');
+    if (bo)
+      Object.assign(bo, {
+        code: 'BORNB26',
+        ill: 'personne',
+        role: 'Association de quartier',
+        texte:
+          'Une association qui oriente des personnes vers un achat à prix solidaire : une personne nommée par appareil, paiement au choix.',
+        points: ['Commander pour une personne', 'Choisir le moyen de paiement', 'Suivre sa commande'],
+      });
+    RESUMES.bo = 'Commander pour une personne, paiement au choix.';
+    RESUMES.interne = 'Flotte, équipe et projets, sans prix ni paiement.';
+    const interne = VUES.find((v) => v.id === 'interne');
+    if (interne)
+      Object.assign(interne, {
+        texte:
+          'Un territoire Emmaüs Connect : sa flotte, son équipe, ses projets de distribution. Ni prix ni paiement.',
+        points: [
+          'Remettre un appareil et éditer une attestation',
+          'Rattacher des remises à un projet',
+          'Gérer l’équipe (accès Google)',
+        ],
+      });
   }
 
   async function charger() {
@@ -340,10 +502,21 @@
       const r = await appel({ action: 'demo-infos' });
       if (!r || !r.ok) throw new Error();
       profils = r.profils || {};
+      // Démo protégée sans la clé équipe : seulement les vues structure.
+      if (r.equipeProtegee && !r.equipe) pourStructures = true;
+      appliquerPerimetre(r.perimetre);
+      appliquerModeStructures();
+      construireListe();
+      const vue = ALIAS_VUES[String(vueVerrouillee || params.get('vue') || '').toLowerCase()];
+      if (vueVerrouillee && vue) {
+        for (let i = VUES.length - 1; i >= 0; i--) if (VUES.at(i).id !== vue) VUES.splice(i, 1);
+        construireListe();
+      }
+      if (vue && !choisie && VUES.find((v) => v.id === vue)) choisir(VUES.findIndex((v) => v.id === vue));
       const res = r.resume || {};
       $('genere').textContent =
         `${res.structures || 0} structures, ${res.commandes || 0} commandes, ${res.sav || 0} SAV — données du ${new Date(r.genereLe).toLocaleDateString('fr-FR')}`;
-      if (choisie) choisir(VUES.indexOf(choisie));
+      if (choisie) choisir(VUES.indexOf(choisie), false);
     } catch (e) {
       $('genere').textContent = 'Démo indisponible pour le moment.';
       message('La plateforme de démonstration ne répond pas pour le moment. Réessayez dans un instant.');
@@ -385,6 +558,35 @@
   });
   document.addEventListener('click', (e) => {
     if (e.target.closest('#btn-entrer')) entrer();
+    if (e.target.closest('#btn-fermer-fiche')) {
+      ouvrirFiche(false);
+      $('bouton-choix').focus();
+    }
+    if (e.target.closest('#btn-autre-vue')) {
+      ouvrirFiche(false);
+      ouvrir(true);
+    }
+  });
+  $('voile-fiche').addEventListener('click', (e) => {
+    if (e.target === $('voile-fiche')) ouvrirFiche(false);
+  });
+  $('voile-fiche').addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      ouvrirFiche(false);
+      $('bouton-choix').focus();
+      return;
+    }
+    if (e.key !== 'Tab') return;
+    const el = [...$('voile-fiche').querySelectorAll('button')];
+    const i = el.indexOf(document.activeElement);
+    if (e.shiftKey && i === 0) {
+      e.preventDefault();
+      el.at(-1).focus();
+    } else if (!e.shiftKey && i === el.length - 1) {
+      e.preventDefault();
+      el.at(0).focus();
+    }
   });
   $('btn-reinit').addEventListener('click', async () => {
     if (

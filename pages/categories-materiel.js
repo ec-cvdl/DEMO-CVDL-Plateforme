@@ -1,13 +1,3 @@
-const $ = (id) => document.getElementById(id);
-function echapper(s) {
-  return String(s ?? '').replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-  );
-}
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
 const SILHOUETTES = {
   portable:
     '<svg viewBox="0 0 34 34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="6" width="24" height="15" rx="1.5"/><path d="M2 27h30l-2.5-4H4.5Z"/></svg>',
@@ -35,17 +25,6 @@ const SVG_SPEC = {
   sms: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   appels:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .3 2 .7 3a2 2 0 0 1-.5 2.1L7.9 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c1 .4 2 .6 3 .7a2 2 0 0 1 1.7 2z"/></svg>',
-};
-// Une couleur dédiée par type de caractéristique — plus facile à repérer d'un coup d'œil
-// qu'une icône grise à 60% d'opacité qu'on ne voyait quasiment pas.
-const SPEC_TEINTES = {
-  systeme: { bg: '#E0F2F2', fg: '#00777A' },
-  processeur: { bg: '#FFF3CC', fg: '#7A5A00' },
-  ram: { bg: '#FBE3EC', fg: '#C2185B' },
-  disque: { bg: '#E3F4EA', fg: '#147A43' },
-  donneesMobiles: { bg: '#E3F4EA', fg: '#147A43' },
-  sms: { bg: '#E0F2F2', fg: '#00777A' },
-  appels: { bg: '#FFF3CC', fg: '#7A5A00' },
 };
 const CATEGORIES = [
   {
@@ -112,17 +91,13 @@ function devineIcone(nom) {
   // contient aussi "atelier" et parfois "ordinateur" — sans cette priorité, il retombait sur une
   // tout autre icône (même ordre de règles que iconeProduit() côté admin).
   if (/(sensibilisation|[ée]cologi|environnement)/.test(n)) return 'feuille';
-  // Doit être vérifié avant "portable"/"ordinateur" : un produit du type "Atelier initiation
-  // ordinateur" contient aussi ces mots-là — sans cette priorité, il retombait sur l'icône
-  // ordinateur portable au lieu de l'icône atelier (même ordre de règles que iconeProduit()
-  // côté admin, où le test atelier vient également avant portable/fixe).
+  // testé avant « portable » / « ordinateur » : « Atelier initiation ordinateur » contient aussi
+  // ces mots (même ordre que iconeProduit() dans l'admin)
   if (/(atelier|animation)/.test(n)) return 'atelier';
   if (/touches?/.test(n)) return 'telephone_touches';
   if (/(smartphone|t[ée]l[ée]phone|mobile)/.test(n)) return 'telephone';
   if (/tablet/.test(n)) return 'tablette';
   if (/(portable|laptop)/.test(n)) return 'portable';
-  // Corrigé : renvoyait 'portable' pour un ordinateur fixe/de bureau (copié-collé de la règle
-  // du dessus jamais adapté), ce qui affichait la silhouette du portable pour ces produits-là.
   if (/(fixe|bureau|desktop|tour|ordinateur|pc)/.test(n)) return 'fixe';
   return '';
 }

@@ -1,5 +1,3 @@
-const $ = (id) => document.getElementById(id);
-
 /** Trajectoire aléatoire pour chaque forme décorative de la bannière — direction, distance et
  *  vitesse tirées au sort au chargement de la page plutôt qu'un jeu figé de préréglages
  *  horizontal/vertical/diagonal. Formes assez grandes (f1/f6) pour rester crédibles même en
@@ -16,14 +14,6 @@ document.querySelectorAll('.bandeau-accueil .forme').forEach((forme) => {
   forme.style.animationDuration = `${(16 + Math.random() * 16).toFixed(1)}s`;
   forme.style.animationDelay = `${(-Math.random() * 15).toFixed(1)}s`;
 });
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
 
 let derniereVerification = null; // réponse de « check », pour « Revoir la présentation »
 async function verifierCodePortail(code) {
@@ -45,8 +35,19 @@ async function verifierCodePortail(code) {
       $('titre-structure-identifiee').innerHTML = r.nom
         ? `${echapper(salutation)}, <em>${echapper(r.nom)}</em>`
         : 'Espace structure';
+      const partenaires = !!(r.perimetre && r.perimetre.partenaires);
+      // Contexte pour les retours et les tutoriels (type de structure, rôle).
+      try {
+        sessionStorage.setItem(
+          'cvdl-contexte-structure',
+          JSON.stringify({ type: (r.politique && r.politique.type) || '', role: r.role || 'responsable', partenaires }),
+        );
+      } catch (e) {}
       document.querySelectorAll('[data-gate="interne"]').forEach((el) => {
         el.hidden = !r.interne;
+      });
+      document.querySelectorAll('[data-gate="partenaires"]').forEach((el) => {
+        el.hidden = !(r.interne && partenaires);
       });
       const conseiller = r.role === 'conseiller';
       document.documentElement.classList.toggle('role-conseiller', conseiller);
@@ -426,10 +427,11 @@ $('panneau-equipe').addEventListener('change', (e) => {
   enregistrerEquipe(equipe.map((x) => (x.email === s.dataset.eqRole ? { ...x, role: s.value } : x)));
 });
 
-/** Connexion Google silencieuse, structures Internes seulement (pas de bouton) : hd limite
- *  Google aux comptes du domaine autorisé — sans session de ce domaine, rien ne s'affiche. Si le
- *  compte est l'e-mail de contact (ou un « Compte Google autorisé ») d'une structure Interne,
- *  l'espace s'ouvre sans code (One Tap, auto_select). Sinon : saisie du code, comme avant. */
+/**
+ * Connexion Google silencieuse, structures Internes seulement : `hd` limite Google aux
+ * comptes du domaine autorisé. Si le compte est l'e-mail de contact ou un compte autorisé d'une
+ * Interne, l'espace s'ouvre sans code (One Tap). Sinon, saisie du code.
+ */
 async function preparerGooglePortail(automatique) {
   if (!automatique) return;
   const post = (corps) =>

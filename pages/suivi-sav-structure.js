@@ -1,11 +1,3 @@
-const $ = (id) => document.getElementById(id);
-
-function echapper(s) {
-  return String(s ?? '').replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-  );
-}
 function afficherMsg(id, texte, type) {
   $(id).innerHTML = texte ? `<div class="msg msg-${type}">${echapper(texte)}</div>` : '';
 }
@@ -24,9 +16,8 @@ function statutGarantiePublic(dateAchatFormatee) {
   const statut = maintenant >= dateFinGarantie ? 'expiree' : maintenant >= dateMiGarantie ? 'bientot' : 'en_cours';
   return { statut, dateFinGarantie: dateFinGarantie.toLocaleDateString('fr-FR') };
 }
-// Même niveau d'information que côté admin (badgeGarantie() dans admin/) — la date complète de
-// fin de garantie était jusqu'ici propre à l'admin, la structure ne voyait que le statut nu
-// ("Garantie en cours" sans autre précision).
+// Même niveau d'information que l'admin (badgeGarantie()) : date de fin de garantie
+// comprise.
 function badgeGarantiePublicSav(dateAchatFormatee) {
   const { statut, dateFinGarantie } = statutGarantiePublic(dateAchatFormatee);
   const cfg = {
@@ -55,10 +46,6 @@ function cibleCarteDepuisUrl(selecteurCarte, classeAnimation) {
     carte.classList.add(classeAnimation);
     setTimeout(() => carte.classList.remove(classeAnimation), 6000);
   }, 150);
-}
-
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
 }
 
 /* Mêmes teintes que le back-office, pour que la couleur du statut reste cohérente partout */

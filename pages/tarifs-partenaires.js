@@ -1,20 +1,3 @@
-const $ = (id) => document.getElementById(id);
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function poster(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-}
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
-
 let codeValide = '';
 let partenairesCourants = [];
 
@@ -140,7 +123,7 @@ async function chargerTarifsPartenaires() {
       c.addEventListener('change', async () => {
         const p = tarifsCourants.find((x) => String(x.ligne) === c.dataset.remplaceTarif) || {};
         let produitBase = p.produitBase || '';
-        // Tarif créé avant l'option : on retrouve le produit de base par son nom si possible.
+        // tarif créé sans produit de base : on le retrouve par son nom si possible
         if (c.checked && !produitBase) {
           produitBase =
             (await demanderCvdl(

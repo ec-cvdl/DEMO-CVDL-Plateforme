@@ -1,12 +1,11 @@
 // Décidé avant le rendu du <body> : si un mot de passe est déjà en mémoire pour cet onglet
-// (reconnexion silencieuse : admin/99-demarrage.js), on affiche uniquement un spinner — jamais le
-// formulaire, même un court instant, le temps que la vérification réponde.
+// (reconnexion silencieuse, admin/99-demarrage.js), on n'affiche qu'un indicateur de
+// chargement, jamais le formulaire.
 try {
   if (sessionStorage.getItem('cvdl-admin-jeton')) document.documentElement.classList.add('rp-reconnexion');
 } catch (e) {}
 
-// Décidé avant le rendu du <body>, comme pour la reconnexion silencieuse plus haut : évite
-// un flash clair→sombre au chargement pour qui a déjà choisi le mode sombre.
+// décidé avant le rendu du <body> : pas d'éclair clair → sombre pour qui a choisi le mode sombre
 try {
   if (localStorage.getItem('cvdl-theme') === 'dark') document.documentElement.classList.add('rp-dark');
   if (localStorage.getItem('cvdl-noel') === '1') document.documentElement.classList.add('rp-noel');

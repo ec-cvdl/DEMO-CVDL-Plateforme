@@ -1,10 +1,4 @@
-const $ = (id) => document.getElementById(id);
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function poster(data) {
+function posterPasseport(data) {
   // Mot de passe admin éventuel : en-tête X-CVDL-Admin, jamais dans le corps ni l'URL.
   const d = { ...data };
   const mdp = d.password;
@@ -54,7 +48,7 @@ $('btn-identifier-admin').addEventListener('click', async () => {
   // Le mot de passe est échangé contre un jeton de session : seul le jeton est gardé.
   let jeton = '';
   try {
-    const r = await poster({ action: 'login', password: mdp });
+    const r = await posterPasseport({ action: 'login', password: mdp });
     jeton = r && r.ok ? r.jeton || '' : '';
   } catch (e) {}
   $('champ-mot-de-passe-admin').value = '';
@@ -137,7 +131,7 @@ $('btn-deconnexion-passeport').addEventListener('click', () => {
 async function afficherPasseport(numeroSerie) {
   $('zone-passeport').innerHTML = '<p class="etat-passeport">Recherche en cours…</p>';
   try {
-    const r = await poster({
+    const r = await posterPasseport({
       action: 'passeport-materiel',
       numeroSerie,
       code: codeIdentifie,

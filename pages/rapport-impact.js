@@ -1,4 +1,3 @@
-const $ = (id) => document.getElementById(id);
 const esc = (v) =>
   String(v == null ? '' : v).replace(
     /[&<>"']/g,

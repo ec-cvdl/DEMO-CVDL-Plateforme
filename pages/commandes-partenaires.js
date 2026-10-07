@@ -1,21 +1,3 @@
-function $(id) {
-  return document.getElementById(id);
-}
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function poster(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-}
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
 try {
   if (sessionStorage.getItem('cvdl-code-structure')) document.documentElement.classList.add('deja-identifie');
 } catch (e) {}
@@ -52,7 +34,7 @@ async function afficherPrerequisPartenaire(c) {
 }
 
 let lignesFlotteSelectionnees = [];
-const tachesAvancerVisibles = {}; // par commande : la tâche « Passer à … » était-elle déjà affichée ?
+// par commande : la tâche « Passer à … » était-elle déjà affichée ?
 
 // Circuit Interne (même règle que le back, regles/circuits.js) : l'Interne valide elle-même.
 const ORDRE_STATUTS = ['Reçue', 'Validée', 'Préparée', 'En cours de livraison', 'Livrée'];
@@ -81,14 +63,7 @@ const SVG_ICONE_TICKET =
   '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z"/><path d="M10 7.5v9" stroke-dasharray="2.2 2.2"/></svg>';
 const SVG_LIEN_EXTERNE =
   '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
-const SVG_COCHE =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
-function formaterMontant(montant) {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(
-    montant,
-  );
-}
 // Noms des bénéficiaires déclarés à la commande, dans l'ordre — pour associer un lien de
 // paiement par personne quand le paiement séparé a été choisi. Même extraction que côté admin
 // (nomsPersonnesCommande) : ne lit que le premier segment de chaque ligne (le nom), qu'elle
@@ -160,13 +135,13 @@ const LIBELLES_COURTS_TIMELINE_PARTENAIRE = {
   'En cours de livraison': 'En livraison',
   Livrée: 'Livrée',
 };
-// Dégradé magenta → turquoise — mêmes teintes que suivi.html, juste 3 segments ici (4 étapes)
-// au lieu de 4, puisque "Validée" n'existe pas dans le parcours self-service partenaire.
+// Dégradé magenta → turquoise, mêmes teintes que suivi.html, 3 segments ici (4 étapes dans
+// le parcours partenaire).
 const DEGRADE_TIMELINE = ['#B3E3E4', '#66CDCF', '#00ACB0', '#00ACB0'];
 
 function construireTimelinePartenaire(statutActuel) {
-  // Une commande déjà validée par un autre biais (admin) avant transfert reste malgré tout
-  // affichée comme "juste après Reçue" ici — Validée n'a pas d'étape dédiée dans ce parcours.
+  // une commande validée par l'admin avant transfert reste affichée juste après « Reçue » :
+  // « Validée » n'a pas d'étape dédiée dans ce parcours
   const indexActuel = ORDRE_STATUTS.indexOf(statutActuel);
   if (indexActuel === -1) return '';
   const etapes = ORDRE_STATUTS.map((etape, i) => {
@@ -583,9 +558,8 @@ async function ouvrirDetailCommande(reference) {
     ? `Passer à « ${prochain === 'En cours de livraison' ? 'En livraison' : prochain} »`
     : 'Commande terminée';
   const besoinAppareils = (c.quantiteAvecNumeroSerie || 0) > 0;
-  // Le choix du matériel n'apparaît qu'à partir de « Validée » (avant : la validation ne pouvait
-  // pas se faire tant que tout n'était pas attribué, alors que rien ne l'exige). Il reste visible
-  // (coché) une fois fait, jusqu'à la préparation.
+  // le choix du matériel apparaît à partir de « Validée » et reste visible (coché) une fois
+  // fait, jusqu'à la préparation
   const etapeMateriel = besoinAppareils && ['Validée'].includes(c.statutCommande);
   $('dc-tache-attribution').hidden = !etapeMateriel;
   $('dc-tache-attribution').className = 'dc-tache ' + (attributionComplete ? 'ok' : 'cours');
@@ -846,10 +820,9 @@ $('dc-confirmer-attribution').addEventListener('click', async () => {
   $('dc-confirmer-attribution').disabled = true;
   $('dc-retour-attribution').innerHTML = '';
   try {
-    // Reconstruit les bénéficiaires déclarés sur la commande, par produit, pour retrouver l'objet
-    // complet {nomComplet, dateNaissance} correspondant à l'index choisi dans chaque menu déroulant.
-    // Fait partie du try englobant : la moindre erreur ici (avant même l'envoi de la requête)
-    // doit remonter à l'écran plutôt que de bloquer silencieusement sans rien afficher.
+    // Retrouve, par produit, les personnes déclarées sur la commande pour obtenir
+    // { nomComplet, dateNaissance } à partir de l'index choisi. Dans le try : une erreur ici doit
+    // s'afficher à l'écran.
     const personnesParProduitCommande = {};
     (commandeOuverte.personnesParLigne || []).forEach((p) => {
       (personnesParProduitCommande[p.produit] ||= []).push(p);
@@ -886,8 +859,7 @@ $('dc-confirmer-attribution').addEventListener('click', async () => {
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Attribution impossible.')}</div>`;
     }
   } catch (e) {
-    // Le détail de l'erreur est affiché (pas juste loggé) pour pouvoir le remonter facilement
-    // en cas de bug, plutôt que de laisser l'écran silencieux sans aucune trace exploitable.
+    // le détail de l'erreur est affiché à l'écran, pour pouvoir le signaler
     console.error('Attribution flotte — erreur :', e);
     $('dc-retour-attribution').innerHTML =
       `<div class="msg msg-erreur">Attribution impossible — erreur technique : ${echapper((e && e.message) || String(e))}</div>`;

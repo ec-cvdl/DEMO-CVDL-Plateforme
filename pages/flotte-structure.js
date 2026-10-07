@@ -1,4 +1,3 @@
-const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 /* Vue « matériel » : page ouverte depuis l'admin (modale Flotte). On y voit tout le matériel
@@ -14,10 +13,10 @@ const VUE_MATERIEL = (() => {
 })();
 if (VUE_MATERIEL) document.documentElement.classList.add('vue-materiel');
 const avecVue = (o) => (VUE_MATERIEL ? { ...o, vue: 'materiel' } : o);
-function jsonp(params) {
+function jsonpVue(params) {
   return fetch(API + '?' + new URLSearchParams(avecVue(params))).then((r) => r.json());
 }
-function poster(data) {
+function posterVue(data) {
   return fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -26,11 +25,6 @@ function poster(data) {
 }
 function afficherMsg(cible, texte, type) {
   $(cible).innerHTML = texte ? '<div class="msg msg-' + type + '">' + texte + '</div>' : '';
-}
-function echapper(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-  });
 }
 // Même règle de casse que commande.html/sav.html : première lettre de chaque mot en majuscule
 // pour le prénom (tirets/espaces gérés), tout en majuscule pour le NOM.
@@ -57,6 +51,7 @@ let estInterneFlotte = false;
 // partenaires) et une structure BO partenaire qui les reçoit (les gère ensuite normalement,
 // mais ne peut plus rien attribuer elle-même — cf. réponse à Q1/Q2 du 15/09).
 let estProprietaireInterne = false;
+let attributionPartenaires = false; // Interne, structures partenaires ouvertes (Réglages → Périmètre)
 let estPartenaireFlotte = false;
 let lignesSelectionneesAttribution = new Set();
 let estEsnFlotte = false;
@@ -90,7 +85,7 @@ async function verifierCode() {
   $('btn-verifier').disabled = true;
   $('btn-verifier').innerHTML = '<span class="spinner-inline"></span>Vérification…';
   try {
-    const r = await jsonp({ action: 'check', code: code });
+    const r = await jsonpVue({ action: 'check', code: code });
     if (r.ok) {
       codeValide = code;
       // Une structure BO auto-créée par une Interne (structurePartenaireDe renseigné) utilise
@@ -103,9 +98,10 @@ async function verifierCode() {
         !!r.structurePartenaireDe ||
         !!(r.politique && r.politique.flotte && r.politique.flotte.centralisee);
       estProprietaireInterne = !!r.interne;
+      attributionPartenaires = estProprietaireInterne && !!(r.perimetre && r.perimetre.partenaires);
       estPartenaireFlotte = !!r.structurePartenaireDe;
       estEsnFlotte = !!r.esn;
-      // Structure qui paie son matériel (RNum, BO, Projets…) : le prix payé est affiché.
+      // Structure qui paie son matériel (Relais Numérique, Vente solidaire, Projets…) : le prix payé est affiché.
       estPayanteFlotte = !(r.politique && r.politique.paiement && r.politique.paiement.aucun);
       estDepotVenteFlotte = !!(r.politique && r.politique.depotVente && r.politique.depotVente.actif);
       facturationDepotVenteFlotte =
@@ -167,49 +163,13 @@ try {
   }
 } catch (e) {}
 
-let lienFlotteActuel = '';
-
-async function chargerAppareils(lienFlotte) {
-  lienFlotteActuel = lienFlotte;
+async function chargerAppareils() {
   $('zone-flotte').innerHTML =
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   try {
-    const r = await jsonp({ action: 'flotte-lister', code: codeValide });
+    const r = await jsonpVue({ action: 'flotte-lister', code: codeValide });
     if (!r.ok) {
-      // Le tableau lié n'est plus accessible (partage retiré, tableau supprimé...) — sans
-      // option de récupération ici, c'était un blocage complet : impossible de continuer à
-      // utiliser la gestion de flotte tant que l'ancien lien restait enregistré. Repris le même
-      // bouton/texte que "Repartir d'un tableau neuf" (déjà existant plus bas, pour le cas où
-      // les données se chargent normalement), pour rester cohérent.
-      $('zone-flotte').innerHTML = `
-        <p class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</p>
-        <p style="font-size:13px;opacity:0.7;margin-top:8px">Le tableau lié n'est peut-être plus accessible (partage retiré, tableau supprimé...).</p>
-        <button type="button" class="flotte-bouton flotte-bouton-contour" style="margin-top:10px" id="btn-recreer-flotte">Repartir d'un tableau neuf</button>`;
-      $('btn-recreer-flotte').addEventListener('click', async () => {
-        if (
-          !(await confirmerCvdl(
-            "Repartir d'un tableau neuf ? Votre tableau actuel ne sera pas supprimé (il reste intact sur votre Drive), mais il ne sera plus lié ici — il faudra en dupliquer un nouveau depuis le modèle et recoller son lien.",
-          ))
-        )
-          return;
-        $('btn-recreer-flotte').disabled = true;
-        $('btn-recreer-flotte').textContent = 'Réinitialisation…';
-        try {
-          const rD = await poster({ action: 'flotte-delier', code: codeValide });
-          if (!rD.ok) {
-            alerteCvdl(rD.erreur || 'Impossible de délier le tableau actuel.');
-            $('btn-recreer-flotte').disabled = false;
-            $('btn-recreer-flotte').textContent = "Repartir d'un tableau neuf";
-            return;
-          }
-        } catch (e) {
-          alerteCvdl('Impossible de délier le tableau actuel — réessaie.');
-          $('btn-recreer-flotte').disabled = false;
-          $('btn-recreer-flotte').textContent = "Repartir d'un tableau neuf";
-          return;
-        }
-        chargerFlotte();
-      });
+      $('zone-flotte').innerHTML = `<p class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</p>`;
       return;
     }
     appareilsCourants = r.appareils;
@@ -221,6 +181,11 @@ async function chargerAppareils(lienFlotte) {
 }
 
 let appareilsCourants = [];
+/** Retours : un appareil remis (ou vendu) est une tâche menée au bout ; avis à la première. */
+function noterRemise(statut) {
+  if ((statut === 'Remis' || statut === 'Vendu') && window.CvdlRetours)
+    CvdlRetours.action('remise', 'Remettre un appareil dans la flotte, c’était simple ?');
+}
 let rechercheFlotte = '';
 
 /* ── Projets de distribution (structures Interne) : chaque appareil « Remis » peut être
@@ -230,7 +195,7 @@ async function chargerProjetsFlotte() {
   projetsFlotte = [];
   if (!estProprietaireInterne || estDepotVenteFlotte) return;
   try {
-    const r = await jsonp({ action: 'projets-structure', code: codeValide });
+    const r = await jsonpVue({ action: 'projets-structure', code: codeValide });
     if (r && r.ok) projetsFlotte = r.projets || [];
   } catch (e) {
     /* non bloquant : la flotte s'affiche sans les projets */
@@ -264,7 +229,7 @@ document.addEventListener('change', async (e) => {
   const item = appareilsCourants.find((a) => a.ligne == ligne);
   sel.disabled = true;
   try {
-    const r = await poster({ action: 'flotte-rattacher-projet', code: codeValide, ligne, projet: sel.value });
+    const r = await posterVue({ action: 'flotte-rattacher-projet', code: codeValide, ligne, projet: sel.value });
     if (r && r.ok) {
       if (item) item.projet = sel.value;
       sel.classList.toggle('on', !!sel.value);
@@ -351,7 +316,7 @@ async function ouvrirTarifsRevente() {
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   $('modale-tarifs-revente').classList.add('visible');
   try {
-    const r = await jsonp({ action: 'flotte-tarifs-revente', code: codeValide });
+    const r = await jsonpVue({ action: 'flotte-tarifs-revente', code: codeValide });
     if (!r.ok) {
       $('tarifs-revente-contenu').innerHTML =
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`;
@@ -387,7 +352,7 @@ document.addEventListener('click', async (e) => {
   const ligne = b.closest('[data-tarif-produit]');
   const champ = ligne.querySelector('input');
   b.disabled = true;
-  const r = await poster({
+  const r = await posterVue({
     action: 'flotte-tarif-revente-definir',
     code: codeValide,
     produit: ligne.dataset.tarifProduit,
@@ -436,7 +401,7 @@ $('personne-portail-contenu')?.addEventListener('change', async (e) => {
     return;
   }
   try {
-    const r = await poster({
+    const r = await posterVue({
       action: 'flotte-liste-perso-ajouter',
       code: $('code').value.trim(),
       liste: 'vendeur',
@@ -498,15 +463,17 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
   let erreur = '';
   for (const champ of aEnvoyer) {
     try {
-      const r = await poster({
+      const r = await posterVue({
         action: 'flotte-modifier',
         code: codeValide,
         ligne: personnePortailLigneCourante,
         champ,
         valeur: valeurs[champ],
       });
-      if (r.ok) a[champ] = valeurs[champ];
-      else {
+      if (r.ok) {
+        a[champ] = valeurs[champ];
+        if (champ === 'statut') noterRemise(valeurs[champ]);
+      } else {
         erreur = r.erreur || 'Enregistrement impossible.';
         break;
       }
@@ -530,9 +497,11 @@ function parserDateFr(v) {
   const m = String(v || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : NaN;
 }
-/** Tri des appareils selon flotteTriColonne/flotteTriSens. Les dates jj/mm/aaaa sont comparées
- *  comme de vraies dates (avant : parseFloat("05/03/2026") = 5, donc tri sur le jour seul), les
- *  n° de série avec un tri « naturel », et les valeurs vides toujours en fin de liste. */
+/**
+ * Tri des appareils selon flotteTriColonne / flotteTriSens : les dates jj/mm/aaaa sont
+ * comparées comme des dates, les numéros de série en tri « naturel », les valeurs vides en
+ * fin de liste.
+ */
 function trierAppareils(liste) {
   if (!flotteTriColonne) return liste;
   const sens = flotteTriSens;
@@ -628,7 +597,7 @@ $('btn-lieu-enregistrer').addEventListener('click', async function () {
     }
     this.disabled = true;
     try {
-      const r = await poster({
+      const r = await posterVue({
         action: 'flotte-liste-perso-ajouter',
         code: $('code').value.trim(),
         liste: 'lieu',
@@ -682,13 +651,6 @@ function statutTeinteFlotte(statut) {
   if (/d3e/.test(t)) return 'd3e';
   return 'stock';
 }
-function classeLigneFlottePortail(a) {
-  if (a.statut === 'D3E') return 'cd-d3e';
-  if (a.statut === 'Remis' || a.statut === 'Vendu') return 'cd-remis';
-  if (a.statut === 'SAV') return 'cd-sav';
-  if (a.statut === 'En stock' && a.alerte2Mois) return 'cd-alerte';
-  return '';
-}
 /** Icône passeport + numéro de série réunis en une seule pastille cliquable. */
 function pillePasseportFlotte(numeroSerie, alerte) {
   // Pilule commune (portail-ui.js) : ouvre le passeport en modale ; le QR reste sur le passeport.
@@ -700,11 +662,11 @@ function pillePasseportFlotte(numeroSerie, alerte) {
   );
 }
 /** Carte d'un appareil — composant unique partagé par les deux designs (structure Interne/
- *  partenaire BO et structure RNum/ESN/BO externe), pour qu'ils restent visuellement identiques
+ *  partenaire Vente solidaire et autres structures), pour qu'ils restent visuellement identiques
  *  malgré des colonnes de données différentes. `opts` décrit ce que CE type de structure peut
  *  voir/modifier : statuts disponibles, case à cocher d'attribution (Interne uniquement),
- *  personne en bouton (Interne, avec fiche détaillée) ou en champ simple (externe), et Payé
- *  (externe uniquement, pas de sens pour de la remise gratuite côté Interne). */
+ *  personne en bouton (Interne, avec fiche détaillée) ou en champ simple (autres), et Payé
+ *  (autres structures uniquement, pas de sens pour de la remise gratuite côté Interne). */
 function carteDispositif(a, opts) {
   const visuel = visuelAppareilFlotte(a, 64);
   const statutKit = classeStatutKitFlotte(a.statut);
@@ -908,9 +870,10 @@ let filtreStatutFlotte = '';
 let filtreRapprochementFlotte = '';
 const STATUTS_RAPPROCHEMENT_FLOTTE = ['À traiter', 'Rapproché'];
 
-/** Vue comptabilité (structures Internes uniquement) — reprend les colonnes du tableur pour le
- *  matériel remis/vendu, avec les champs de rapprochement bancaire déjà supportés côté backend
- *  (numeroRapprochement / statutRapprochement) mais jusqu'ici jamais exposés dans cette page. */
+/**
+ * Vue comptabilité (Internes) : colonnes du matériel remis ou vendu, avec les champs de
+ * rapprochement bancaire (numeroRapprochement, statutRapprochement).
+ */
 function construireTableauComptaFlotte(appareils) {
   const entetes = `
     <tr>
@@ -1105,7 +1068,7 @@ function rendreFlotteInterneParitePortail(appareils) {
       ? construireTableauComptaFlotte(appareilsAffiches)
       : vueFlotteInterne === 'tableau'
         ? construireTableauFlotteInterne(appareilsAffiches, {
-            avecCheckbox: estProprietaireInterne,
+            avecCheckbox: attributionPartenaires,
             statuts: STATUTS_FLOTTE_INTERNE_PORTAIL,
             personneMode: 'button',
             stockage: aColonnesStockage(),
@@ -1114,7 +1077,7 @@ function rendreFlotteInterneParitePortail(appareils) {
             .map((a) =>
               carteDispositif(a, {
                 checkbox:
-                  estProprietaireInterne && !a.verrouille
+                  attributionPartenaires && !a.verrouille
                     ? { checked: lignesSelectionneesAttribution.has(a.ligne) }
                     : null,
                 verrouille: !!a.verrouille,
@@ -1146,7 +1109,7 @@ function rendreFlotteInterneParitePortail(appareils) {
               `<button type="button" class="flotte-tri${filtreStatutFlotte === s ? ' actif' : ''}" data-filtre-statut-flotte="${echapper(s)}">${formeFiltreFlotte(s)}${s || 'Tous'}</button>`,
           )
           .join('');
-  const barreAttribution = !estProprietaireInterne
+  const barreAttribution = !attributionPartenaires
     ? ''
     : `
   <div class="card elev-sm" data-role="responsable" id="barre-attribution-flotte" style="padding:12px 16px;margin-top:16px;display:none;align-items:center;gap:12px;flex-wrap:wrap">
@@ -1170,12 +1133,12 @@ function rendreFlotteInterneParitePortail(appareils) {
       <input type="text" id="recherche-flotte" class="input" placeholder="${VUE_MATERIEL ? 'Rechercher (n° de série, modèle…)' : 'Rechercher (n° de série, personne, modèle…)'}" value="${echapper(rechercheFlotte)}">
     </div>
     <div class="flotte-filtres">${libelleFiltreFlotte}${filtres}</div>
-    ${estProprietaireInterne ? `<label class="flotte-toggle" title="Masque les appareils déjà transférés à une structure partenaire"><input type="checkbox" data-toggle-transferes ${masquerTransferes ? 'checked' : ''}><span class="piste"></span>Masquer les appareils transférés</label>` : ''}
+    ${attributionPartenaires ? `<label class="flotte-toggle" title="Masque les appareils déjà transférés à une structure partenaire"><input type="checkbox" data-toggle-transferes ${masquerTransferes ? 'checked' : ''}><span class="piste"></span>Masquer les appareils transférés</label>` : ''}
     ${vueFlotteInterne !== 'compta' ? `<div class="flotte-tris">${libelleTriFlotte}${optionsTri.map(([champ, label]) => `<button type="button" class="flotte-tri${flotteTriColonne === champ ? ' actif' : ''}" data-tri-champ-standard="${champ}">${label}${flotteTriColonne === champ ? (flotteTriSens === 1 ? ' ↑' : ' ↓') : ''}</button>`).join('')}</div>` : ''}
   </div>
   ${cartes}
   ${vueFlotteInterne === 'tableau' ? `<div style="display:flex;gap:16px;margin-top:14px;font-size:11.5px;opacity:0.7;flex-wrap:wrap"><span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#7A5A00" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ligne ambrée : en stock depuis plus de 2 mois</span><span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> attribué à une structure partenaire (verrouillé)</span><span>Le statut se change directement dans sa pastille.</span></div>` : ''}
-  ${vueFlotteInterne === 'cartes' ? `<div class="cvdl-legende fl-legende"><span data-forme="rond" style="--forme:var(--vert)">En stock</span><span data-forme="carre" style="--forme:var(--tur)">${statutVenduFlotte()}</span><span data-forme="losange" style="--forme:var(--rouge)">SAV</span><span data-forme="rond" style="--forme:#8FA3B3">D3E</span>${estProprietaireInterne ? '<span>Verrouillé : attribué à une structure partenaire</span>' : ''}</div>` : ''}
+  ${vueFlotteInterne === 'cartes' ? `<div class="cvdl-legende fl-legende"><span data-forme="rond" style="--forme:var(--vert)">En stock</span><span data-forme="carre" style="--forme:var(--tur)">${statutVenduFlotte()}</span><span data-forme="losange" style="--forme:var(--rouge)">SAV</span><span data-forme="rond" style="--forme:#8FA3B3">D3E</span>${attributionPartenaires ? '<span>Verrouillé : attribué à une structure partenaire</span>' : ''}</div>` : ''}
   ${barreAttribution}`;
 
   document.querySelectorAll('[data-vue-flotte]').forEach((b) => {
@@ -1185,7 +1148,7 @@ function rendreFlotteInterneParitePortail(appareils) {
     });
   });
   cablerBarreOutilsPortailInterne();
-  if (estProprietaireInterne) cablerAttributionFlottePortail();
+  if (attributionPartenaires) cablerAttributionFlottePortail();
   majLargeurMain();
 }
 
@@ -1231,11 +1194,11 @@ function cablerBarreOutilsPortailInterne() {
     this.disabled = true;
     $('retour-actualiser-flotte').textContent = 'Actualisation…';
     try {
-      const rA = await poster({ action: 'flotte-actualiser', code: codeValide });
+      const rA = await posterVue({ action: 'flotte-actualiser', code: codeValide });
       if (rA.ok) {
         $('retour-actualiser-flotte').textContent =
           rA.ajoutes > 0 ? rA.ajoutes + ' nouvel(aux) appareil(s) ajouté(s).' : 'Déjà à jour, rien de nouveau.';
-        await chargerAppareils(lienFlotteActuel);
+        await chargerAppareils();
       } else {
         $('retour-actualiser-flotte').textContent = rA.erreur || 'Actualisation impossible.';
       }
@@ -1273,9 +1236,10 @@ function cablerAttributionFlottePortail() {
   majBarre();
 
   const select = $('select-partenaire-attribution');
-  if (select && !select.dataset.charge) {
+  // conseiller : barre d'attribution masquée (cvdl-ui.js), liste réservée au responsable
+  if (select && !select.dataset.charge && !document.documentElement.classList.contains('role-conseiller')) {
     select.dataset.charge = '1';
-    poster({ action: 'structures-partenaires-lister', codeCreateur: codeValide })
+    posterVue({ action: 'structures-partenaires-lister', codeCreateur: codeValide })
       .then((r) => {
         if (r.ok && r.structures && r.structures.length) {
           select.innerHTML =
@@ -1306,8 +1270,8 @@ function cablerAttributionFlottePortail() {
       return;
 
     this.disabled = true;
-    // Avant le transfert (après, l'appareil devient verrouillé côté Interne) : proposer de mettre à
-    // jour le lieu de stockage des appareils concernés.
+    // avant le transfert (l'appareil est ensuite verrouillé côté Interne) : proposer de mettre à
+    // jour le lieu de stockage
     if (aColonnesStockage()) {
       const lignesTransfert = [...lignesSelectionneesAttribution];
       const lieuxActuels = new Set(
@@ -1319,7 +1283,7 @@ function cablerAttributionFlottePortail() {
       );
       if (lieu !== null) {
         for (const l of lignesTransfert) {
-          const rLieu = await poster({
+          const rLieu = await posterVue({
             action: 'flotte-modifier',
             code: codeValide,
             ligne: l,
@@ -1340,14 +1304,14 @@ function cablerAttributionFlottePortail() {
     }
     this.textContent = 'Attribution…';
     try {
-      const r = await poster({
+      const r = await posterVue({
         action: 'flotte-attribuer-partenaire',
         codeCreateur: codeValide,
         codePartenaire,
         lignes: [...lignesSelectionneesAttribution],
       });
       if (r.ok) {
-        await chargerAppareils(lienFlotteActuel);
+        await chargerAppareils();
       } else {
         afficherMsg('retour-attribution-flotte', echapper(r.erreur || 'Attribution impossible.'), 'erreur');
         this.disabled = false;
@@ -1371,8 +1335,6 @@ function rendreAppareils(appareils) {
   const barreOutilsSecondaire = `
     <div class="flotte-actions">
       <button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-actualiser-flotte">↻ Actualiser</button>
-      <button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-recreer-tableau-flotte">Repartir d'un tableau neuf</button>
-      ${lienFlotteActuel !== 'interne' ? `<a href="${echapper(urlSure(lienFlotteActuel))}" target="_blank" rel="noopener" class="flotte-bouton flotte-bouton-contour" style="text-decoration:none">Ouvrir dans Sheets ↗</a>` : ''}
       <button type="button" class="flotte-bouton flotte-bouton-plein" id="btn-stats-flotte-portail-simple">Statistiques</button>
     </div>
     <div id="retour-actualiser-flotte" class="compteur-ajouts"></div>`;
@@ -1483,7 +1445,7 @@ function rendreAppareils(appareils) {
   cablerChampsFlotte();
 }
 /** Écoute les changements sur tous les champs [data-champ] (marque, modèle, statut...) et
- *  enregistre via flotte-modifier — commune aux deux designs (RNum/ESN/BO externe et Interne),
+ *  enregistre via flotte-modifier — commune aux deux designs (Interne et autres structures),
  *  qui partagent le même gabarit de tableau et donc les mêmes attributs data-*. */
 function cablerChampsFlotte() {
   document.querySelectorAll('#zone-flotte [data-champ]').forEach((champ) => {
@@ -1505,7 +1467,7 @@ function cablerChampsFlotte() {
           rerendreFlotte();
           return;
         }
-        const r = await poster({
+        const r = await posterVue({
           action: 'flotte-liste-perso-ajouter',
           code: $('code').value.trim(),
           liste: nomChamp === 'lieuStockage' ? 'lieu' : 'vendeur',
@@ -1531,7 +1493,7 @@ function cablerChampsFlotte() {
 
       champ.disabled = true;
       try {
-        const r = await poster({ action: 'flotte-modifier', code: codeValide, ligne, champ: nomChamp, valeur });
+        const r = await posterVue({ action: 'flotte-modifier', code: codeValide, ligne, champ: nomChamp, valeur });
         const item = appareilsCourants.find((a) => a.ligne == ligne);
         if (!r.ok) {
           alerteCvdl(r.erreur || 'Enregistrement impossible.');
@@ -1539,6 +1501,7 @@ function cablerChampsFlotte() {
           return;
         }
         if (item) item[nomChamp] = valeur;
+        if (nomChamp === 'statut') noterRemise(valeur);
         if (item && r.dateVente) item.dateVente = r.dateVente;
         if (r.facture && !r.facture.deja)
           afficherMsg(
@@ -1551,7 +1514,7 @@ function cablerChampsFlotte() {
         if (item && nomChamp === 'statut' && valeur === statutVenduFlotte() && aColonnesStockage()) {
           const lieu = await demanderLieuStockage(`${item.numeroSerie} passe en « ${valeur} ».`, item.lieuStockage);
           if (lieu !== null && lieu !== item.lieuStockage) {
-            const rLieu = await poster({
+            const rLieu = await posterVue({
               action: 'flotte-modifier',
               code: codeValide,
               ligne,
@@ -1598,11 +1561,11 @@ function cablerBarreOutils() {
     bouton.disabled = true;
     $('retour-actualiser-flotte').textContent = 'Actualisation…';
     try {
-      const rA = await poster({ action: 'flotte-actualiser', code: codeValide });
+      const rA = await posterVue({ action: 'flotte-actualiser', code: codeValide });
       if (rA.ok) {
         $('retour-actualiser-flotte').textContent =
           rA.ajoutes > 0 ? rA.ajoutes + ' nouvel(aux) appareil(s) ajouté(s).' : 'Déjà à jour, rien de nouveau.';
-        await chargerAppareils(lienFlotteActuel);
+        await chargerAppareils();
       } else {
         $('retour-actualiser-flotte').textContent = rA.erreur || 'Actualisation impossible.';
       }
@@ -1618,7 +1581,7 @@ function cablerBarreOutils() {
       const nouvelle = await demanderCvdl('Nom du nouveau lieu de stockage :');
       if (!nouvelle || !nouvelle.trim()) return;
       try {
-        const r = await poster({
+        const r = await posterVue({
           action: 'flotte-liste-perso-ajouter',
           code: $('code').value.trim(),
           liste: 'lieu',
@@ -1633,25 +1596,6 @@ function cablerBarreOutils() {
       }
     });
   }
-
-  const boutonRecreer = $('btn-recreer-tableau-flotte');
-  if (boutonRecreer) {
-    boutonRecreer.addEventListener('click', async () => {
-      if (
-        !(await confirmerCvdl(
-          "Repartir d'un tableau neuf ? Votre tableau actuel ne sera pas supprimé (il reste intact sur votre Drive), mais il ne sera plus lié ici — il faudra en dupliquer un nouveau depuis le modèle et recoller son lien.",
-        ))
-      )
-        return;
-      try {
-        const r = await poster({ action: 'flotte-delier', code: codeValide });
-        if (r.ok) chargerFlotte();
-        else alerteCvdl(r.erreur || 'Impossible de délier le tableau actuel.');
-      } catch (e) {
-        alerteCvdl('Impossible de délier le tableau actuel — réessaie.');
-      }
-    });
-  }
 }
 
 function dateVersISO(dateStr) {
@@ -1660,20 +1604,13 @@ function dateVersISO(dateStr) {
   if (!j || !m || !a) return '';
   return `${a}-${m}-${j}`;
 }
-function isoVersDateFr(iso) {
-  if (!iso) return '';
-  const [a, m, j] = iso.split('-');
-  if (!j || !m || !a) return '';
-  return `${j}/${m}/${a}`;
-}
 
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-qr-serie]');
   if (!b) return;
   const numeroSerie = b.dataset.qrSerie;
-  // URL résolue relativement à la page courante : marche que l'adresse se termine par
-  // « flotte-structure.html » ou non (avant, sans le « .html » dans l'adresse, le lien devenait
-  // « …flotte-structurepasseport.html » → page d'erreur).
+  // URL résolue par rapport à la page courante : fonctionne que l'adresse se termine par
+  // « flotte-structure.html » ou non
   const lien = new URL('passeport.html', location.href);
   lien.search = '';
   lien.hash = '';
@@ -1716,7 +1653,7 @@ document.addEventListener('click', (e) => {
   $('retour-attestation-flotte').innerHTML = '';
   $('modale-attestation-flotte').classList.add('visible');
   if (nomPersonne) {
-    poster({
+    posterVue({
       action: 'flotte-date-naissance',
       code: codeValide,
       numeroSerie: attestationSerieCourante,
@@ -1747,7 +1684,7 @@ $('btn-generer-attestation-flotte').addEventListener('click', async () => {
   $('btn-generer-attestation-flotte').disabled = true;
   $('retour-attestation-flotte').innerHTML = '<div class="msg msg-info">Génération en cours…</div>';
   try {
-    const r = await poster({
+    const r = await posterVue({
       action: 'flotte-generer-attestation',
       code: codeValide,
       numeroSerie: attestationSerieCourante,
@@ -1755,6 +1692,7 @@ $('btn-generer-attestation-flotte').addEventListener('click', async () => {
       dateNaissance,
     });
     if (r.ok) {
+      if (window.CvdlRetours) CvdlRetours.action('attestation');
       $('retour-attestation-flotte').innerHTML =
         `<div class="msg msg-succes">Prête — <a href="${echapper(urlSure(r.url))}" target="_blank" rel="noopener" download="Attestation de paiement.pdf">l'ouvrir ↗</a></div>`;
     } else {
@@ -1771,71 +1709,9 @@ async function chargerFlotte() {
   try {
     // Listes partagées (lieux de stockage, vendeurs) : communes à TOUTES les structures, de tout
     // type — rechargées à chaque ouverture pour voir ce qu'une autre structure vient d'ajouter.
-    {
-      const rListes = await jsonp({ action: 'flotte-listes-perso' }).catch(() => null);
-      if (rListes && rListes.ok) listesPersoFlottePortail = rListes;
-    }
-    const r = await jsonp({ action: 'flotte-obtenir', code: codeValide });
-    if (!r.ok) {
-      $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Chargement impossible.</p>';
-      return;
-    }
-
-    if (r.lienFlotte) {
-      await chargerAppareils(r.lienFlotte);
-      return;
-    }
-
-    if (!r.lienModele) {
-      $('zone-flotte').innerHTML =
-        '<p class="msg msg-erreur">Cette fonctionnalité n\'est pas encore configurée — contactez-nous directement.</p>';
-      return;
-    }
-
-    $('zone-flotte').innerHTML = `
-      <ol class="tuto-flotte">
-        <li>
-          <div class="titre-etape">Copiez le modèle dans votre propre Google Drive</div>
-          <div class="desc-etape">Cliquez ce lien, connecté à votre compte Google : <a href="${echapper(urlSure(r.lienModele))}" target="_blank" rel="noopener">Créer ma copie du modèle</a>. Une copie s'ouvre, qui vous appartient entièrement.</div>
-        </li>
-        <li>
-          <div class="titre-etape">Partagez-la en modification par lien</div>
-          <div class="desc-etape">Dans votre copie : bouton <b>Partager</b> (en haut à droite) → sous "Accès général", choisissez <b>"Toute personne disposant du lien"</b> → rôle <b>Éditeur</b> → Copier le lien.</div>
-        </li>
-        <li>
-          <div class="titre-etape">Collez ce lien ici</div>
-          <div class="desc-etape">On le vérifie, puis on pré-remplit automatiquement avec tous les appareils déjà livrés à votre structure — vous n'aurez plus qu'à indiquer qui utilise chaque appareil.</div>
-          <div class="field" style="margin-top:10px">
-            <label for="lien-flotte-champ" class="sr-only">Lien de votre tableau</label>
-            <input type="text" class="input" id="lien-flotte-champ" placeholder="Collez le lien de votre copie ici">
-          </div>
-          <div id="retour-lien-flotte" aria-live="polite"></div>
-          <button type="button" class="btn btn-primary" style="margin-top:10px" id="btn-valider-flotte">Valider et pré-remplir</button>
-        </li>
-      </ol>`;
-
-    $('btn-valider-flotte').addEventListener('click', async () => {
-      const lien = $('lien-flotte-champ').value.trim();
-      if (!lien) {
-        afficherMsg('retour-lien-flotte', "Collez d'abord le lien de votre copie.", 'erreur');
-        return;
-      }
-      $('btn-valider-flotte').disabled = true;
-      $('btn-valider-flotte').textContent = 'Vérification…';
-      afficherMsg('retour-lien-flotte', '', 'info');
-      try {
-        const rL = await poster({ action: 'flotte-lier', code: codeValide, lienFlotte: lien });
-        if (rL.ok) {
-          chargerFlotte();
-        } else {
-          afficherMsg('retour-lien-flotte', echapper(rL.erreur || 'Erreur inconnue'), 'erreur');
-        }
-      } catch (e) {
-        afficherMsg('retour-lien-flotte', 'Connexion impossible — réessaie.', 'erreur');
-      }
-      $('btn-valider-flotte').disabled = false;
-      $('btn-valider-flotte').textContent = 'Valider et pré-remplir';
-    });
+    const rListes = await jsonpVue({ action: 'flotte-listes-perso' }).catch(() => null);
+    if (rListes && rListes.ok) listesPersoFlottePortail = rListes;
+    await chargerAppareils();
   } catch (e) {
     $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Chargement impossible — réessaie.</p>';
   }

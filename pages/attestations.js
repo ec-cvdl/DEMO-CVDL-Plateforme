@@ -1,20 +1,3 @@
-const $ = (id) => document.getElementById(id);
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function poster(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-}
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
-
 let codeValide = '';
 let appareilsAttestation = [];
 let appareilChoisi = null;
@@ -147,6 +130,7 @@ $('btn-generer-attestation').addEventListener('click', async () => {
       dateNaissance,
     });
     if (r.ok) {
+      if (window.CvdlRetours) CvdlRetours.action('attestation');
       $('retour-attestation').innerHTML =
         `<div class="msg msg-succes">Prête — <a href="${echapper(urlSure(r.url))}" target="_blank" rel="noopener">l'ouvrir ↗</a></div>`;
     } else {

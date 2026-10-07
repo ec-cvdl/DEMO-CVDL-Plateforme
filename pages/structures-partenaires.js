@@ -1,27 +1,10 @@
-const $ = (id) => document.getElementById(id);
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s == null ? '' : String(s);
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function poster(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data),
-  }).then((r) => r.json());
-}
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
-}
-
 let codeValide = '';
 let partenairesCourants = [];
 
 /* ════════════════════════════════════════════════════════════════════════════════════
-   Création / modification d'une structure partenaire (BO) — assistant en étapes, même
+   Création / modification d'une structure partenaire (Vente solidaire) — assistant en étapes, même
    parcours que « Nouvelle structure » dans l'admin (assistant-portail.js). Le type est
-   toujours BO : l'étape « Type » de l'admin n'a pas lieu d'être ici.
+   toujours Vente solidaire : l'étape « Type » de l'admin n'a pas lieu d'être ici.
    ════════════════════════════════════════════════════════════════════════════════════ */
 const CATEGORIES = [
   'Collège/Université',

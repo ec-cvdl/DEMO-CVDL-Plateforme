@@ -1,11 +1,3 @@
-const $ = (id) => document.getElementById(id);
-
-function echapper(s) {
-  return String(s ?? '').replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-  );
-}
 function afficherMsg(id, texte, type) {
   $(id).innerHTML = texte ? `<div class="msg msg-${type}">${echapper(texte)}</div>` : '';
 }
@@ -21,15 +13,6 @@ function cibleCarteDepuisUrl(selecteurCarte, classeAnimation) {
     carte.classList.add(classeAnimation);
     setTimeout(() => carte.classList.remove(classeAnimation), 6000);
   }, 150);
-}
-function formaterMontant(montant) {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(
-    montant,
-  );
-}
-
-function jsonp(params) {
-  return fetch(API + '?' + new URLSearchParams(params)).then((r) => r.json());
 }
 
 const ETAPES_TIMELINE = ['Reçue', 'Validée', 'Préparée', 'En cours de livraison', 'Livrée'];
@@ -61,32 +44,6 @@ const LIBELLES_COURTS_TIMELINE = {
   'En cours de livraison': 'En livraison',
   Livrée: 'Livrée',
 };
-
-// Dégradé magenta → turquoise appliqué progressivement aux segments franchis de la timeline —
-// un segment reçu tôt reste proche du magenta, un segment proche de la livraison vire au
-// turquoise. Couleurs interpolées à l'avance (4 segments entre les 5 étapes).
-// 5e teinte ajoutée, plus profonde que le dernier ton du dégradé — sans elle, l'étape "Livrée"
-// réutilisait exactement la même couleur que "En cours de livraison" (toutes deux plafonnées au
-// même index via Math.min), donc rien ne distinguait visuellement une commande réellement
-// arrivée d'une commande simplement en cours de route.
-const DEGRADE_TIMELINE_SUIVI = ['#B3E3E4', '#66CDCF', '#00ACB0', '#00ACB0', 'var(--color-accent-700)'];
-
-function construireTimelineSuivi(statutActuel) {
-  const indexActuel = ETAPES_TIMELINE.indexOf(statutActuel);
-  if (indexActuel === -1) return '';
-  const etapes = ETAPES_TIMELINE.map((etape, i) => {
-    const cls = i < indexActuel ? 'fait' : i === indexActuel ? 'actuel' : '';
-    const couleurSegment = DEGRADE_TIMELINE_SUIVI[Math.min(i, DEGRADE_TIMELINE_SUIVI.length - 1)];
-    // Le connecteur menant à l'étape i (::before) doit être coloré dès que cette étape est
-    // atteinte (fait OU actuelle) — sinon la ligne s'arrête un cran trop tôt et paraît cassée.
-    const connecteurAtteint = i <= indexActuel;
-    return `<div class="tlc-suivi-etape ${cls}" style="${connecteurAtteint ? `--couleur-segment:${couleurSegment}` : ''}">
-      <div class="tlc-suivi-point ${cls}" style="${cls ? `--couleur-segment:${couleurSegment}` : ''}"></div>
-      <div class="tlc-suivi-libelle ${cls}">${echapper(LIBELLES_COURTS_TIMELINE[etape] || etape)}</div>
-    </div>`;
-  }).join('');
-  return `<div class="tlc-suivi">${etapes}</div>`;
-}
 
 /** Copie en presse-papier au clic sur l'icône (et seulement l'icône) d'une pilule numéro de
  *  série/code — délégué sur le document car les pilules sont reconstruites à chaque rendu. Le
