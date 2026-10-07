@@ -1048,7 +1048,10 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
     cible.insertBefore(e, cible.firstChild);
   }
 
-  const vueVerrouillee = !!lireLocal('cvdl-demo-vue');
+  let vueVerrouillee = false;
+  try {
+    vueVerrouillee = !!sessionStorage.getItem('cvdl-demo-vue');
+  } catch (err) {}
   function poser() {
     if (document.getElementById('cvdl-bandeau-demo')) return;
     const b = document.createElement('div');

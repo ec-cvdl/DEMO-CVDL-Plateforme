@@ -136,7 +136,7 @@
 .demo-pied button{ font:inherit; background:none; border:0; padding:0; color:inherit; text-decoration:underline; cursor:pointer; }
 .demo-pied .sep{ opacity:.4; }
 </style>
-<script src="portail-ui.js?v=30" defer></script>
+<script src="portail-ui.js?v=31" defer></script>
 </head>
 <body data-famille="accueil">
 <main class="demo-page" id="contenu-principal">
@@ -172,37 +172,37 @@
     <div class="demo-section-tete"><span class="num" aria-hidden="true">1</span><h2 id="titre-fonctions">Ce que permet la plateforme</h2></div>
     <p class="demo-section-intro">Les grandes fonctionnalités, et à qui elles s’adressent.</p>
     <ul class="demo-cartes">
-      <li class="demo-carte">
+      <li class="demo-carte" data-vues="rn bo interne">
         <span class="ill" data-ill="commander"></span>
         <h3>Commander du matériel</h3>
         <p>Ordinateurs, tablettes et smartphones reconditionnés, au tarif de chaque structure. La commande est suivie étape par étape, de la validation à la livraison.</p>
         <div class="demo-pour"><span>Pour</span><span class="pil struct">Structures</span><span class="pil struct">Partenaires</span></div>
       </li>
-      <li class="demo-carte">
+      <li class="demo-carte" data-vues="">
         <span class="ill" data-ill="tableau"></span>
         <h3>Piloter la distribution</h3>
         <p>Toutes les commandes au même endroit, le calendrier des livraisons, le stock, les structures et les statistiques d’activité.</p>
         <div class="demo-pour"><span>Pour</span><span class="pil equipe">Équipe CVDL</span></div>
       </li>
-      <li class="demo-carte">
+      <li class="demo-carte" data-vues="rn bo interne conseiller">
         <span class="ill" data-ill="passeport"></span>
         <h3>Suivre chaque appareil</h3>
         <p>La flotte de chaque structure, appareil par appareil (numéro de série), avec son passeport : d’où il vient, qui l’a reconditionné, à qui il a été remis.</p>
         <div class="demo-pour"><span>Pour</span><span class="pil struct">Structures</span><span class="pil equipe">Équipe CVDL</span></div>
       </li>
-      <li class="demo-carte">
+      <li class="demo-carte" data-vues="rn bo interne">
         <span class="ill" data-ill="suiviSav"></span>
         <h3>Dépanner et réparer</h3>
         <p>Un dépannage guidé pour les petits soucis, puis la déclaration de panne, un fil d’échanges et le suivi de la réparation jusqu’au retour de l’appareil.</p>
         <div class="demo-pour"><span>Pour</span><span class="pil public">Personnes accompagnées</span><span class="pil struct">Structures</span><span class="pil equipe">Logistique</span></div>
       </li>
-      <li class="demo-carte">
+      <li class="demo-carte" data-vues="rn">
         <span class="ill" data-ill="facture"></span>
         <h3>Devis, factures et finances</h3>
         <p>Devis et factures générés automatiquement, paiements, relances des impayés et vue d’ensemble par territoire ou par type de structure.</p>
         <div class="demo-pour"><span>Pour</span><span class="pil equipe">Comptabilité</span><span class="pil struct">Structures</span></div>
       </li>
-      <li class="demo-carte">
+      <li class="demo-carte" data-vues="interne conseiller">
         <span class="ill" data-ill="distribution"></span>
         <h3>Partenaires, projets et impact</h3>
         <p>Un territoire peut créer ses associations partenaires, valider leurs commandes, leur confier des appareils, suivre ses projets financés et leur impact environnemental.</p>
@@ -255,6 +255,6 @@
   </div>
 </main>
 
-<script src="pages/demo.js?v=11"></script>
+<script src="pages/demo.js?v=13"></script>
 </body>
 </html>
