@@ -73,12 +73,12 @@
      seulement les vues structure du lancement, sur l'Association Le Tremplin. */
   const params = new URLSearchParams(location.search);
   // Lien d'une structure (?vue=rn|vs|interne|conseiller) : la démo reste sur cette vue, sans
-  // changement de profil (mémorisé ; ?cle=… ou ?pour=equipe le lève).
+  // changement de profil (mémorisé pour l'onglet ; ?cle=… ou ?pour=equipe le lève).
   let vueVerrouillee = '';
   try {
-    if (params.get('cle') || params.get('pour') === 'equipe') localStorage.removeItem('cvdl-demo-vue');
-    else if (params.get('vue')) localStorage.setItem('cvdl-demo-vue', params.get('vue').toLowerCase());
-    vueVerrouillee = localStorage.getItem('cvdl-demo-vue') || '';
+    if (params.get('cle') || params.get('pour') === 'equipe') sessionStorage.removeItem('cvdl-demo-vue');
+    else if (params.get('vue')) sessionStorage.setItem('cvdl-demo-vue', params.get('vue').toLowerCase());
+    vueVerrouillee = sessionStorage.getItem('cvdl-demo-vue') || '';
   } catch (e) {}
   if (vueVerrouillee) {
     $('btn-quitter').hidden = true;
@@ -456,15 +456,26 @@
     $('btn-reinit').hidden = true;
     const sep = $('btn-reinit').previousElementSibling;
     if (sep && sep.classList.contains('sep')) sep.hidden = true;
-    // Fonctionnalités réservées à l'équipe CVDL : masquées.
+    // Fonctionnalités : seulement celles de la vue verrouillée, sinon celles des 4 vues structure.
+    const vueLien = ALIAS_VUES[vueVerrouillee];
     document.querySelectorAll('ul.demo-cartes > li.demo-carte').forEach((li) => {
-      if (!li.querySelector('.pil.struct, .pil.public')) li.hidden = true;
+      const vues = (li.dataset.vues || '').split(' ').filter(Boolean);
+      li.hidden = vueLien ? !vues.includes(vueLien) : !vues.length;
     });
+    // Partenaires fermés : la carte ne parle que des projets et de l'impact.
+    const carte = document.querySelector('li.demo-carte[data-vues="interne conseiller"]');
+    if (carte && !(perimetreCourant && perimetreCourant.partenaires)) {
+      carte.querySelector('h3').textContent = 'Projets et impact';
+      carte.querySelector('p').textContent =
+        'Rattacher les appareils remis à des projets de distribution financés, suivre leur avancement et leur impact environnemental.';
+    }
   }
 
   /* Périmètre du lancement (Réglages → Périmètre) : seuls les types ouverts sont proposés ;
      partenaires fermés → Vente solidaire autonome, Interne sans partenaires. */
+  let perimetreCourant = null;
   function appliquerPerimetre(p) {
+    perimetreCourant = p || null;
     if (!p) return;
     const actifs = p.typesActifs || [];
     for (let i = VUES.length - 1; i >= 0; i--) {
