@@ -318,7 +318,8 @@
     if (r.ok) {
       S.tickets = r.tickets;
       S.charge = true;
-    }
+      S.erreur = '';
+    } else if (!S.charge) S.erreur = r.erreur || 'Le serveur ne répond pas. Réessayez dans un instant.';
     peindre();
   }
 
@@ -416,7 +417,7 @@
         <span class="sp-tk-b"><span class="sp-tk-app">${esc(appareil)}</span>${tags(t)}${avatar(t)}</span></button>`;
             })
             .join('')
-        : `<p class="sp-vide">${S.charge ? 'Rien ici pour le moment.' : 'Chargement…'}</p>`);
+        : `<p class="sp-vide">${S.charge ? 'Rien ici pour le moment.' : S.erreur ? esc(S.erreur) : 'Chargement…'}</p>`);
   }
 
   function ticketOuvert() {
@@ -503,7 +504,7 @@
     if (!t) {
       const aTraiter = S.tickets.filter(FILES[0].f).length,
         retard = S.tickets.filter(enRetard).length;
-      d.innerHTML = `<div class="sp-accueil"><span data-ill="suiviSav" class="ill"></span><b>Choisissez un ticket</b><p>${S.charge ? `${aTraiter} ticket${aTraiter > 1 ? 's' : ''} à traiter${retard ? `, dont <strong>${retard} sans réponse depuis 3 jours ou plus</strong>` : ''}.` : 'Chargement…'}</p></div>`;
+      d.innerHTML = `<div class="sp-accueil"><span data-ill="suiviSav" class="ill"></span><b>Choisissez un ticket</b><p>${S.charge ? `${aTraiter} ticket${aTraiter > 1 ? 's' : ''} à traiter${retard ? `, dont <strong>${retard} sans réponse depuis 3 jours ou plus</strong>` : ''}.` : S.erreur ? esc(S.erreur) : 'Chargement…'}</p></div>`;
       illustrer(d);
       return;
     }

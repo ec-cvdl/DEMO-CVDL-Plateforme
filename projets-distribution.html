@@ -2,11 +2,13 @@
 <html lang="fr">
 <head>
 <script src="api.js?v=1"></script>
+<script src="commun.js?v=1"></script>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<script src="anti-cadre.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Projets de distribution — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="cvdl-ui.css?v=34">
 <link rel="stylesheet" href="assistant-portail.css?v=1">
 <style>
 /* Mise en page de la page ; composants visuels : cvdl-ui.css (+ quelques blocs propres ci-dessous). */
@@ -79,11 +81,11 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
 .pd-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:space-between; border-top:var(--pointille); padding-top:14px; }
 @media (max-width:760px){ .pd-colonnes{ grid-template-columns:1fr; } .pd-voile{ padding:0; align-items:flex-end; } .pd-detail{ max-height:94vh; border-radius:22px 22px 0 0; padding:18px 16px; } }
 </style>
-<script src="portail-ui.js?v=24" defer></script>
+<script src="portail-ui.js?v=30" defer></script>
 <script src="cvdl-ui.js?v=12" defer></script>
 <script src="assistant-portail.js?v=1" defer></script>
-<link rel="stylesheet" href="retours.css?v=1">
-<script src="retours.js?v=1" defer></script>
+<link rel="stylesheet" href="retours.css?v=2">
+<script src="retours.js?v=2" defer></script>
 </head>
 <body data-famille="commandes">
 
@@ -96,7 +98,7 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
 
 <main id="contenu-principal">
   <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
-  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" onclick="location.href='portail-structure.html'">
+  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" data-aller="portail-structure.html">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
     Portail
   </button>
@@ -131,6 +133,6 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
   </div>
 </main>
 
-<script src="pages/projets-distribution.js?v=1"></script>
+<script src="pages/projets-distribution.js?v=2"></script>
 </body>
 </html>

@@ -38,20 +38,36 @@
   };
   const page = () => location.pathname.split('/').pop() || 'index.html';
   const parcoursPage = () => page().replace(/\.html$/, '');
+  // Démo : les retours partent vers la vraie plateforme, marqués « démo » (comptés à part) —
+  // la démo est remise à zéro, ils y seraient perdus. Le code de démo n'y est pas gardé.
+  const enDemo = () => /-demo$/.test(api());
+  const apiRetours = () => api().replace(/-demo$/, '');
+  /** Type de structure et rôle, posés par le portail après vérification du code. */
+  const contexte = () => {
+    try {
+      return JSON.parse(sessionStorage.getItem('cvdl-contexte-structure') || '{}') || {};
+    } catch (e) {
+      return {};
+    }
+  };
 
   function envoyer(donnees, balise) {
-    const url = api();
+    const url = apiRetours();
     if (!url) return Promise.resolve({ ok: false });
+    const ctx = contexte();
     const corps = JSON.stringify(
-      Object.assign(
-        {
-          action: 'retour-enregistrer',
-          page: page(),
-          code: codeStructure(),
-          details: { largeur: window.innerWidth, mobile: window.innerWidth < 700 ? 'oui' : 'non' },
-        },
-        donnees,
-      ),
+      Object.assign({ action: 'retour-enregistrer', page: page(), code: enDemo() ? '' : codeStructure() }, donnees, {
+        details: Object.assign(
+          {
+            largeur: window.innerWidth,
+            mobile: window.innerWidth < 700 ? 'oui' : 'non',
+            typeStructure: ctx.type || '',
+            role: ctx.role || '',
+            demo: enDemo() ? 'oui' : '',
+          },
+          donnees.details || {},
+        ),
+      }),
     );
     if (balise && navigator.sendBeacon) {
       try {
@@ -233,5 +249,81 @@
     }
   });
 
-  window.CvdlRetours = { demanderAvis, ouvrirAvis, noterErreur };
+  /* ── Usage : une ligne par page vue (durée à l'écran), envoyée en quittant la page ──
+     Pages publiques et structure seulement (ni admin ni outil support). */
+  const SUIVI_USAGE = !/^(admin|support|demo)\.html$/.test(page());
+  let visibleDepuis = document.visibilityState === 'visible' ? Date.now() : 0;
+  let tempsVisible = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') visibleDepuis = Date.now();
+    else if (visibleDepuis) {
+      tempsVisible += Date.now() - visibleDepuis;
+      visibleDepuis = 0;
+    }
+  });
+  window.addEventListener('pagehide', () => {
+    if (visibleDepuis) tempsVisible += Date.now() - visibleDepuis;
+    visibleDepuis = 0;
+    if (SUIVI_USAGE && tempsVisible > 1500)
+      envoyer({ type: 'usage', parcours: parcoursPage(), details: { duree: Math.round(tempsVisible / 1000) } }, true);
+    tempsVisible = 0;
+    // Tâche commencée sur cette page et jamais terminée : abandon, avec l'étape d'arrêt.
+    Object.keys(enCours).forEach((nom) => terminerParcours(nom, 'abandon', true));
+  });
+
+  /* ── Parcours : une tâche menée au bout ou abandonnée (durée, étape d'arrêt) ── */
+  const enCours = {};
+  function commencerParcours(nom, etape) {
+    if (!enCours[nom]) enCours[nom] = { debut: Date.now(), etape: etape || '' };
+  }
+  function etapeParcours(nom, etape) {
+    if (enCours[nom]) enCours[nom].etape = etape || '';
+  }
+  function terminerParcours(nom, resultat, balise) {
+    const p = enCours[nom];
+    delete enCours[nom];
+    const details = { resultat: resultat || 'reussi' };
+    if (p) {
+      details.duree = Math.round((Date.now() - p.debut) / 1000);
+      if (details.resultat === 'abandon') details.etape = p.etape;
+    }
+    envoyer({ type: 'parcours', parcours: nom, details }, balise);
+  }
+  /** Action unique réussie (remise d'un appareil, attestation…) ; avis proposé la première fois. */
+  function action(nom, avis) {
+    envoyer({ type: 'parcours', parcours: nom, details: { resultat: 'reussi' } });
+    if (avis && !lire('cvdl-retour-' + nom + '-premier')) {
+      ecrire('cvdl-retour-' + nom + '-premier', 'oui');
+      proposerAvis({ parcours: nom, question: avis });
+    }
+  }
+
+  /** Petite carte d'avis en bas à droite, refermable (après une action, sans bloquer). */
+  function proposerAvis(opts) {
+    if (document.querySelector('.rt-flottante')) return;
+    const carte = document.createElement('div');
+    carte.className = 'rt-carte rt-flottante';
+    carte.setAttribute('role', 'dialog');
+    carte.setAttribute('aria-label', 'Votre avis');
+    carte.innerHTML =
+      '<button type="button" class="rt-fermer" data-rt="fermer" aria-label="Fermer"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' +
+      formulaire({ question: opts.question });
+    document.body.appendChild(carte);
+    const fermer = () => carte.remove();
+    carte.addEventListener('click', (e) => {
+      if (e.target.closest('[data-rt="fermer"]')) fermer();
+    });
+    cabler(carte, { parcours: opts.parcours, cle: 'cvdl-retour-' + opts.parcours + '-' + Date.now() }, fermer);
+  }
+
+  window.CvdlRetours = {
+    demanderAvis,
+    ouvrirAvis,
+    proposerAvis,
+    noterErreur,
+    commencerParcours,
+    etapeParcours,
+    terminerParcours,
+    action,
+  };
 })();

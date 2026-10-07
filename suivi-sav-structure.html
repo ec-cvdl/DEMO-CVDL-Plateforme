@@ -2,11 +2,13 @@
 <html lang="fr">
 <head>
 <script src="api.js?v=1"></script>
+<script src="commun.js?v=1"></script>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<script src="anti-cadre.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Suivi de mes demandes SAV — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="cvdl-ui.css?v=34">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -37,12 +39,12 @@ main{ padding:var(--space-6) var(--space-4); }
 .v1-message{ padding:10px 12px; display:flex; flex-direction:column; gap:4px; }
 .liste-tickets-suivi, #liste-tickets-suivi{ display:flex; flex-direction:column; gap:14px; }
 </style>
-<script src="portail-ui.js?v=24" defer></script>
+<script src="portail-ui.js?v=30" defer></script>
 <script src="cvdl-ui.js?v=12" defer></script>
-<link rel="stylesheet" href="retours.css?v=1">
+<link rel="stylesheet" href="retours.css?v=2">
 <link rel="stylesheet" href="sav-fil.css?v=1">
 <script src="sav-fil.js?v=1"></script>
-<script src="retours.js?v=1" defer></script>
+<script src="retours.js?v=2" defer></script>
 </head>
 <body data-famille="sav">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -53,7 +55,7 @@ main{ padding:var(--space-6) var(--space-4); }
 
 <main id="contenu-principal">
   <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
-  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" onclick="location.href='portail-structure.html'">
+  <button type="button" class="btn-retour-portail" style="margin-bottom:var(--space-4)" data-aller="portail-structure.html">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
     Portail
   </button>
@@ -83,6 +85,6 @@ main{ padding:var(--space-6) var(--space-4); }
 </main>
 
 <script src="deja-identifie.js?v=1"></script>
-<script src="pages/suivi-sav-structure.js?v=1"></script>
+<script src="pages/suivi-sav-structure.js?v=2"></script>
 </body>
 </html>

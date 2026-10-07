@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════════════════════════════
    portail.css — kit visuel commun de l'espace public (structures + personnes accompagnées)
-   Chargé EN DERNIER sur chaque page publique (après reparc.css et le <style> de la page) :
+   Chargé EN DERNIER sur chaque page publique (après reparc.css et le \3c style> de la page) :
    il harmonise boutons, cartes, champs, pastilles et fonds sans toucher à la logique.
    Famille de page (attribut sur <body>) :
      data-famille="commandes" → turquoise (commander, suivi, réseau…)
@@ -106,8 +106,7 @@ body[data-famille] .card {
   border-radius: var(--pk-rayon-carte);
   border: 1px solid var(--color-divider);
 }
-body[data-famille] .card.elev-lg,
-body[data-famille] .card.elev-md {
+body[data-famille] .card.elev-lg {
   box-shadow: var(--pk-ombre);
 }
 body[data-famille] .card.elev-sm {
@@ -153,10 +152,6 @@ body[data-famille] .tag {
 }
 .pk-pill svg {
   flex: none;
-}
-.pk-cours {
-  background: color-mix(in srgb, var(--th-bg-00acb0ff, #00acb0) 14%, var(--th-bg-ffffffff, white));
-  color: var(--th-tx-007c80ff, #007c80);
 }
 .pk-ok {
   background: color-mix(in srgb, var(--th-bg-0f6e56ff, #0f6e56) 12%, var(--th-bg-ffffffff, white));
@@ -273,38 +268,6 @@ button:hover .ill .ill-fond,
 }
 
 /* ── Lumière d'état (colonne d'état des cartes) : dégradé qui glisse et respire ── */
-.pk-lum {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-  color: #fff;
-  background: linear-gradient(
-    125deg,
-    var(--e2) 0%,
-    color-mix(in srgb, var(--e) 80%, var(--e2)) 35%,
-    var(--e) 55%,
-    color-mix(in srgb, var(--e) 60%, var(--e2)) 75%,
-    var(--e2) 100%
-  );
-  background-size: 260% 260%;
-  animation:
-    pk-glisse 14s ease-in-out infinite alternate,
-    pk-respire 6s ease-in-out infinite;
-}
-.pk-lum::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(
-    100deg,
-    transparent 30%,
-    var(--th-bg-ffffff24, rgba(255, 255, 255, 0.14)) 50%,
-    transparent 70%
-  );
-  background-size: 250% 100%;
-  animation: pk-voile 9s ease-in-out infinite;
-}
 @keyframes pk-glisse {
   0% {
     background-position: 0% 40%;
@@ -329,26 +292,6 @@ button:hover .ill .ill-fond,
   100% {
     background-position: -120% 0;
   }
-}
-.pk-e-cours {
-  --e: var(--th-ac-00acb0ff, #00acb0);
-  --e2: var(--th-ac-004f5cff, #004f5c);
-}
-.pk-e-action {
-  --e: var(--th-ac-e8912aff, #e8912a);
-  --e2: var(--th-ac-8a3f06ff, #8a3f06);
-}
-.pk-e-ok {
-  --e: var(--th-ac-1a9b77ff, #1a9b77);
-  --e2: var(--th-ac-0a4a3aff, #0a4a3a);
-}
-.pk-e-ko {
-  --e: var(--th-ac-8b96a0ff, #8b96a0);
-  --e2: var(--th-ac-46505aff, #46505a);
-}
-.pk-e-urg {
-  --e: var(--th-ac-e62460ff, #e62460);
-  --e2: var(--th-ac-6d0b2bff, #6d0b2b);
 }
 
 /* ══ Carte « colonne d'état + tiroir » (commandes et SAV) ══ */
@@ -902,10 +845,6 @@ body[data-famille] .msg-alerte {
   body[data-famille] .voile-modale-qr.visible,
   body[data-famille] .voile-modale-qr.visible .modale-qr {
     animation: none !important;
-  }
-  .pk-lum,
-  .pk-lum::before {
-    animation: none;
   }
   .ill .ill-fond {
     transition: none;

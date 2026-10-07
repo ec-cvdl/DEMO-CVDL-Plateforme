@@ -927,6 +927,18 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
     #cvdl-bandeau-demo .bd-replier{ margin-left:auto; border:1px solid rgba(255,255,255,.35); background:none; color:#fff; border-radius:999px; padding:4px 10px; font:600 12.5px system-ui, sans-serif; cursor:pointer; white-space:nowrap; }
     #cvdl-bandeau-demo .bd-replier:hover, #cvdl-bandeau-demo .bd-replier:focus-visible{ background:rgba(255,255,255,.12); outline:none; }
     #cvdl-bandeau-demo.replie{ padding:3px 12px; font-size:12px; }
+    #cvdl-demo-sans-risque{ position:relative; display:flex; gap:18px; align-items:flex-start; margin:16px auto; max-width:1200px; width:calc(100% - 32px); box-sizing:border-box; padding:20px 22px; border-radius:18px;
+      background:repeating-linear-gradient(-45deg, #FFF3C4 0 14px, #FFEDB0 14px 28px); border:2px solid #002743; box-shadow:4px 4px 0 #002743; color:#002743; font-family:var(--police, system-ui, sans-serif); }
+    #cvdl-demo-sans-risque .asb-ico{ flex:none; width:58px; height:58px; border-radius:16px; background:#FECC38; border:2px solid #002743; display:inline-flex; align-items:center; justify-content:center; }
+    #cvdl-demo-sans-risque .asb-txt{ flex:1; min-width:0; padding-right:24px; }
+    #cvdl-demo-sans-risque .asb-sur{ font-size:11.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#8A5A00; }
+    #cvdl-demo-sans-risque h2{ margin:2px 0 4px; font-family:var(--police-titre, system-ui, sans-serif); font-size:22px; line-height:1.2; color:#002743; }
+    #cvdl-demo-sans-risque p{ margin:0; font-size:14.5px; }
+    #cvdl-demo-sans-risque ul{ margin:10px 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px; }
+    #cvdl-demo-sans-risque li{ padding:6px 12px; border-radius:999px; background:#fff; border:1.5px solid #002743; font-size:14px; }
+    #cvdl-demo-sans-risque .asb-fermer{ position:absolute; top:10px; right:12px; border:0; background:none; color:#002743; font:600 20px/1 system-ui, sans-serif; cursor:pointer; padding:4px 6px; opacity:.7; }
+    #cvdl-demo-sans-risque .asb-fermer:hover, #cvdl-demo-sans-risque .asb-fermer:focus-visible{ opacity:1; }
+    @media (max-width:640px){ #cvdl-demo-sans-risque{ flex-direction:column; gap:10px; padding:16px; } #cvdl-demo-sans-risque .asb-ico{ width:46px; height:46px; } }
     #cvdl-bandeau-demo.replie .bd-actions{ display:none; }
     #cvdl-bandeau-demo.replie .bd-replier{ padding:2px 10px; }
     @media (max-width:640px){
@@ -947,7 +959,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   css.href = 'explications.css?v=2';
   document.head.appendChild(css);
   const js = document.createElement('script');
-  js.src = 'explications.js?v=4';
+  js.src = 'explications.js?v=6';
   js.defer = true;
   js.onload = () => majBandeau();
   document.head.appendChild(js);
@@ -1010,6 +1022,33 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
     );
   }
 
+  /** Encart en haut de page : la démo est sans risque (masquable pour la session). */
+  function poserSansRisque() {
+    let masque = false;
+    try {
+      masque = sessionStorage.getItem('cvdl-demo-sans-risque') === 'masque';
+    } catch (e) {}
+    if (masque || document.getElementById('cvdl-demo-sans-risque')) return;
+    const e = document.createElement('div');
+    e.id = 'cvdl-demo-sans-risque';
+    e.setAttribute('role', 'note');
+    e.innerHTML =
+      '<span class="asb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg></span>' +
+      '<div class="asb-txt"><div class="asb-sur">Démonstration</div><h2>Ici, rien n’est réel : essayez sans crainte</h2>' +
+      '<p>Toutes les données sont fictives. Ce que vous saisissez (commandes, pannes, personnes…) n’a aucun effet sur la vraie plateforme.</p>' +
+      '<ul><li>Aucun impact sur les données réelles</li><li>Aucun e-mail envoyé</li><li>Remise à zéro après 15 min sans activité</li></ul></div>' +
+      '<button type="button" class="asb-fermer" aria-label="Masquer ce message">×</button>';
+    e.querySelector('.asb-fermer').addEventListener('click', () => {
+      e.remove();
+      try {
+        sessionStorage.setItem('cvdl-demo-sans-risque', 'masque');
+      } catch (err) {}
+    });
+    const cible = document.querySelector('main') || document.body;
+    cible.insertBefore(e, cible.firstChild);
+  }
+
+  const vueVerrouillee = !!lireLocal('cvdl-demo-vue');
   function poser() {
     if (document.getElementById('cvdl-bandeau-demo')) return;
     const b = document.createElement('div');
@@ -1021,8 +1060,9 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       '<span class="bd-actions">' +
       '<button type="button" class="xp-inter" aria-pressed="true"><i aria-hidden="true"></i>Explications</button>' +
       '<button type="button" class="xp-tutos">Tutoriels</button>' +
-      '<a class="bd-profil" href="demo.html">Changer de profil</a>' +
-      (siteDemo ? '' : '<a class="bd-quitter" href="demo.html?quitter=1">Quitter</a>') +
+      // Démo ouverte par le lien d'une structure : pas de changement de profil ni de sortie.
+      (vueVerrouillee ? '' : '<a class="bd-profil" href="demo.html">Changer de profil</a>') +
+      (siteDemo || vueVerrouillee ? '' : '<a class="bd-quitter" href="demo.html?quitter=1">Quitter</a>') +
       '</span>' +
       '<button type="button" class="bd-replier" aria-expanded="true">Replier ▾</button>';
     const replier = (oui) => {
@@ -1047,6 +1087,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       if (X) X.ouvrirPanneau();
     });
     document.body.appendChild(b);
+    poserSansRisque();
     replier(lireLocal('cvdl-demo-barre-repliee') === '1');
     majBandeau();
     let attente = 0;
@@ -1070,3 +1111,18 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser);
   else poser();
 })();
+
+/* Actions déclaratives des pages (pas de JavaScript dans le HTML) :
+   data-aller="page.html" · data-fermer="id" (masque) · data-basculer="id" (affiche / masque). */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-aller], [data-fermer], [data-basculer]');
+  if (!el) return;
+  if (el.dataset.aller) {
+    location.href = el.dataset.aller;
+    return;
+  }
+  const cible = document.getElementById(el.dataset.fermer || el.dataset.basculer);
+  if (!cible) return;
+  cible.hidden = el.dataset.fermer ? true : !cible.hidden;
+  if (!cible.hidden) cible.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});

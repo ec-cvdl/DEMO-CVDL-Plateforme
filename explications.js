@@ -563,7 +563,7 @@
           cible: '.dialog.csw label',
           titre: 'Un type, des règles',
           texte:
-            'Vente solidaire : elle achète à prix réduit. Bon d’orientation : elle commande pour des personnes nommées. Interne : une équipe Emmaüs Connect. ESN : un atelier de reconditionnement. Projets : un projet financé.',
+            'Relais Numérique : elle achète à prix réduit. Vente solidaire : elle commande pour des personnes nommées. Interne : une équipe Emmaüs Connect. ESN : un atelier de reconditionnement. Projets : un projet financé.',
         },
         {
           cible: '[data-cs-suivant]',
@@ -874,6 +874,17 @@
     let ids = Object.keys(TUTOS).filter((id) => TUTOS[id].espace === e);
     if (e === 'admin' && !document.querySelector('#rp-nav [data-nav="commandes"]'))
       ids = ids.filter((id) => ['finances', 'factures'].includes(id)); // rôle Comptabilité
+    if (e === 'structure') {
+      // Selon la structure (posé par le portail) : un conseiller ne commande pas ; les
+      // partenaires ne concernent qu'un responsable d'Interne, quand ils sont ouverts.
+      let ctx = {};
+      try {
+        ctx = JSON.parse(sessionStorage.getItem('cvdl-contexte-structure') || '{}') || {};
+      } catch (err) {}
+      const conseiller = ctx.role === 'conseiller' || document.documentElement.classList.contains('role-conseiller');
+      if (conseiller) ids = ids.filter((id) => id !== 'commander');
+      if (conseiller || ctx.type !== 'interne' || !ctx.partenaires) ids = ids.filter((id) => id !== 'partenaires');
+    }
     return ids;
   }
 
@@ -1085,6 +1096,8 @@
     const cible = e.cible ? await attendre(e.cible, 3500) : null;
     if (!tuto) return;
     if (e.siPresent && !cible) return allerEtape(i + (sens || 1), sens || 1); // élément absent pour ce rôle : on saute
+    // Élément présent mais masqué pour ce rôle ou ce type de structure : on saute l'étape.
+    if (cible && !cible.getClientRects().length) return allerEtape(i + (sens || 1), sens || 1);
     afficherEtape(e, cible, i, etapes.length);
   }
   function afficherEtape(e, cible, i, n) {

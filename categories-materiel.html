@@ -2,11 +2,13 @@
 <html lang="fr">
 <head>
 <script src="api.js?v=1"></script>
+<script src="commun.js?v=1"></script>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<script src="anti-cadre.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Catégories de matériel — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="cvdl-ui.css?v=34">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -41,10 +43,10 @@ main{ max-width:1240px; margin:0 auto; padding:var(--space-8) var(--space-6) 64p
 .selecteur-categories{ justify-content:flex-start; }
 }
 </style>
-<script src="portail-ui.js?v=24" defer></script>
+<script src="portail-ui.js?v=30" defer></script>
 <script src="cvdl-ui.js?v=12" defer></script>
-<link rel="stylesheet" href="retours.css?v=1">
-<script src="retours.js?v=1" defer></script>
+<link rel="stylesheet" href="retours.css?v=2">
+<script src="retours.js?v=2" defer></script>
 </head>
 <body data-famille="materiel">
 <main>
@@ -70,6 +72,6 @@ main{ max-width:1240px; margin:0 auto; padding:var(--space-8) var(--space-6) 64p
     <div class="ct-bas" id="ct-bas-commander" hidden><a class="btn btn-primary" href="commande.html">Commander ce matériel →</a></div>
   </div>
 </main>
-<script src="pages/categories-materiel.js?v=1"></script>
+<script src="pages/categories-materiel.js?v=2"></script>
 </body>
 </html>

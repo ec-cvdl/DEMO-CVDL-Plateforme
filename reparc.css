@@ -76,10 +76,6 @@ h4 {
   font-weight: var(--font-heading-weight);
 }
 
-.washed {
-  filter: saturate(0.6) contrast(0.85) brightness(1.1) opacity(0.94);
-}
-
 *,
 *::before,
 *::after {
@@ -142,9 +138,6 @@ figure {
 figcaption {
   font-size: 11px;
   margin-top: var(--space-1);
-  color: color-mix(in srgb, var(--color-text) 55%, transparent);
-}
-.text-muted {
   color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
 :focus {
@@ -266,60 +259,18 @@ textarea.input {
   cursor: pointer;
   font-size: 14px;
 }
-.radio input,
-.seg-opt input {
+.radio input {
   position: absolute;
   opacity: 0;
   width: 0;
   height: 0;
   pointer-events: none;
 }
-.radio .dot {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  border-radius: 50%;
-  border: 1.5px solid var(--color-divider);
-}
-.radio:hover .dot {
-  border-color: var(--color-accent);
-}
-.radio input:checked + .dot {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  box-shadow: inset 0 0 0 4px var(--color-bg);
-}
-.radio input:focus-visible + .dot {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
 .seg {
   display: inline-flex;
   overflow: hidden;
   border: 1px solid var(--color-divider);
   border-radius: var(--radius-md);
-}
-.seg-opt {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.seg-opt + .seg-opt {
-  border-left: 1px solid var(--color-divider);
-}
-.seg-opt:has(input:checked) {
-  background: var(--color-accent);
-  color: var(--color-bg);
-}
-.seg-opt:not(:has(input:checked)):hover {
-  background: color-mix(in srgb, var(--color-text) 7%, transparent);
-}
-.seg-opt:has(input:focus-visible) {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
 }
 
 /* ── Bascule à boutons (liste/kanban etc.) — plus simple que .seg (pas de input caché) ── */
@@ -376,27 +327,15 @@ textarea.input {
   opacity: 0.8;
   flex: 1;
 }
-.card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: color-mix(in srgb, var(--color-text) 50%, transparent);
-}
 .elev-sm {
   box-shadow: var(--shadow-sm);
-}
-.elev-md {
-  box-shadow: var(--shadow-md);
 }
 .elev-lg {
   box-shadow: var(--shadow-lg);
 }
 
-/* gap:6px ajouté — avant ça, l'espacement entre une icône et son texte à l'intérieur d'un
-   .tag dépendait d'un espace tapé à la main dans le HTML (présent à certains endroits, oublié
-   à d'autres, d'où des tags "collés" par endroits). Avec un gap sur la classe elle-même, plus
-   besoin d'y penser au cas par cas. */
+/* gap sur .tag : l'espace entre l'icône et le texte ne dépend plus des espaces tapés dans le
+   HTML */
 .tag {
   display: inline-flex;
   align-items: center;
@@ -439,11 +378,9 @@ textarea.input {
   color: var(--color-vert-700);
 }
 
-/* Messages de retour (erreur/succès/info) — jamais définis jusqu'ici pour les pages
-   publiques (seul admin.html avait sa propre règle .msg-erreur en local), donc invisibles
-   partout ailleurs. Rouge dédié pour l'erreur, indépendant de --color-accent qui varie d'une
-   page à l'autre (magenta admin, turquoise public). admin.html garde son propre style local
-   (chargé après ce fichier), donc rien ne change côté admin. */
+/* Messages de retour (erreur / succès / info) des pages publiques. Rouge dédié pour
+   l'erreur, indépendant de --color-accent (magenta admin, turquoise public). admin.html garde
+   son propre style, chargé après ce fichier. */
 .msg {
   font-size: 13px;
   border-radius: var(--radius-md);
@@ -473,12 +410,6 @@ textarea.input {
   gap: var(--space-4);
   padding: var(--space-3) var(--space-4);
   border-bottom: none;
-}
-.nav-brand {
-  font-family: var(--font-heading);
-  font-weight: var(--font-heading-weight);
-  font-size: 18px;
-  margin-right: auto;
 }
 .nav a {
   color: inherit;
@@ -555,10 +486,6 @@ textarea.input {
   font-family: var(--font-heading);
   font-weight: var(--font-heading-weight);
   font-size: 22px;
-}
-.dialog-body {
-  font-size: 14.5px;
-  opacity: 0.85;
 }
 .dialog-actions {
   display: flex;
@@ -739,9 +666,8 @@ textarea.input {
 .rp-toggle-theme .rp-toggle-lune {
   display: none;
 }
-/* Fond de carte désormais blanc, comme la page : sans cette bordure fine, une card sans
-   ombre visible (rendu navigateur, impression, etc.) disparaîtrait complètement. Filet de
-   sécurité en plus des classes elev-*, pas un remplacement. */
+/* fond de carte blanc comme la page : la bordure fine garde la carte visible sans ombre
+   (impression…) */
 .card {
   border: 1px solid var(--color-divider);
 }
@@ -1181,9 +1107,6 @@ body {
   .btn {
     white-space: normal;
   }
-  table.tableau-appareils {
-    font-size: 12px;
-  }
 }
 @media (max-width: 480px) {
   h1 {
@@ -1191,9 +1114,8 @@ body {
   }
 }
 
-/* Lignes clé/valeur et lignes d'historique — même format que la page passeport.html standalone
-   (qui les définit localement), partagé ici pour que l'admin puisse reprendre exactement le
-   même rendu en un seul bloc au lieu de plusieurs cartes séparées. */
+/* Lignes clé / valeur et lignes d'historique, même format que passeport.html, partagées pour
+   que l'admin reprenne le même rendu. */
 .rp-ligne-info {
   display: flex;
   align-items: baseline;
@@ -1375,12 +1297,6 @@ body {
   flex-direction: column;
   gap: 10px;
 }
-.rpd-art {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-}
 .rpd-ill {
   background: var(--th-bg-ffffffff, #fff);
   border-radius: 10px;
@@ -1399,17 +1315,6 @@ body {
 }
 .rpd-l b {
   text-align: right;
-}
-.rpd-total {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding-top: 10px;
-  border-top: 1px solid var(--th-bd-ffffff1f, rgba(255, 255, 255, 0.12));
-}
-.rpd-total b {
-  font-family: var(--font-heading);
-  font-size: 24px;
 }
 .rpd-sec {
   display: flex;
@@ -1576,12 +1481,6 @@ body {
   background: var(--th-bg-fff3dfff, #fff3df);
   color: var(--th-tx-b45309ff, #b45309);
 }
-.rpd-annulee {
-  background: var(--color-neutral-100);
-  border-radius: 14px;
-  padding: 12px 14px;
-  font-weight: 600;
-}
 .rpd-etapes {
   display: flex;
   flex-direction: column;
@@ -1675,50 +1574,6 @@ body {
   flex-direction: column;
   gap: 12px;
 }
-.rpd-taches {
-  display: flex;
-  flex-direction: column;
-}
-.rpd-tache {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  gap: 10px;
-  align-items: center;
-  font-size: 13px;
-  padding: 6px 0;
-}
-.rpd-tache + .rpd-tache {
-  border-top: 1px dashed var(--color-divider);
-}
-.rpd-tache small {
-  display: block;
-  color: var(--color-neutral-700);
-  font-size: 12px;
-}
-.rpd-coche {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid var(--th-bd-e62460ff, #e62460);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  box-sizing: border-box;
-}
-.rpd-coche.ok {
-  background: var(--th-bg-0f6e56ff, #0f6e56);
-  border-color: #0f6e56;
-}
-.rpd-coche.info {
-  background: var(--th-bg-fde6eeff, #fde6ee);
-  border-color: var(--th-bd-fde6eeff, #fde6ee);
-  color: var(--th-tx-e62460ff, #e62460);
-}
-.rpd-tache.ok .rpd-tache-titre {
-  color: var(--color-neutral-700);
-  text-decoration: line-through;
-}
 .rpd-actions {
   border-top: 1px solid var(--color-divider);
   padding-top: 12px;
@@ -1755,11 +1610,6 @@ body {
   }
 }
 /* Devis attendu : la validation logistique passe au second plan (le devis d'abord). */
-.rpd-bloc-cours.devis-attendu [data-demander-validation] {
-  background: var(--color-surface) !important;
-  color: var(--color-text) !important;
-  border: 1px solid var(--color-divider) !important;
-}
 .rpd-fermer-mobile {
   display: none;
 }
@@ -2160,9 +2010,6 @@ body {
 }
 .rpd-ill {
   background: var(--color-neutral-100) !important;
-}
-.rpd-total {
-  border-top-color: var(--color-divider) !important;
 }
 .rpd-row svg {
   opacity: 1 !important;

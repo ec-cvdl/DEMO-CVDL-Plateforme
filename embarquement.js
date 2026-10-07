@@ -56,7 +56,7 @@
   const FLECHE =
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
-  /* ── Libellés des types (référentiel : Interne, ESN, Vente solidaire = BO, Relais Numérique = RNum) ── */
+  /* ── Libellés des types (référentiel : Interne, ESN, Vente solidaire, Relais Numérique) ── */
   const LIBELLES = {
     interne: 'Structure Interne',
     esn: 'ESN',
@@ -82,7 +82,7 @@
     titre: 'Chaque commande, pas à pas',
     texte,
     parcours: parcours || STATUTS,
-    points: ['Un e-mail à chaque étape', 'Les numéros de série et les documents dans le suivi'],
+    points: ['Un e-mail de confirmation à l’enregistrement', 'Les numéros de série et les documents dans le suivi'],
   });
 
   /* ── Étapes par type ── */
@@ -108,17 +108,25 @@
               'Votre impact : appareils réemployés, CO₂ évité, personnes équipées',
             ],
           },
-          {
-            ill: 'partenairesCmd',
-            sur: 'Vos partenaires',
-            titre: 'Les structures qui travaillent avec vous',
-            texte:
-              'Créez vos structures partenaires, validez leurs commandes et attribuez-leur des appareils de votre flotte.',
-            points: [
-              'Rattachez vos remises à des projets de distribution',
-              'Donnez accès à votre équipe avec son compte Google',
-            ],
-          },
+          ctx.partenairesOuverts
+            ? {
+                ill: 'partenairesCmd',
+                sur: 'Vos partenaires',
+                titre: 'Les structures qui travaillent avec vous',
+                texte:
+                  'Créez vos structures partenaires, validez leurs commandes et attribuez-leur des appareils de votre flotte.',
+                points: [
+                  'Rattachez vos remises à des projets de distribution',
+                  'Donnez accès à votre équipe avec son compte Google',
+                ],
+              }
+            : {
+                ill: 'distribution',
+                sur: 'Votre territoire',
+                titre: 'Vos projets et votre équipe',
+                texte: 'Rattachez vos remises à des projets de distribution et suivez leur avancement.',
+                points: ['Donnez accès à votre équipe avec son compte Google'],
+              },
         ];
       case 'esn':
         return [
@@ -332,6 +340,7 @@
       conseiller,
       type: p.type || 'standard',
       partenaire: !!r.structurePartenaireDe,
+      partenairesOuverts: !!(r.perimetre && r.perimetre.partenaires),
       depotVente: !!(p.depotVente && p.depotVente.actif),
       facturationDepotVente: p.depotVente && p.depotVente.facturation,
     };
@@ -424,6 +433,16 @@
         await transition(racine);
         document.documentElement.classList.remove('emb-ouvert');
         fini();
+        // Présentation suivie jusqu'au bout : avis rapide (retours.js).
+        if (i === etapes.length - 1 && window.CvdlRetours)
+          setTimeout(
+            () =>
+              CvdlRetours.proposerAvis({
+                parcours: 'embarquement',
+                question: 'Cette présentation était-elle claire ?',
+              }),
+            900,
+          );
       }
 
       function clavier(e) {

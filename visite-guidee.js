@@ -39,7 +39,9 @@
     if (enCours) return;
     if (!opts || !opts.etapes || !opts.etapes.length) return;
     if (!immediat && lire(opts.cle) === 'vu') return;
-    const etapes = opts.etapes.filter((e) => e.cibles.some((s) => document.querySelector(s)));
+    // Seulement ce qui est affiché (une tuile masquée pour un conseiller n'est pas présentée).
+    const visible = (s) => [...document.querySelectorAll(s)].some((el) => el.getClientRects().length);
+    const etapes = opts.etapes.filter((e) => e.cibles.some(visible));
     if (!etapes.length) return;
     enCours = { opts, etapes, index: 0 };
     if (immediat) return demarrer();
@@ -123,7 +125,7 @@
 
   function cibles() {
     const e = enCours.etapes[enCours.index];
-    return e.cibles.map((s) => document.querySelector(s)).filter(Boolean);
+    return e.cibles.map((s) => document.querySelector(s)).filter((el) => el && el.getClientRects().length);
   }
 
   function aller(i) {

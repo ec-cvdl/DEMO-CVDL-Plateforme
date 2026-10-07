@@ -2,11 +2,13 @@
 <html lang="fr">
 <head>
 <script src="api.js?v=1"></script>
+<script src="commun.js?v=1"></script>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<script src="anti-cadre.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Demande de SAV — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="cvdl-ui.css?v=34">
 <link rel="stylesheet" href="depannage.css?v=1">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
@@ -59,10 +61,10 @@ main{ padding:var(--space-6) var(--space-4); }
 .tableau-materiel-sav-scroll tbody tr{ cursor:pointer; }
 .icone-symptome.ill-symptome{ width:60px !important; height:60px !important; padding:0 !important; display:flex; align-items:center; justify-content:center; }
 </style>
-<script src="portail-ui.js?v=24"></script>
+<script src="portail-ui.js?v=30"></script>
 <script src="cvdl-ui.js?v=12"></script>
-<link rel="stylesheet" href="retours.css?v=1">
-<script src="retours.js?v=1" defer></script>
+<link rel="stylesheet" href="retours.css?v=2">
+<script src="retours.js?v=2" defer></script>
 <script src="depannage.js?v=1"></script>
 </head>
 <body data-famille="sav">
@@ -71,7 +73,7 @@ main{ padding:var(--space-6) var(--space-4); }
 <main id="contenu-principal">
   <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
   <div class="pk-barre-etapes">
-  <button type="button" class="btn-retour-portail" onclick="location.href='portail-structure.html'">
+  <button type="button" class="btn-retour-portail" data-aller="portail-structure.html">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
     Portail
   </button>
@@ -242,6 +244,6 @@ main{ padding:var(--space-6) var(--space-4); }
 </main>
 
 <script src="deja-identifie.js?v=1"></script>
-<script src="pages/sav.js?v=1"></script>
+<script src="pages/sav.js?v=3"></script>
 </body>
 </html>

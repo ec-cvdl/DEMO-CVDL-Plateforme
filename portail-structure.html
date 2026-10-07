@@ -2,10 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net https://accounts.google.com/gsi/; frame-src 'self' https://ec-cvdl.github.io https://accounts.google.com/gsi/; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<script src="anti-cadre.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net https://accounts.google.com/gsi/; frame-src 'self' https://ec-cvdl.github.io https://accounts.google.com/gsi/; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CVDL — Espace structure</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=32">
+<link rel="stylesheet" href="cvdl-ui.css?v=34">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -158,14 +159,14 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 .ps-choix-carte[style*="--tur"] .ill .ill-fond{ fill:color-mix(in srgb, var(--tur) 45%, #fff); }
 .ps-choix-carte[style*="--mag"] .ill .ill-fond{ fill:color-mix(in srgb, var(--mag) 35%, #fff); }
 </style>
-<script src="portail-ui.js?v=24" defer></script>
+<script src="portail-ui.js?v=30" defer></script>
 <script src="cvdl-ui.js?v=12" defer></script>
-<link rel="stylesheet" href="retours.css?v=1">
-<script src="retours.js?v=1" defer></script>
+<link rel="stylesheet" href="retours.css?v=2">
+<script src="retours.js?v=2" defer></script>
 <link rel="stylesheet" href="visite-guidee.css?v=1">
-<script src="visite-guidee.js?v=1" defer></script>
+<script src="visite-guidee.js?v=2" defer></script>
 <link rel="stylesheet" href="embarquement.css?v=1">
-<script src="embarquement.js?v=1" defer></script>
+<script src="embarquement.js?v=5" defer></script>
 </head>
 <body data-famille="accueil">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -178,7 +179,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 <main id="contenu-principal">
   <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
   <div id="etape-code" style="max-width:460px;margin:0 auto">
-    <button type="button" class="btn-retour" style="margin-bottom:var(--space-4)" onclick="location.href='portail.html'">
+    <button type="button" class="btn-retour" style="margin-bottom:var(--space-4)" data-aller="portail.html">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
       Retour
     </button>
@@ -264,14 +265,14 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
     <div class="card elev-sm" id="panneau-aide-decision" hidden style="padding:var(--space-5) var(--space-6);margin-top:var(--space-5)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
         <h2 style="margin:0">Aide à la décision — redirection du matériel</h2>
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('panneau-aide-decision').hidden = true">Fermer</button>
+        <button type="button" class="btn btn-ghost" data-fermer="panneau-aide-decision">Fermer</button>
       </div>
       <iframe src="https://ec-cvdl.github.io/decision-tree/" title="Arbre de décision — redirection du matériel" style="width:100%;height:600px" loading="lazy"></iframe>
     </div>
     <div class="card elev-sm" id="panneau-equipe" hidden style="padding:var(--space-5) var(--space-6);margin-top:var(--space-5)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
         <h2 style="margin:0">Accès de l’équipe</h2>
-        <button type="button" class="btn btn-ghost" onclick="document.getElementById('panneau-equipe').hidden = true">Fermer</button>
+        <button type="button" class="btn btn-ghost" data-fermer="panneau-equipe">Fermer</button>
       </div>
       <p style="opacity:.7;margin:0 0 var(--space-3);font-size:14px">Ces personnes ouvrent l’espace <strong>sans code</strong>, avec leur compte Google <span id="eq-domaine"></span>. <b>Responsable de territoire</b> : tout. <b>Conseiller numérique</b> : flotte et ventes, attestations, projets et rapport d’impact (consultation).</p>
       <div id="eq-liste" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -287,7 +288,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <section class="ps-plus">
           <div class="cvdl-surtitre ps-plus-titre">Aller plus loin</div>
           <div class="ps-plus-liste">
-            <a class="pv-carte" href="commandes-partenaires.html" data-gate="interne" data-role="responsable" hidden>
+            <a class="pv-carte" href="commandes-partenaires.html" data-gate="partenaires" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M10 18 24 11l14 7v14l-14 7-14-7z"/></g><g class="pv-illu-trait"><path d="M8 16 22 9l14 7v14l-14 7-14-7z"/><path d="M8 16l14 7 14-7M22 23v14"/><path d="M15 12.5 29 19.5"/><circle cx="37" cy="36" r="7" fill="var(--pv-fond)"/><path d="M34 36h6M37.5 33.5 40 36l-2.5 2.5"/></g></svg></span>
         <span class="pv-txt"><b>Commandes de mes partenaires</b><small>Attribuez du matériel de votre flotte à leurs commandes.</small></span><span class="pv-badge alerte" data-badge="commandes-partenaires" hidden></span>
       </a>
@@ -295,11 +296,11 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M9 20 21 14l12 6v13l-12 6-12-6z"/></g><g class="pv-illu-trait"><path d="M7 18 19 12l12 6v13l-12 6-12-6z"/><path d="M7 18l12 6 12-6M19 24v13"/><path d="M34 14h9M39 10l4 4-4 4"/><path d="M34 24h6M37 21l3 3-3 3"/></g></svg></span>
         <span class="pv-txt"><b>Projets de distribution</b><small>Suivez vos projets financés : objectifs, appareils remis, rythme à tenir.</small></span>
       </a>
-            <a class="pv-carte" href="structures-partenaires.html" data-gate="interne" data-role="responsable" hidden>
+            <a class="pv-carte" href="structures-partenaires.html" data-gate="partenaires" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><rect x="9" y="16" width="14" height="24" rx="2"/><rect x="27" y="10" width="14" height="30" rx="2"/></g><g class="pv-illu-trait"><rect x="7" y="14" width="14" height="24" rx="2"/><rect x="25" y="8" width="14" height="30" rx="2"/><path d="M11 20h2M16 20h2M11 26h2M16 26h2M29 14h2M34 14h2M29 20h2M34 20h2M29 26h2M34 26h2"/><path d="M12 38v-5h4v5M30 38v-5h4v5"/><path d="M3 38h40"/></g></svg></span>
         <span class="pv-txt"><b>Mes structures partenaires</b><small>Créez des structures que vous accompagnez, pour qu’elles puissent commander.</small></span><span class="pv-badge neutre" data-badge="structures-partenaires" hidden></span>
       </a>
-            <a class="pv-carte" href="tarifs-partenaires.html" data-gate="interne" data-role="responsable" hidden>
+            <a class="pv-carte" href="tarifs-partenaires.html" data-gate="partenaires" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M26 8h14v14L22 40 8 26z"/></g><g class="pv-illu-trait"><path d="M24 6h14v14L20 38 6 24z"/><circle cx="31.5" cy="12.5" r="2.5"/><path d="M24.5 22.5a5 5 0 1 0 0 6.5M16 24.2h7M16.5 27.2h6"/></g></svg></span>
         <span class="pv-txt"><b>Tarifs partenaires</b><small>Prix personnalisés du catalogue pour vos structures partenaires.</small></span>
       </a>
@@ -307,7 +308,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><circle cx="18" cy="18" r="8"/><circle cx="33" cy="21" r="6"/></g><g class="pv-illu-trait"><circle cx="18" cy="17" r="6"/><path d="M7 38c1-7 6-11 11-11s10 4 11 11"/><circle cx="33" cy="20" r="5"/><path d="M31 29c5 0 9 3 10 9"/></g></svg></span>
         <span class="pv-txt"><b>Accès de l’équipe</b><small>Conseillers numériques et responsables qui entrent avec leur compte Google.</small></span>
       </button>
-            <button class="pv-carte" type="button" id="carte-aide-decision" onclick="document.getElementById('panneau-aide-decision').hidden = !document.getElementById('panneau-aide-decision').hidden; if(!document.getElementById('panneau-aide-decision').hidden) document.getElementById('panneau-aide-decision').scrollIntoView({behavior:'smooth', block:'start'});">
+            <button class="pv-carte" type="button" id="carte-aide-decision" data-basculer="panneau-aide-decision">
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M12 12h22l5 5-5 5H12z"/></g><g class="pv-illu-trait"><path d="M22 4v38"/><path d="M10 10h22l5 5-5 5H10z"/><path d="M34 24H14l-5 5 5 5h20z" fill="var(--pv-fond)"/><path d="M16 42h12"/></g></svg></span>
         <span class="pv-txt"><b>Aide à la décision</b><small>Un arbre de décision pas à pas pour orienter vers le bon équipement.</small></span>
       </button>
@@ -340,6 +341,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 
 <script src="deja-identifie.js?v=1"></script>
 <script src="api.js?v=1"></script>
-<script src="pages/portail-structure.js?v=2"></script>
+<script src="commun.js?v=1"></script>
+<script src="pages/portail-structure.js?v=5"></script>
 </body>
 </html>

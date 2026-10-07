@@ -353,18 +353,8 @@ i.att {
 .fin-tranche .fin-jauge {
   width: 100%;
 }
-.fin-tranche.t30 .fin-jauge i {
-  background: var(--th-bg-fecc38ff, #fecc38);
-}
-.fin-tranche.t60 .fin-jauge i,
-.fin-tranche.t90 .fin-jauge i {
+.fin-tranche.t60 .fin-jauge i {
   background: var(--th-bg-d97706ff, #d97706);
-}
-.fin-tranche.plus90 .fin-jauge i {
-  background: var(--th-bg-e5484dff, #e5484d);
-}
-.fin-tranche.plus90 {
-  border-color: color-mix(in srgb, var(--th-bd-002743ff, #002743) 45%, transparent);
 }
 
 /* Réglages */
