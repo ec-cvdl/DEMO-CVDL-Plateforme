@@ -148,9 +148,10 @@ document.addEventListener('change', (e) => {
     return;
   }
 });
-/** Import CSV tec.tech : le numéro de série est toujours en colonne G (7ᵉ colonne), à partir
- *  de la 2ᵉ ligne (la 1ʳᵉ est l'en-tête) — jamais la 1ʳᵉ colonne, contrairement à ce qui était
- *  fait avant. Parsing minimal mais gère les champs entre guillemets et le séparateur , ou ;. */
+/**
+ * Import CSV tec.tech : numéro de série en colonne G (7e), à partir de la 2e ligne.
+ * Gère les champs entre guillemets et les séparateurs « , » et « ; ».
+ */
 function parserLigneCsv(ligne, separateur) {
   const champs = [];
   let champ = '',
@@ -194,15 +195,6 @@ function synchroSeriesDepuisLignes() {
     if (c && zone.value !== String(c.numerosSerie || '').replace(/\n+$/, ''))
       synchroSeriesDepuisLignes.t = setTimeout(() => confirmerSeriesCommande(zone.dataset.ref), 700);
   }
-}
-function remplirLignesSeries(numeros) {
-  const champs = [...document.querySelectorAll('[data-serie-index]')];
-  let k = 0;
-  champs.forEach((x) => {
-    if (!x.value.trim() && k < numeros.length) x.value = numeros[k++];
-  });
-  synchroSeriesDepuisLignes();
-  return k;
 }
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || !e.target.matches || !e.target.matches('[data-serie-index]')) return;
@@ -592,11 +584,8 @@ async function enregistrerRapprochement() {
   const statut = $('rp-statut-comptable').value;
   const note = $('rp-note-depot').value.trim();
   const f = state.factures.find((x) => x.referenceFacture === c.referenceFacture);
-  // Rapproché ou Clôturé = la commande a été confrontée au relevé bancaire et son montant y
-  // figure bien : ça VEUT DIRE qu'elle est payée, qu'elle soit passée par le lien de paiement en
-  // ligne ou réglée autrement (virement, chèque...). Avant ce correctif, rien dans l'admin ne
-  // permettait de marquer une commande "Payée" en dehors du paiement en ligne — un règlement
-  // par un autre moyen restait donc invisible partout (tableau de bord inclus).
+  // Rapproché ou Clôturé = la commande figure sur le relevé bancaire : elle est payée, quel
+  // que soit le moyen de paiement.
   const marquerPaye = statut === 'Rapproché' || statut === 'Clôturé';
   $('rp-enregistrer-rappro').disabled = true;
   try {

@@ -56,13 +56,13 @@ function sansPaiementNc(s) {
 }
 function prixUnitaireNc(p, s) {
   if (!p || !s || sansPaiementNc(s)) return null;
-  const v = parseFloat(typeNc(s) === 'RNum' ? p.prixRN : p.prixStandard);
+  const v = parseFloat(typeNc(s) === 'Relais Numérique' ? p.prixRN : p.prixStandard);
   return isNaN(v) ? null : v;
 }
 function moyensNc(s) {
   const t = typeNc(s);
-  if (t === 'RNum') return ['Virement (RNum uniquement)'];
-  if (t === 'BO') {
+  if (t === 'Relais Numérique') return ['Virement (Relais Numérique)'];
+  if (t === 'Vente solidaire') {
     const l = String(s.moyensPaiement || '')
       .split(',')
       .map((x) => x.trim())
@@ -198,7 +198,7 @@ function etapeNcProduits(v, s) {
           '</span><span><b>Aucun produit ajouté</b><small>Choisissez un produit et sa quantité, puis « Ajouter ».</small></span></div>'
     }
     ${t === 'Projets' ? `<div class="csw-info"><span class="csw-type-ic">${icon('alert', 18)}</span><span><b>Structure Projets</b><small>Une quantité supérieure au stock est autorisée (commande par prévision).</small></span></div>` : ''}
-    ${sansPaiementNc(s) ? `<p class="csw-aide">${echapper(t)} : aucun paiement ni prix pour cette structure.</p>` : `<p class="csw-aide">Tarif ${t === 'RNum' ? 'vente solidaire (RNum)' : 'standard'} de base — un tarif personnalisé éventuel s’applique au calcul final.</p>`}`;
+    ${sansPaiementNc(s) ? `<p class="csw-aide">${echapper(t)} : aucun paiement ni prix pour cette structure.</p>` : `<p class="csw-aide">Tarif ${t === 'Relais Numérique' ? 'Relais Numérique' : 'standard'} de base — un tarif personnalisé éventuel s’applique au calcul final.</p>`}`;
 }
 function etapeNcLivraison(v, s) {
   const t = typeNc(s);
@@ -206,8 +206,8 @@ function etapeNcLivraison(v, s) {
   const personnes = v.personnes;
   const blocPersonnes = `
     <section class="csw-section">
-      <h4>Personnes accompagnées ${t === 'BO' ? '*' : '<em>(facultatif)</em>'}</h4>
-      ${t === 'BO' ? `<p class="csw-aide" style="margin:0">Une personne par appareil${nbUnites ? ` — ${nbUnites} attendue${nbUnites > 1 ? 's' : ''}` : ''}. La date de naissance sert aux attestations.</p>` : ''}
+      <h4>Personnes accompagnées ${t === 'Vente solidaire' ? '*' : '<em>(facultatif)</em>'}</h4>
+      ${t === 'Vente solidaire' ? `<p class="csw-aide" style="margin:0">Une personne par appareil${nbUnites ? ` — ${nbUnites} attendue${nbUnites > 1 ? 's' : ''}` : ''}. La date de naissance sert aux attestations.</p>` : ''}
       <div class="ncw-personnes">
         ${personnes
           .map(
@@ -254,8 +254,8 @@ function etapeNcPaiement(v, s) {
     blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${icon('check', 18)}</span><span><b>Mise en dépôt</b><small>Structure en dépôt-vente : rien à payer à la commande, le matériel reste à Emmaüs Connect jusqu’à sa vente.</small></span></div>`;
   else if (sansPaiementNc(s))
     blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${icon('check', 18)}</span><span><b>Aucun paiement</b><small>Structure ${echapper(t)} : ni paiement, ni facture.</small></span></div>`;
-  else if (t === 'RNum')
-    blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${iconeMoyenPaiementAdmin('Virement', 20)}</span><span><b>Virement (RNum uniquement)</b><small>Moyen imposé pour la vente solidaire : devis puis facture.</small></span></div>`;
+  else if (t === 'Relais Numérique')
+    blocMoyen = `<div class="csw-info"><span class="csw-type-ic">${iconeMoyenPaiementAdmin('Virement', 20)}</span><span><b>Virement (Relais Numérique)</b><small>Moyen imposé aux Relais Numérique : devis puis facture.</small></span></div>`;
   else
     blocMoyen = `
     <div class="csw-moyens" role="radiogroup" aria-label="Moyen de paiement">
@@ -270,8 +270,8 @@ function etapeNcPaiement(v, s) {
     </div>`;
   const nbPersonnes = v.personnes.filter((p) => (p.prenom + p.nom).trim()).length;
   return `
-    <section class="csw-section"><h4>Moyen de paiement${t === 'BO' ? ' *' : ''}</h4>${blocMoyen}
-      ${t === 'BO' && v.moyenPaiement === 'Paiement en ligne (CB)' && nbPersonnes > 1 ? `<label class="csw-option${v.paiementSepare ? ' choisi' : ''}" style="padding:12px 14px"><span class="rp-switch"><input type="checkbox" data-nc="paiementSepare" ${v.paiementSepare ? 'checked' : ''}><span class="rp-switch-piste"></span></span><span class="csw-option-txt"><b>Un lien de paiement par personne</b><small>Chaque personne règle sa part ; sinon un seul lien pour toute la commande.</small></span></label>` : ''}
+    <section class="csw-section"><h4>Moyen de paiement${t === 'Vente solidaire' ? ' *' : ''}</h4>${blocMoyen}
+      ${t === 'Vente solidaire' && v.moyenPaiement === 'Paiement en ligne (CB)' && nbPersonnes > 1 ? `<label class="csw-option${v.paiementSepare ? ' choisi' : ''}" style="padding:12px 14px"><span class="rp-switch"><input type="checkbox" data-nc="paiementSepare" ${v.paiementSepare ? 'checked' : ''}><span class="rp-switch-piste"></span></span><span class="csw-option-txt"><b>Un lien de paiement par personne</b><small>Chaque personne règle sa part ; sinon un seul lien pour toute la commande.</small></span></label>` : ''}
     </section>
     <section class="csw-section"><h4>Suivi</h4>
       <div class="csw-grille">
@@ -280,7 +280,7 @@ function etapeNcPaiement(v, s) {
         <div class="field csw-large"><label for="nc-commentaire">Commentaire <em>(facultatif)</em></label><textarea class="input" id="nc-commentaire" data-nc="commentaire" rows="3">${echapper(v.commentaire)}</textarea></div>
       </div>
       <div class="csw-cases">
-        ${t === 'RNum' || t === 'Projets' ? `<label><input type="checkbox" data-nc="demandeDevis" ${v.demandeDevis ? 'checked' : ''}>Devis demandé par la structure</label>` : ''}
+        ${t === 'Relais Numérique' || t === 'Projets' ? `<label><input type="checkbox" data-nc="demandeDevis" ${v.demandeDevis ? 'checked' : ''}>Devis demandé par la structure</label>` : ''}
         <label><input type="checkbox" data-nc="notifier" ${v.notifier ? 'checked' : ''}>Envoyer l’e-mail de confirmation à la structure</label>
       </div>
     </section>`;
@@ -315,8 +315,8 @@ function etapeNcRecap(v, s) {
       ? 'Mise en dépôt (payé à la vente)'
       : sansPaiementNc(s)
         ? 'Aucun paiement'
-        : typeNc(s) === 'RNum'
-          ? 'Virement (RNum uniquement)'
+        : typeNc(s) === 'Relais Numérique'
+          ? 'Virement (Relais Numérique)'
           : v.moyenPaiement || 'À définir';
   return `<div class="csw-recap">
     ${bloc(0, 'Structure', [
@@ -360,9 +360,10 @@ function verifierEtapeCommande(i) {
       return 'Chaque personne doit avoir un prénom et un nom.';
     if (remplies.some((p) => p.naissance.trim() && !/^\d{2}\/\d{2}\/\d{4}$/.test(p.naissance.trim())))
       return 'Date de naissance au format jj/mm/aaaa.';
-    if (typeNc(s) === 'BO' && !remplies.length) return 'Ajoutez au moins une personne accompagnée (bon d’orientation).';
+    if (typeNc(s) === 'Vente solidaire' && !remplies.length) return 'Ajoutez au moins une personne accompagnée.';
   }
-  if (cle === 'paiement' && typeNc(s) === 'BO' && !v.moyenPaiement) return 'Choisissez un moyen de paiement.';
+  if (cle === 'paiement' && typeNc(s) === 'Vente solidaire' && !v.moyenPaiement)
+    return 'Choisissez un moyen de paiement.';
   return '';
 }
 function allerEtapeCommande(cible) {
@@ -506,7 +507,7 @@ async function enregistrerCommande() {
     lignes: state.ncLignes,
     statutCommande: v.statutCommande,
     statutPaiement: sansPaiementNc(s) ? '' : v.statutPaiement,
-    moyenPaiement: sansPaiementNc(s) ? '' : t === 'RNum' ? 'Virement (RNum uniquement)' : v.moyenPaiement,
+    moyenPaiement: sansPaiementNc(s) ? '' : t === 'Relais Numérique' ? 'Virement (Relais Numérique)' : v.moyenPaiement,
     paiementSepare: !!(v.paiementSepare && personnes.length > 1 && v.moyenPaiement === 'Paiement en ligne (CB)'),
     personnes,
     modeLivraison: v.modeLivraison,

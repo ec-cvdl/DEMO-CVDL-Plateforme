@@ -123,13 +123,6 @@ document.addEventListener(
   },
   true,
 );
-function blocPrerequisCommande(c, statut) {
-  const e = etatServeurCommande(c);
-  const etat = e && e.etat;
-  if (!etat || etat.statut !== statut || !etat.etapeSuivante || !window.FicheCommande) return '';
-  // Composant partagé avec l'espace partenaire (fiche-commande.js)
-  return `<div class="rpd-prerequis">${window.FicheCommande.checklist(etat)}</div>`;
-}
 
 /** Historique d'une commande (onglet « Historique » côté serveur) — mis en cache, rechargé si
  *  plus vieux de 20 s (le dossier se ré-affiche après chaque action). */

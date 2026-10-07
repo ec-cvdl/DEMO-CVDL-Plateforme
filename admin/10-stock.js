@@ -92,9 +92,8 @@ const PALETTE_ANNEAUX = [
 function anneauUnique(lignes, formatValeur, taille) {
   taille = taille || 180;
   const total = lignes.reduce((s, l) => s + l.valeur, 0) || 1;
-  // conic-gradient CSS plutôt que des arcs SVG en stroke-dasharray : la dernière étape est
-  // forcée à 100% pile, donc aucun trou d'arrondi flottant possible entre segments — contraste
-  // avec l'ancienne version en SVG qui pouvait laisser un fin espace gris visible.
+  // conic-gradient plutôt que des arcs SVG : la dernière étape est forcée à 100 %, sans trou
+  // d'arrondi entre segments
   let cumulPct = 0;
   const stops = lignes
     .map((l, i) => {
@@ -131,27 +130,6 @@ function anneauUnique(lignes, formatValeur, taille) {
         }
       </div>
     </div>`;
-}
-function classementAnneaux(lignes, formatValeur) {
-  const total = lignes.reduce((s, l) => s + l.valeur, 0) || 1;
-  return `<div style="display:flex;flex-direction:column;gap:12px">
-    ${
-      lignes.length
-        ? lignes
-            .map(
-              (l, i) => `
-      <div style="display:flex;align-items:center;gap:12px">
-        ${ring(l.valeur / total, PALETTE_ANNEAUX[i % PALETTE_ANNEAUX.length], 32)}
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${echapper(l.label)}</div>
-          <div style="font-size:11.5px;opacity:0.6">${echapper(formatValeur ? formatValeur(l.valeur) : l.valeur)} · ${Math.round((l.valeur / total) * 100)}%</div>
-        </div>
-      </div>`,
-            )
-            .join('')
-        : '<p style="opacity:0.5;font-size:13px">Aucune donnée.</p>'
-    }
-  </div>`;
 }
 /* ============================================================
    Réglages

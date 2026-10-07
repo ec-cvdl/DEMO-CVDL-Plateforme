@@ -399,10 +399,9 @@ function sectionDepotVenteStock() {
       </div>
     </section>`;
 }
-/* Modale « Flotte » : la page flotte de la structure elle-même (même design, mêmes outils :
-   liste / fiches / comptabilité, statistiques, personnes, lieux…) intégrée dans l'admin — les
-   modifications sont donc exactement celles que voit la structure. Les appareils livrés sont
-   ajoutés à la flotte juste avant l'ouverture. */
+/* Modale « Flotte » : la page flotte de la structure intégrée dans l'admin (mêmes outils,
+   mêmes modifications que la structure). Les appareils livrés y sont ajoutés juste avant
+   l'ouverture. */
 async function ouvrirFlotteStructure(code, modalParent) {
   state.modal = { kind: 'flotte-structure', ref: code, chargement: true, modalParent: modalParent || null };
   render();

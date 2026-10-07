@@ -1,14 +1,12 @@
-/* ════════════════════════════════════════════════════════════════════════════════════
-   depannage-admin.js — onglet « Dépannage » de l'admin : arbres de décision proposés après le
-   choix du symptôme, avant la déclaration d'un SAV (pages sav.html / sav-beneficiaire.html).
+/* Onglet « Dépannage » de l'admin : arbres de décision proposés après le choix du symptôme,
+   avant la déclaration d'un SAV (sav.html, sav-beneficiaire.html).
    · Liste : arbres, statut, symptômes rattachés, statistiques (réglé sans SAV / SAV déclaré),
-     symptômes encore sans arbre, derniers parcours ;
-   · Éditeur : plan de l'arbre (à gauche), étape choisie (au centre), aperçu exact de ce que
-     verra la structure (à droite, depannage.js) ;
-   · Import du fichier .json de l'ancien outil d'arbres de décision (sauvegarde ou export).
-   S'appuie sur les fonctions globales de l'admin (admin/*.js) : jsonp, poster, posterEtat, etat, echapper,
-   icon, render, confirmerCvdl, motDePasse. Routes : src/routes/depannage.js.
-   ════════════════════════════════════════════════════════════════════════════════════ */
+     symptômes sans arbre, derniers parcours ;
+   · Éditeur : plan de l'arbre (à gauche), étape choisie (au centre), aperçu de ce que verra la
+     structure (à droite, depannage.js) ;
+   · Import du fichier .json de l'outil externe d'arbres de décision.
+   Fonctions globales de l'admin utilisées : jsonp, poster, posterEtat, etat, echapper, icon,
+   render, confirmerCvdl, motDePasse. Routes : src/routes/depannage.js. */
 const dpa = {
   charge: false,
   chargement: false,

@@ -182,11 +182,10 @@ function icon(name, size) {
   }
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${ICONES[name] || ICONES.package}</svg>`;
 }
-/** Ouvre le document généré (bon de livraison, devis, facture...) dans un nouvel onglet — un
- *  lien data: ouvert directement en target="_blank"/window.open est bloqué en silence par les
- *  navigateurs récents (Chrome/Edge) : l'onglet s'ouvre une fraction de seconde puis se
- *  referme, sans erreur JS. On le convertit en Blob + URL objet, qui n'est pas concerné par
- *  cette restriction ; un vrai lien (modèle Google Sheets historique) s'ouvre tel quel. */
+/**
+ * Ouvre un document généré dans un nouvel onglet. Un lien data: ouvert directement est
+ * bloqué par les navigateurs : on le convertit en Blob. Un vrai lien s'ouvre tel quel.
+ */
 function ouvrirDocumentGenere(url) {
   const correspondance = String(url || '').match(/^data:([^;]+);[^,]*base64,(.+)$/s);
   if (correspondance) {
@@ -243,80 +242,13 @@ function pilulesNumerosSerie(texteNumeros) {
 function pilulesCodes(texteCodes) {
   return window.pilulesSeriesCvdl ? window.pilulesSeriesCvdl(texteCodes, { code: true }) : '';
 }
-/** Infos de contact (personne/téléphone/email) regroupées en une seule pilule, séparées par
- *  des "|" — plutôt que 3 pilules .tag distinctes de taille différente des pilules violette/
- *  rouge ci-dessus. Segments absents simplement omis (jamais de "|" en trop). */
-function piluleContact(nom, telephone, email) {
-  const segments = [];
-  if (nom)
-    segments.push(
-      `<span style="display:inline-flex;align-items:center;gap:6px">${icon('personne', 13)}${echapper(nom)}</span>`,
-    );
-  if (telephone)
-    segments.push(
-      `<span style="display:inline-flex;align-items:center;gap:6px">${icon('telephone_touches', 13)}${echapper(telephone)}</span>`,
-    );
-  if (email)
-    segments.push(
-      `<span style="display:inline-flex;align-items:center;gap:6px">${icon('mail', 13)}${echapper(email)}</span>`,
-    );
-  if (!segments.length) return '';
-  return `<span class="rp-pilule-neutre">${segments.join('<span style="opacity:0.35">|</span>')}</span>`;
-}
 // Groupes de commande : chaque produit appartient à l'un des trois ; une structure peut être
 // limitée à un sous-ensemble (plusieurs cochés = profil "Mixte" dans les formulaires).
 const GROUPES_COMMANDE = ['Connexion', 'Équipement', 'Accompagnement'];
 const TECTECH_TYPES = ['ORDINATEUR_FIXE', 'ORDINATEUR_PORTABLE', 'SMARTPHONE', 'TABLETTE', 'TELEPHONE_A_TOUCHES'];
 const TECTECH_CATEGORIES = ['PREMIUM', 'A', 'B', 'C', 'D'];
 
-/** Sélecteur "Groupe(s) de commande" réutilisé pour une structure (accès catalogue) — un select
- *  Tout/un groupe précis/Mixte, avec des cases à cocher qui apparaissent seulement sur Mixte.
- *  `valeurActuelle` est la liste CSV existante (ex. "Connexion,Équipement" ou "" pour Tout). */
-function selecteurGroupesCommande(idPrefixe, valeurActuelle) {
-  const groupesActifs = (valeurActuelle || '')
-    .split(',')
-    .map((g) => g.trim())
-    .filter(Boolean);
-  const estMixte = groupesActifs.length > 1;
-  const modeInitial = !groupesActifs.length ? 'tout' : estMixte ? 'mixte' : groupesActifs[0];
-  return `
-    <select class="input" id="${idPrefixe}-mode" data-groupes-mode="${idPrefixe}">
-      <option value="tout" ${modeInitial === 'tout' ? 'selected' : ''}>Tout le catalogue</option>
-      ${GROUPES_COMMANDE.map((g) => `<option value="${echapper(g)}" ${modeInitial === g ? 'selected' : ''}>${echapper(g)} uniquement</option>`).join('')}
-      <option value="mixte" ${modeInitial === 'mixte' ? 'selected' : ''}>Mixte (plusieurs groupes)</option>
-    </select>
-    <div id="${idPrefixe}-mixte" style="display:${modeInitial === 'mixte' ? 'flex' : 'none'};flex-direction:column;gap:6px;margin-top:8px">
-      ${GROUPES_COMMANDE.map((g) => `<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="${idPrefixe}-case" value="${echapper(g)}" ${groupesActifs.includes(g) ? 'checked' : ''}>${echapper(g)}</label>`).join('')}
-    </div>`;
-}
-/** Lit la valeur courante du sélecteur, sous forme de CSV prête à envoyer au backend. */
-function lireGroupesCommande(idPrefixe) {
-  const mode = $(`${idPrefixe}-mode`).value;
-  if (mode === 'tout') return '';
-  if (mode === 'mixte')
-    return Array.from(document.querySelectorAll(`.${idPrefixe}-case:checked`))
-      .map((c) => c.value)
-      .join(',');
-  return mode;
-}
 const MOYENS_PAIEMENT_STRUCTURE = ['Paiement en ligne (CB)', 'Chèque', 'Espèces', 'Comptoir solidaire'];
-/** Moyens de paiement autorisés (surtout pertinent pour les structures BO) — simples cases à
- *  cocher, aucune cochée = tous, même principe que côté self-service Interne. */
-function selecteurMoyensPaiement(idPrefixe, valeurActuelle) {
-  const actifs = (valeurActuelle || '')
-    .split(',')
-    .map((m) => m.trim())
-    .filter(Boolean);
-  return MOYENS_PAIEMENT_STRUCTURE.map(
-    (m) =>
-      `<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" class="${idPrefixe}-case" value="${echapper(m)}" ${actifs.includes(m) ? 'checked' : ''}>${echapper(m)}</label>`,
-  ).join('');
-}
-function lireMoyensPaiement(idPrefixe) {
-  return Array.from(document.querySelectorAll(`.${idPrefixe}-case:checked`))
-    .map((c) => c.value)
-    .join(',');
-}
 
 const ICONES_PRODUIT_OPTIONS = [
   { value: '', label: 'Automatique (déduite du nom)' },
@@ -437,24 +369,4 @@ function iconeProduit(nom, icone) {
   if (/(portable|laptop)/.test(n)) return 'portable';
   if (/(fixe|bureau|desktop|tour)/.test(n)) return 'fixe';
   return 'package';
-}
-/** iconeCentrale (optionnel) : glyphe affiché au centre de l'anneau — html d'un icon(...),
- *  utilisé pour les cartes SAV du kanban (icône du statut, comme les cartes commandes qui
- *  affichent déjà l'icône de leur étape). Laissé à null ailleurs (ex. anneaux de stats) : rien
- *  ne change pour ces usages-là. */
-function ring(fraction, color, size, iconeCentrale, epaisseur) {
-  size = size || 32;
-  epaisseur = epaisseur || 4;
-  // Marge inchangée (size/2 - 4) pour l'épaisseur par défaut — ne pas casser le rendu des
-  // usages existants (cartes kanban) — un peu plus de marge en plus au-delà de 4px de trait,
-  // pour qu'un trait plus épais (nouvelle carte "Vue du jour") ne déborde pas du viewBox.
-  const r = size / 2 - 4 - Math.max(0, epaisseur - 4),
-    c = 2 * Math.PI * r,
-    offset = c * (1 - fraction);
-  const svg = `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="flex:none">
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="var(--color-neutral-200)" stroke-width="${epaisseur}"/>
-    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${epaisseur}" stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 ${size / 2} ${size / 2})"/>
-  </svg>`;
-  if (!iconeCentrale) return svg;
-  return `<span style="position:relative;display:inline-flex;flex:none;width:${size}px;height:${size}px">${svg}<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:${color}">${iconeCentrale}</span></span>`;
 }

@@ -40,6 +40,14 @@ function vueReglages() {
 
 
     ${sectionReglages({
+      ic: 'building',
+      teinte: 'vert',
+      titre: 'Périmètre du lancement',
+      desc: 'Les types de structures proposés à la création, et l’ouverture des structures partenaires. Un type masqué n’est plus proposé ; les structures existantes continuent de fonctionner.',
+      corps: vuePerimetre(r),
+    })}
+
+    ${sectionReglages({
       ic: 'lien_externe',
       teinte: 'bleu',
       titre: 'Liens utiles',
@@ -56,7 +64,7 @@ function vueReglages() {
       <div class="rg-tuiles">
         ${[
           ['data-ouvrir-modele-bon', 'Bon de livraison', 'À chaque préparation de commande'],
-          ['data-ouvrir-modele-devis', 'Devis', 'Vente solidaire, Projets'],
+          ['data-ouvrir-modele-devis', 'Devis', 'Relais Numérique, Projets'],
           ['data-ouvrir-modele-facture', 'Facture', 'Après livraison ou en fin de mois'],
           ['data-ouvrir-modele-attestation', 'Attestation', 'Paiement des personnes accompagnées'],
         ]
@@ -71,7 +79,6 @@ function vueReglages() {
         <p class="rg-aide">Colle l'ID (ou le lien complet) du classeur/document modèle — ignoré si un modèle HTML est téléversé ci-dessus pour le même document.</p>
         <div class="rg-grille">
           ${champ('ID modèle — Bon de livraison', `<input class="input" id="rg-modele-bon-livraison" value="${echapper(r.modeleBonLivraison || '')}" placeholder="ID ou lien du classeur modèle">`)}
-          ${champ("ID modèle — Bon d'orientation", `<input class="input" id="rg-modele-bon-orientation" value="${echapper(r.modeleBonOrientation || '')}" placeholder="ID ou lien du classeur modèle">`)}
           ${champ('ID modèle — Attestation de paiement', `<input class="input" id="rg-modele-attestation" value="${echapper(r.modeleAttestationPaiement || '')}" placeholder="ID ou lien du document modèle">`)}
           ${champ('ID modèle — Facturation', `<input class="input" id="rg-modele-facturation" value="${echapper(r.modeleFacturation || '')}" placeholder="ID ou lien du classeur modèle">`)}
         </div>
@@ -148,6 +155,29 @@ function sectionReglages({ ic, teinte, titre, desc, corps, cls }) {
       <div class="rg-corps">${corps}</div>
     </section>`;
 }
+function vuePerimetre(r) {
+  const actifs = String(r.typesActifs || 'rn,interne,bo').split(',');
+  return `
+      <div class="rg-tuiles">${TYPES_STRUCTURE.map(
+        (t) =>
+          `<label class="rg-tuile"><input type="checkbox" class="rg-type-actif" value="${t.cle}" ${actifs.includes(t.cle) ? 'checked' : ''}><span class="rg-tuile-txt"><b>${echapper(t.libelle)}</b><small>${echapper(t.aide)}</small></span></label>`,
+      ).join('')}</div>
+      <label class="rg-tuile"><input type="checkbox" id="rg-partenaires-actifs" ${r.partenairesActifs ? 'checked' : ''}><span class="rg-tuile-txt"><b>Structures partenaires</b><small>Une Interne crée des Ventes solidaires rattachées, les valide et les sert depuis sa flotte. Fermé : elles fonctionnent comme des Ventes solidaires autonomes.</small></span></label>
+      <div class="rg-actions"><button type="button" class="btn btn-primary" id="rg-perimetre-enregistrer">Enregistrer le périmètre</button></div>`;
+}
+async function enregistrerPerimetre() {
+  const typesActifs = [...document.querySelectorAll('.rg-type-actif:checked')].map((c) => c.value).join(',');
+  if (!typesActifs) {
+    etat('Gardez au moins un type de structure', 'erreur');
+    return;
+  }
+  const partenairesActifs = $('rg-partenaires-actifs').checked;
+  const r = await poster({ action: 'reglages-set', typesActifs, partenairesActifs });
+  if (r.ok) {
+    Object.assign(state.reglages, { typesActifs, partenairesActifs });
+    etat('Périmètre enregistré', 'succes');
+  } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
+}
 async function enregistrerQuantitesMax() {
   const qte = parseInt($('rg-qte-max').value, 10),
     esn = parseInt($('rg-qte-max-esn').value, 10);
@@ -193,8 +223,10 @@ async function retirerPartagesPublics() {
   }
   if (bouton) bouton.disabled = false;
 }
-/** Mode démo : bouton désactivé tant que le mot de confirmation exact n'est pas tapé — filet de
- *  sécurité minimal avant une action destructrice qui efface toutes les données réelles. */
+/**
+ * Mode démo : bouton actif seulement quand le mot de confirmation exact est tapé (action
+ * destructrice).
+ */
 async function lancerReinitialisationDemo() {
   if ($('rg-demo-confirmation').value.trim() !== 'RÉINITIALISER') return;
   if (
@@ -254,7 +286,6 @@ async function enregistrerModelesSheets() {
   bouton.disabled = true;
   const champs = {
     modeleBonLivraison: extraireIdDepuisLien($('rg-modele-bon-livraison').value),
-    modeleBonOrientation: extraireIdDepuisLien($('rg-modele-bon-orientation').value),
     modeleAttestationPaiement: extraireIdDepuisLien($('rg-modele-attestation').value),
     modeleFacturation: extraireIdDepuisLien($('rg-modele-facturation').value),
   };
@@ -312,4 +343,5 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#rg-demo-lancer')) lancerReinitialisationDemo();
   if (e.target.closest('#rg-retirer-partages')) retirerPartagesPublics();
   if (e.target.closest('#rg-qte-enregistrer')) enregistrerQuantitesMax();
+  if (e.target.closest('#rg-perimetre-enregistrer')) enregistrerPerimetre();
 });

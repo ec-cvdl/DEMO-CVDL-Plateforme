@@ -9,12 +9,10 @@ function urlSure(u) {
   if (!/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^\/\//.test(v)) return v; // relatif (même site)
   return '#';
 }
-// Adresse de l’API : constante API définie dans api.js (fixe, jamais lue du stockage).
-function urlApiActive() {
-  return API;
-}
-/** Le mot de passe admin ne voyage plus dans l'URL (journaux, historique) mais dans l'en-tête
- *  X-CVDL-Admin (encodé : un en-tête HTTP n'accepte pas tous les caractères). */
+/**
+ * Le mot de passe admin passe dans l'en-tête X-CVDL-Admin, jamais dans l'URL (encodé : un
+ * en-tête HTTP n'accepte pas tous les caractères).
+ */
 function enteteAdmin(mdp) {
   return mdp ? { 'X-CVDL-Admin': encodeURIComponent(mdp) } : {};
 }
@@ -88,16 +86,3 @@ function etat(message, type, duree) {
 }
 
 let motDePasse = '';
-/** Trajectoires aléatoires pour les formes décoratives du tableau de bord ("À décider
- *  maintenant") — direction, distance et vitesse tirées au sort une seule fois par session
- *  (pas à chaque rendu, sinon les formes changeraient de trajectoire à chaque re-rendu du
- *  tableau de bord). Un vrai tirage aléatoire plutôt qu'un jeu figé de préréglages horizontal/
- *  vertical/diagonal — n'importe quel angle est possible, pas seulement ces 3-là. */
-const KPI_FORMES_TRAJECTOIRES = Array.from({ length: 4 }, () => ({
-  x0: Math.round(Math.random() * 240 - 120),
-  y0: Math.round(Math.random() * 240 - 120),
-  x1: Math.round(Math.random() * 240 - 120),
-  y1: Math.round(Math.random() * 240 - 120),
-  duree: (14 + Math.random() * 14).toFixed(1),
-  delai: (-Math.random() * 15).toFixed(1),
-}));

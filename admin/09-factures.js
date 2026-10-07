@@ -34,13 +34,9 @@ function vueFactures() {
   if (state.docsFiltre === 'facture-impayee')
     dossiers = dossiers.filter(({ f }) => f && f.statut !== 'Payée' && f.statut !== 'Annulée');
 
-  // Couleur de fond calquée sur le statut réel de chaque pièce (via DOC_META/BADGE), plutôt
-  // que sur une teinte fixe par colonne — un dossier entièrement soldé (devis accepté, facture
-  // payée, rapproché) ressort donc visuellement tout en vert/turquoise, alors qu'avant les 3
-  // blocs gardaient toujours la même couleur qu'ils soient réglés ou non, ce qui ne donnait
-  // aucune impression de "clôturé". `vert` (paiement reçu) recolore TOUT — icône, référence et
-  // libellé de statut compris, pas seulement le fond — sinon l'icône et le texte gardaient la
-  // couleur de l'ancien statut malgré un fond vert, contradictoire à l'œil.
+  // Couleur de fond selon le statut réel de chaque pièce (DOC_META / BADGE) : un dossier soldé
+  // (devis accepté, facture payée, rapproché) ressort en vert. `vert` (paiement reçu) recolore
+  // aussi l'icône, la référence et le statut.
   const infosDevis = (d, vert) =>
     d
       ? {
@@ -117,10 +113,8 @@ function vueFactures() {
 
   const infosRappro = (c, f) => {
     if (!f) return { present: false, bg: null, html: `<span style="font-size:12.5px">—</span>` };
-    // Trois niveaux, pas deux : Non rapproché (rouge, rien fait) → Rapproché (jaune, pointé
-    // mais pas clos) → Clôturé (vert, terminé). Avant ce changement, "Rapproché" et "Clôturé"
-    // partageaient la même couleur verte — plus de distinction visuelle entre "en cours" et
-    // "vraiment terminé".
+    // Trois niveaux : Non rapproché (rouge) → Rapproché (jaune, pointé mais pas clos) →
+    // Clôturé (vert).
     const b =
       c.statutComptable === 'Clôturé'
         ? BADGE['tag-accent-2']
@@ -128,9 +122,8 @@ function vueFactures() {
           ? BADGE['tag-warn']
           : { bg: 'var(--color-corail-100)', fg: 'var(--color-corail-700)' };
     const icone = c.statutComptable === 'Clôturé' ? 'check' : c.statutComptable === 'Rapproché' ? 'clock' : 'alert';
-    // Ajustement optique : un triangle (alerte) ou une aiguille d'horloge, même parfaitement
-    // centrés géométriquement dans leur cadre, paraissent visuellement décalés — correction
-    // manuelle d'un pixel, absente pour "check" qui n'a pas ce problème.
+    // ajustement optique d'un pixel pour le triangle et l'horloge, qui paraissent décalés une
+    // fois centrés
     const decalageIcone = icone === 'alert' ? '-1px' : icone === 'clock' ? '0.5px' : '0px';
     return {
       present: true,

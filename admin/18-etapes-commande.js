@@ -519,10 +519,8 @@ async function confirmerSeriesCommande(ref) {
     if (r.ok) {
       c.numerosSerie = valeur;
       (state.confirmSubEtapes[c.ligne] ||= {}).series = true;
-      // BO uniquement : réécrit "personnes" pour associer chaque bénéficiaire à son numéro —
-      // même format pipe (nom|dateNaissance|produit|numeroSerie) que lisent déjà le suivi public,
-      // les attestations et la flotte structure, jusqu'ici jamais rempli en pratique faute
-      // d'écran pour le faire.
+      // BO : réécrit « personnes » pour associer chaque personne à son numéro de série, au format
+      // nom|dateNaissance|produit|numeroSerie (lu par le suivi, les attestations et la flotte)
       const structure = state.structures.find((s) => s.code === c.code);
       if (structure && structure.bo) {
         const unitesAssoc = unitesSeriePersonnes(c);
@@ -626,19 +624,6 @@ async function enregistrerColissimoCommande(ref) {
     render();
   }
 }
-async function genererBonLivraisonCommande(ref) {
-  const c = state.commandes.find((x) => x.reference === ref);
-  if (!c) return;
-  const r = await posterEtat(
-    { action: 'commande-generer-bon-livraison', ligne: c.ligne },
-    'Génération du bon…',
-    'Bon de livraison généré',
-  );
-  if (r.ok) {
-    c.bonLivraison = r.url;
-    render();
-  }
-}
 /** Valide l'étape "Préparée" : enregistre les numéros de série, génère le bon de livraison,
  *  l'envoie par mail à la structure, puis fait avancer le statut — même enchaînement que
  *  côté back (juste regroupé en un seul clic ici). */
@@ -647,8 +632,7 @@ async function validerPreparationCommande(ref, btn) {
   if (!c) return;
   if (btn) btn.disabled = true;
   try {
-    // Bon de livraison désactivé temporairement (demande explicite) : on passe directement au
-    // statut suivant, sans tenter de le générer ni de l'envoyer.
+    // bon de livraison désactivé : passage direct au statut suivant
     const rStatut = await poster({
       action: 'update',
       ligne: c.ligne,
@@ -724,10 +708,11 @@ async function enregistrerLienPaiement(ref) {
     render();
   }
 }
-/** Variante par bénéficiaire du champ ci-dessus (paiement séparé, ≥2 personnes) — un champ par
- *  nom plutôt qu'une zone de texte unique. Les lignes vides sont conservées à leur position tant
- *  que tous les liens ne sont pas encore saisis, pour que chaque ligne reste à l'index du bon
- *  bénéficiaire (voir nomsPersonnesCommande) au lieu de décaler les suivants. */
+/**
+ * Variante par personne du champ ci-dessus (paiement séparé, 2 personnes ou plus) : un champ
+ * par nom. Les lignes vides gardent leur position pour rester à l'index de la bonne personne
+ * (voir nomsPersonnesCommande).
+ */
 async function enregistrerLiensPaiementPersonnes(ref) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;

@@ -90,11 +90,8 @@ async function ajouterStatutSav() {
   } else $('rp-retour-modale').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur)}</div>`;
 }
 
-/* ============================================================
-   Modèle de bon de livraison — HTML téléversé, hors Google
-   Workspace (remplace le modèle Google Sheets historique dès
-   qu'un modèle est présent).
-   ============================================================ */
+/* Modèle de bon de livraison : HTML téléversé, prioritaire sur le modèle
+   Google Sheets. */
 const JETONS_MODELE_BON = [
   'STRUCTURE',
   'ADRESSE',

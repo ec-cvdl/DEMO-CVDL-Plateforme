@@ -17,9 +17,7 @@ function vuePasseportMateriel() {
     ${
       r && r.ok
         ? (() => {
-            // Une seule carte pour tout, comme la page passeport.html standalone — avant, ces mêmes
-            // informations étaient éparpillées sur jusqu'à 4 cartes séparées (info, origine tec.tech,
-            // tickets SAV, historique), ce qui rendait la page difficile à parcourir d'un coup d'œil.
+            // une seule carte pour tout, comme passeport.html
             const infosCompletes = r.reconditionneurOriginal !== undefined || !!r.tectech;
             const lignes = [
               !r.sourceTecTechUniquement ? ['N° de commande', echapper(r.referenceCommande), true] : null,

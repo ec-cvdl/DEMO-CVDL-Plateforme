@@ -1,9 +1,7 @@
 /* Admin CVDL — tableau de bord, fil des priorités, notifications. Scripts chargés dans l'ordre par admin.html (fonctions globales partagées). */
 function commandesUrgentes() {
-  // Volontairement limité aux étapes où une action reste à faire (Reçue/Validée/Préparée) —
-  // une fois "En cours de livraison" ou "Livrée", ce n'est plus une notification actionnable :
-  // le fil des priorités doit rester un centre de notifs des VRAIS trucs à vérifier, pas un
-  // rappel permanent de tout ce qui a été marqué urgent un jour.
+  // Seulement les étapes où une action reste à faire (Reçue, Validée, Préparée) : une commande
+  // en livraison ou livrée n'est plus une priorité.
   return state.commandes.filter(
     (c) =>
       c.dateLivraisonSouhaitee === 'ASAP' && !['En cours de livraison', 'Livrée', 'Annulée'].includes(c.statutCommande),
@@ -43,11 +41,10 @@ function commandesLivraisonDepassee() {
     return d && !Number.isNaN(d.getTime()) && d < aujourdhui;
   });
 }
-/** Renommé mentalement "à clôturer" (le statut comptable final visé) — un dossier facturé pas
- *  encore clôturé, qu'il ait été payé en ligne ou autrement (l'ancienne version exigeait
- *  `statutPaiement === 'Payé'`, qui ne devient vrai que via le paiement en ligne — un règlement
- *  par virement ou chèque, marqué "payé" uniquement au moment du rapprochement lui-même,
- *  n'aurait donc jamais pu apparaître ici). */
+/**
+ * Dossiers « à clôturer » : facturés mais pas encore clôturés, payés en ligne ou
+ * autrement.
+ */
 function commandesARapprocher() {
   return state.commandes.filter((c) => c.referenceFacture && c.statutComptable !== 'Clôturé');
 }
@@ -448,9 +445,8 @@ function ligneFeedPriorite(f) {
     <span class="rp-fil-statut"><span class="tag ${f.tagCls || ''}" style="${f.tagStyle || ''}">${echapper(f.statut)}</span>${f.urgent ? '<span class="rp-fil-urgent">Urgent</span>' : ''}</span>
     <span class="rp-fil-fleche">${icon('arrow', 15)}</span>
   </div>`;
-  // Une seule colonne flexible sous l'icône (au lieu de 4 blocs flex:none en concurrence sur la
-  // largeur) — le tag de statut, potentiellement long ("Date dépassée, à vérifier"), a sa propre
-  // ligne plutôt que de forcer tout le reste à se tasser dans un panneau étroit (340px).
+  // une colonne flexible sous l'icône ; le statut, parfois long, a sa propre ligne dans le
+  // panneau étroit (340 px)
   return `<div ${f.attrs} style="display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3);cursor:pointer;${f.urgent ? `background:color-mix(in srgb, ${f.badgeBg} 45%, var(--color-surface))` : ''}">
     <span style="width:34px;height:34px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center;background:${f.badgeBg};color:${f.badgeFg}">${f.icon}</span>
     <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">

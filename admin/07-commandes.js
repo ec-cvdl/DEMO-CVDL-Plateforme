@@ -12,17 +12,6 @@ function pastilleStatutCommande(statut) {
   const coul = COULEUR_STATUT_COMMANDE[statut] || '#8FA3B3';
   return `<span class="rp-statut" style="--st:${coul}">${echapper(statut === 'En cours de livraison' ? 'En livraison' : statut)}</span>`;
 }
-function articlesIllustres(c, max) {
-  const lignes = c.lignes || [];
-  const tout = lignes.map((l) => {
-    const p = state.produits.find((x) => x.nom === l.produit);
-    return `<span class="rp-art" title="${echapper(l.quantite + ' × ' + l.produit)}">${illustrationProduitAdmin(l.produit, p ? p.icone : '', 24)}<b>${parseInt(l.quantite, 10) || 0}</b></span>`;
-  });
-  return (
-    tout.slice(0, max || 4).join('') +
-    (tout.length > (max || 4) ? `<span class="rp-art-plus">+${tout.length - (max || 4)}</span>` : '')
-  );
-}
 /** Badge « Urgent » (commande ASAP) : magenta tant qu'elle n'est pas livrée, vert une fois livrée. */
 function badgeUrgentCommande(c) {
   if (c.dateLivraisonSouhaitee !== 'ASAP' || c.statutCommande === 'Annulée') return '';
@@ -271,37 +260,6 @@ function vueCommandes() {
     }
     ${state.commandesFiltreStatut === 'ACTION' ? commandesParAction(liste) : tableauCommandes(liste)}`;
 }
-function kanbanCommandes(liste) {
-  return `
-    <div class="rp-kanban">
-      ${ORDER_STATUSES.map((statut) => {
-        const items = liste.filter((c) => c.statutCommande === statut);
-        const coul = COULEUR_STATUT_COMMANDE[statut] || '#8FA3B3';
-        return `
-        <div class="rp-kb-col" style="--st:${coul}">
-          <div class="rp-kb-tete"><span class="rp-kb-point"></span><b>${echapper(statut === 'En cours de livraison' ? 'En livraison' : statut)}</b><span>${items.length}</span></div>
-          <div class="rp-kanban-zone rp-kb-zone" data-kanban-colonne="${echapper(statut)}">
-          ${
-            items
-              .map((c) => {
-                const idx = ORDER_STATUSES.indexOf(c.statutCommande);
-                const montant = c.montantFacture != null ? c.montantFacture : c.montantEstime;
-                return `
-            <div class="rp-kb-carte" draggable="true" data-commande-ouvrir="${echapper(c.reference)}" data-kanban-carte="${echapper(c.reference)}">
-              <div class="rp-kb-l1"><b>${echapper(c.reference)}</b>${indicateursCommande(c, { urgent: true })}</div>
-              <small class="rp-kb-struct">${echapper(c.nom)}</small>
-              <div class="rp-kb-arts">${articlesIllustres(c, 3)}</div>
-              <div class="rp-kb-l2"><small>${echapper(c.date)}</small>${montant != null && !structureExclueDevisFacture(c) ? `<b>${formaterMontant(montant)}</b>` : ''}</div>
-              <div class="rp-kb-barres">${ORDER_STATUSES.map((_, i) => `<i class="${i <= idx ? 'on' : ''}"></i>`).join('')}</div>
-            </div>`;
-              })
-              .join('') || '<div class="rp-kb-vide">Aucune</div>'
-          }
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`;
-}
 let ligneCommandeEnGlisse = null;
 let ligneSavEnGlisse = null;
 let materielDragLigne = null;
@@ -468,11 +426,8 @@ function vueKpiListing(quoi) {
         };
       },
     },
-    // Bug corrigé : cette liste utilisait docsEnAttenteListe() (devis/factures au statut "En
-    // attente"), une donnée totalement différente du montant/nombre affiché sur la case "À
-    // clôturer" du tableau de bord (qui vient de commandesARapprocher(), les factures à
-    // rapprocher/clôturer) — la carte annonçait un nombre non nul, mais cliquer dessus ouvrait
-    // une liste vide ou sans rapport, puisqu'elle interrogeait une tout autre donnée.
+    // même source que la case « À clôturer » du tableau de bord (commandesARapprocher), pour que
+    // le nombre affiché corresponde à la liste
     facturation: {
       titre: 'Factures à clôturer',
       liste: commandesARapprocher(),

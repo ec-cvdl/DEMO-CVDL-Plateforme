@@ -40,7 +40,7 @@ const state = {
   documentGenere: null, // état du panneau "voir/générer/envoyer" ouvert sur un devis ou une facture — { type, ref, chargement, url, erreur, envoiChargement, envoiOk }
   ncCode: '', // structure choisie dans cette même modale
   reglages: {}, // chargé au démarrage (action:'reglages'), utilisé par la page Réglages
-  tectechOrigine: {}, // { [referenceSav]: 'chargement' | { ok, reconditionneur, donateur, structureDonatrice } } — chargé à la demande, pas systématiquement (voir sav-origine-tectech)
+  tectechOrigine: {}, // { [referenceSav]: 'chargement' | { ok, reconditionneur, donateur, structureDonatrice } }, chargé à la demande
   passeportRecherche: '',
   passeportResultat: null,
   passeportChargement: false, // onglet Passeport matériel (admin) — recherche par numéro de série, accès complet (pas de restriction structure), inclut tec.tech
@@ -166,8 +166,7 @@ async function connecter(valeurForcee) {
       location.href = 'projet.html#edition';
       return;
     }
-    // La fenêtre de connexion (et son flou) reste affichée pendant tout le chargement des
-    // données — la masquer avant laissait voir l'appli vide un court instant.
+    // la fenêtre de connexion reste affichée pendant le chargement, pour ne pas montrer l'admin vide
     $('btn-connexion').textContent = 'Chargement des données…';
     await chargerTout();
     const snDepart = lireHash().sn;
@@ -192,9 +191,8 @@ async function connecter(valeurForcee) {
 
 async function chargerTout() {
   etat('Chargement…', 'chargement');
-  // limite:-1 (commandes) / limite:0 (sav, devis, factures) → tout l'historique, pas une page :
-  // c'est le vrai comportement du back (voir routes/*.js), pas une limite de 500 qu'on s'était
-  // fixée à tort — nécessaire pour que les statistiques portent sur l'ensemble des données.
+  // limite -1 (commandes) / 0 (SAV, devis, factures) : tout l'historique, pour que les
+  // statistiques portent sur l'ensemble des données
   const compta = state.role === 'compta'; // rôle Comptabilité : ni SAV ni réglages
   const [rc, rs, rss, rst, rd, rf, rp, rr, rdi] = await Promise.all([
     jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }).catch(() => null),
@@ -237,7 +235,7 @@ const NAV_DEFS = [
   { key: 'dashboard', label: 'Tableau de bord', ic: 'dashboard' },
   { key: 'commandes', label: 'Commandes', ic: 'cart' },
   { key: 'sav', label: 'SAV', ic: 'wrench' },
-  { key: 'depannage', label: 'Dépannage', ic: 'loupe_diagnostic' }, // arbres de décision avant SAV (depannage-admin.js)
+  { key: 'depannage', label: 'Dépannage', ic: 'loupe_diagnostic' }, // arbres de décision avant SAV (admin/31-depannage.js)
   { key: 'factures', label: 'Devis / Factures', ic: 'receipt' },
   { key: 'finance', label: 'Finances', ic: 'carte_paiement' }, // facturé / encaissé, territoires, impayés, relances (finance-admin.js)
   { key: 'stock', label: 'Stock', ic: 'package' },
@@ -251,9 +249,10 @@ const NAV_DEFS = [
   { key: 'reglages', label: 'Réglages', ic: 'gear' },
 ];
 
-/** Navigation entre onglets synchronisée avec l'historique du navigateur — bouton retour/
- *  avant du navigateur fonctionne comme changer d'onglet, sans recharger la page ni perdre
- *  les données déjà chargées. */
+/**
+ * Navigation entre onglets liée à l'historique du navigateur : retour / avant changent
+ * d'onglet sans recharger la page.
+ */
 /** Onglet + paramètres lus dans l'ancre (#passeport?sn=XXX). */
 function lireHash() {
   const [onglet, qs] = location.hash.slice(1).split('?');
@@ -658,9 +657,8 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  // Capture les champs texte du devis libre AVANT tout re-rendu déclenché par cette même
-  // modale (ajout/retrait de ligne) — sinon ils repartaient à vide à chaque fois, puisque leur
-  // contenu ne vivait que dans le DOM, jamais dans state (voir ndStructureNom et consorts).
+  // on capture les champs du devis libre avant tout nouveau rendu de la modale (ajout ou
+  // retrait de ligne), sinon leur saisie serait perdue
   if (state.modal && state.modal.kind === 'devis' && state.modal.libre && $('cdl-structure')) {
     state.ndStructureNom = $('cdl-structure').value;
     state.ndEmail = $('cdl-email').value;

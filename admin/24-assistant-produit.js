@@ -18,7 +18,7 @@ const ETAPES_PRODUIT = [
     titre: 'Prix et stock',
     ill: 'facture',
     h: 'Prix et stock',
-    p: 'Le prix standard et le prix Vente solidaire / RNum, le stock de départ.',
+    p: 'Le prix standard et le prix Relais Numérique, le stock de départ.',
   },
   {
     cle: 'caracteristiques',
@@ -164,7 +164,7 @@ function etapeCpPrix(v) {
       <h4>Prix</h4>
       <div class="csw-grille">
         <div class="field"><label for="cp-prix-standard">Prix standard (€) *</label><input class="input" id="cp-prix-standard" type="number" step="0.01" min="0" inputmode="decimal" value="${echapper(v['cp-prix-standard'])}"></div>
-        <div class="field"><label for="cp-prix-rn">Prix Vente solidaire / RNum (€) *</label><input class="input" id="cp-prix-rn" type="number" step="0.01" min="0" inputmode="decimal" value="${echapper(v['cp-prix-rn'])}"></div>
+        <div class="field"><label for="cp-prix-rn">Prix Relais Numérique (€) *</label><input class="input" id="cp-prix-rn" type="number" step="0.01" min="0" inputmode="decimal" value="${echapper(v['cp-prix-rn'])}"></div>
         <div class="field"><label for="cp-prix-revente-max">Prix de revente maximal (€) <em>(facultatif)</em></label><input class="input" id="cp-prix-revente-max" type="number" step="0.01" min="0" inputmode="decimal" value="${echapper(v['cp-prix-revente-max'])}" placeholder="Pas de plafond"><small class="cpw-aide">Plafond du prix auquel une structure peut revendre l’appareil (ex. Relais Numériques).</small></div>
       </div>
     </section>
@@ -258,7 +258,7 @@ function etapeCpRecap(v) {
     ])}
     ${bloc(1, 'Prix et stock', [
       ['Prix standard', euros(v['cp-prix-standard'])],
-      ['Prix RNum', euros(v['cp-prix-rn'])],
+      ['Prix Relais Numérique', euros(v['cp-prix-rn'])],
       ['Revente max.', v['cp-prix-revente-max'] ? euros(v['cp-prix-revente-max']) : 'Pas de plafond'],
       ['Stock', v['cp-stock']],
       ['Si indisponible', v['cp-message-rupture']],
@@ -376,7 +376,7 @@ function vueCreerProduit() {
     <div class="cp-section"><div class="rp-surtitre">Prix et stock</div>
     <div class="cp-grille2">
     ${champ('Prix standard (€) *', `<input class="input" id="cp-prix-standard" type="number" step="0.01" value="${p ? echapper(p.prixStandard) : ''}">`)}
-    ${champ('Prix Vente solidaire / RNum (€) *', `<input class="input" id="cp-prix-rn" type="number" step="0.01" value="${p ? echapper(p.prixRN) : ''}">`)}
+    ${champ('Prix Relais Numérique (€) *', `<input class="input" id="cp-prix-rn" type="number" step="0.01" value="${p ? echapper(p.prixRN) : ''}">`)}
     <div class="field" style="margin-top:var(--space-2)"><label for="cp-prix-revente-max">Prix de revente maximal (€) <em style="font-weight:400">— ex. Relais Numériques, facultatif</em></label>
       <input class="input" id="cp-prix-revente-max" type="number" step="0.01" min="0" value="${p && p.prixReventeMax != null ? echapper(p.prixReventeMax) : ''}" placeholder="Pas de plafond">
       <p style="margin:4px 0 0;font-size:12px;opacity:.65">Plafond du prix auquel une structure peut revendre cet appareil à la personne accompagnée (tarifs de revente dans sa flotte).</p></div>
@@ -484,18 +484,16 @@ async function enregistrerProduit() {
     stock = lire('cp-stock');
   if (!nom || prixStandard === '' || prixRN === '' || stock === '') {
     $('rp-retour-modale').innerHTML =
-      '<div class="msg msg-erreur">Nom, prix standard, prix RNum et stock sont obligatoires.</div>';
+      '<div class="msg msg-erreur">Nom, prix standard, prix Relais Numérique et stock sont obligatoires.</div>';
     return;
   }
   {
     const b = $('cp-enregistrer');
     if (b) b.disabled = true;
   }
-  // Le toggle "sans suivi" pilote deux drapeaux (nominatif, passeport) — le troisième (sans
-  // numéro de série) est forcé à faux si le produit est dématérialisé : un code reste requis
-  // par unité dans ce cas (voir "Codes" à l'étape Validée), même si l'ancien toggle "sans
-  // suivi" est aussi coché sur ce produit (ex. une recharge qui avait déjà ce toggle avant
-  // l'ajout du concept "dématérialisé").
+  // Le réglage « sans suivi » pilote deux drapeaux (nominatif, passeport). Le troisième (sans
+  // numéro de série) est forcé à faux pour un produit dématérialisé : un code reste requis par
+  // unité (voir « Codes » à l'étape Validée).
   const sansSuivi = coche('cp-sans-suivi');
   const dematerialise = coche('cp-dematerialise');
   // Système/RAM/disque : ordinateur, smartphone ou tablette. Processeur : ordinateur/smartphone
@@ -539,11 +537,8 @@ async function enregistrerProduit() {
     etat(ligne ? 'Enregistrement…' : 'Création…', 'chargement');
     let ok, reponses, r;
     if (ligne) {
-      // Chaque appel est isolé dans son propre catch : sans ça, un seul des ~20 champs qui
-      // renvoie une réponse invalide (erreur réseau, réponse HTML au lieu de JSON...) fait
-      // rejeter tout le Promise.all d'un coup — alors que les autres appels, déjà partis, ont
-      // très bien pu réussir côté serveur entre-temps. D'où l'impression contradictoire
-      // "erreur interne" à l'écran alors que le reste s'enregistre bel et bien.
+      // chaque appel a son propre catch : un champ en erreur ne doit pas faire échouer
+      // l'enregistrement des autres, déjà envoyés
       reponses = await Promise.all(
         Object.keys(champsCommuns).map((c) =>
           poster({ action: 'produit-update', ligne, champ: c, valeur: champsCommuns[c] })
@@ -555,18 +550,13 @@ async function enregistrerProduit() {
             })),
         ),
       );
-      // "Champ non modifiable" = le back ne connaît pas encore cette colonne (front redéployé
-      // avant le back, par ex. juste après l'ajout d'un nouveau champ) — pas une vraie erreur
-      // d'enregistrement, tous les AUTRES champs de cette même sauvegarde ont bien été écrits.
-      // Sans cette distinction, un seul champ "en avance" faisait échouer tout l'enregistrement
-      // aux yeux de l'utilisateur alors que le reste avait bien été pris en compte.
+      // « Champ non modifiable » : le back ne connaît pas encore ce champ (front déployé avant le
+      // back) ; les autres champs sont bien enregistrés, ce n'est pas une erreur
       const echecsReels = reponses.filter((x) => !x.ok && x.erreur !== 'Champ non modifiable');
       ok = echecsReels.length === 0;
     } else {
       r = await poster({
-        // Tous les champs saisis sont envoyés dès la création (RAM, disque, système, message de
-        // rupture… étaient auparavant remis à vide ici : ils n'apparaissaient qu'après une
-        // seconde modification du produit).
+        // tous les champs saisis sont envoyés dès la création
         action: 'produit-create',
         ...champsCommuns,
         structureDediee: '',

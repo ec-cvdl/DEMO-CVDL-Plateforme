@@ -4,9 +4,9 @@
    commandes à la livraison, calendrier global. Back : routes/distributions.js, distributions.js.
    ════════════════════════════════════════════════════════════════════════════════════ */
 const TYPES_PERIMETRE = [
-  ['rn', 'RNum'],
+  ['rn', 'Relais Numérique'],
   ['projets', 'Projets'],
-  ['bo', 'BO'],
+  ['bo', 'Vente solidaire'],
   ['interne', 'Interne'],
   ['esn', 'ESN'],
   ['standard', 'Standard'],

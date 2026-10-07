@@ -1,16 +1,3 @@
-/* Admin CVDL — impact et vue 360° d'une structure. Scripts chargés dans l'ordre par admin.html (fonctions globales partagées). */
-/* ════════════════════════════════════════════════════════════════════════════════════
-   IMPACT (rapport par commande ou par structure) et VUE 360° D'UNE STRUCTURE
-   ════════════════════════════════════════════════════════════════════════════════════ */
-const CATEGORIES_IMPACT = [
-  'PC portable',
-  'PC fixe',
-  'Tablette',
-  'Smartphone',
-  'Écran',
-  'Accessoire',
-  'Recharge / forfait',
-];
 function categorieImpact(nomProduit) {
   const p = (state.produits || []).find((x) => x.nom === nomProduit) || {};
   const cle = `${p.icone || ''} ${nomProduit || ''}`.toLowerCase();
@@ -71,57 +58,6 @@ function calculImpact(commandes) {
   return { livrees, parCat, appareils, personnes, co2, dechets, coefConnu };
 }
 const fmtNombre = (n) => Math.round(n).toLocaleString('fr-FR');
-
-/** Rapport d'impact imprimable (nouvelle fenêtre, charte CVDL, prêt à imprimer en PDF). */
-function ouvrirRapportImpact({ titre, sousTitre, commandes }) {
-  const im = calculImpact(commandes);
-  const logo = new URL('logo.png', location.href).href;
-  const cats = CATEGORIES_IMPACT.filter((c) => im.parCat[c]);
-  const aujourdhui = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-  const kpi = (v, l) => `<div class="k"><b>${v}</b><span>${l}</span></div>`;
-  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Rapport d’impact — ${echapper(sousTitre)}</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Space+Grotesk:wght@700&display=swap">
-<style>
-*{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:#002743;background:#fff}
-.page{max-width:820px;margin:0 auto;padding:36px 40px 48px;border-top:8px solid #E62460}
-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:1px solid #E3E8EC}
-header img{height:44px} .sur{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:#C2185B}
-h1{font-family:"Space Grotesk",sans-serif;font-size:32px;line-height:1.1;margin:6px 0 4px} .sous{color:#5A6D7D;font-size:15px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:26px 0}
-.k{border:1.5px solid #002743;border-radius:16px;padding:16px 18px;box-shadow:4px 4px 0 rgba(0,39,67,.16)} .k b{display:block;font-family:"Space Grotesk",sans-serif;font-size:30px;line-height:1} .k span{display:block;margin-top:6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:#5A6D7D}
-h2{font-family:"Space Grotesk",sans-serif;font-size:19px;margin:28px 0 10px}
-table{width:100%;border-collapse:collapse;font-size:14px} th{text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5A6D7D;padding:10px 12px;background:#F6F8FA;border-bottom:1px solid #E3E8EC} td{padding:10px 12px;border-bottom:1px solid #EDF1F4} td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
-.note{margin-top:26px;padding:14px 16px;border-radius:12px;background:#F6F8FA;font-size:12.5px;line-height:1.55;color:#40566A}
-.actions{display:flex;justify-content:flex-end;margin-bottom:16px} .actions button{font:inherit;font-weight:700;padding:10px 20px;border-radius:999px;border:1.5px solid #002743;background:#00777A;color:#fff;cursor:pointer}
-@media print{ .actions{display:none} .page{padding:0;border-top-width:6px} @page{margin:16mm} }
-</style></head><body><div class="page">
-<div class="actions"><button onclick="window.print()">Imprimer / enregistrer en PDF</button></div>
-<header><div><div class="sur">Rapport d’impact</div><h1>${echapper(titre)}</h1><div class="sous">${echapper(sousTitre)} · établi le ${aujourdhui}</div></div><img src="${logo}" alt="Emmaüs Connect"></header>
-<div class="kpis">
-${kpi(fmtNombre(im.appareils), 'appareils remis')}
-${im.personnes ? kpi(fmtNombre(im.personnes), 'personnes équipées') : ''}
-${kpi(fmtNombre(im.livrees.length), im.livrees.length > 1 ? 'commandes livrées' : 'commande livrée')}
-${im.coefConnu && im.co2 ? kpi(fmtNombre(im.co2) + ' kg', 'CO₂e évités') : ''}
-${im.coefConnu && im.dechets ? kpi(fmtNombre(im.dechets) + ' kg', 'déchets évités') : ''}
-</div>
-<h2>Matériel remis</h2>
-${cats.length ? `<table><thead><tr><th>Catégorie</th><th style="text-align:right">Quantité</th></tr></thead><tbody>${cats.map((c) => `<tr><td>${c}</td><td class="n">${fmtNombre(im.parCat[c])}</td></tr>`).join('')}</tbody></table>` : '<p class="sous">Aucune commande livrée sur la période.</p>'}
-${im.livrees.length > 1 ? `<h2>Commandes livrées</h2><table><thead><tr><th>Commande</th><th>Livrée le</th><th style="text-align:right">Articles</th></tr></thead><tbody>${im.livrees.map((c) => `<tr><td>${echapper(c.reference)}</td><td>${echapper(c.dateLivraison || '—')}</td><td class="n">${(c.lignes || []).reduce((s, l) => s + (parseInt(l.quantite, 10) || 0), 0)}</td></tr>`).join('')}</tbody></table>` : ''}
-<div class="note"><b>Méthode.</b> Seules les commandes au statut « Livrée » sont comptées. Les appareils excluent les accessoires et les recharges.
-${im.coefConnu ? 'Les émissions et déchets évités sont calculés avec les coefficients par catégorie renseignés dans l’administration CVDL (source à citer : voir réglages).' : 'Les émissions de CO₂ et les déchets évités ne sont pas affichés : les coefficients par catégorie n’ont pas encore été renseignés dans l’administration.'}
-${im.personnes ? '' : ' Le nombre de personnes équipées n’est connu que lorsque les personnes sont renseignées dans la commande.'}</div>
-</div></body></html>`;
-  const w = window.open('', '_blank');
-  if (!w) {
-    alerteCvdl(
-      'Le navigateur a bloqué l’ouverture du rapport.\n\nAutorise les fenêtres pour cette page, puis réessaie.',
-    );
-    return;
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-}
 
 /** Coefficients d'impact par catégorie (kg CO2e et kg de déchets évités par appareil). */
 function vueCoefficientsImpact() {

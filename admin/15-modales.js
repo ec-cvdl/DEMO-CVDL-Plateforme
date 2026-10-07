@@ -120,9 +120,10 @@ function vueModal() {
   return '';
 }
 
-/** Panneau donateur/reconditionneur d'origine (tec.tech) — chargé à la demande (bouton), pas
- *  automatiquement à l'ouverture du ticket : évite un appel tec.tech par ticket ouvert quand
- *  la plupart du temps l'admin n'a pas besoin de cette info. */
+/**
+ * Panneau donateur / reconditionneur d'origine (tec.tech), chargé à la demande (bouton) :
+ * pas d'appel tec.tech à chaque ouverture de ticket.
+ */
 function blocOrigineTecTech(s) {
   const etatOrigine = state.tectechOrigine[s.reference];
   if (!etatOrigine) {

@@ -5,7 +5,7 @@
 function vueInfoTypesStructure() {
   const items = [
     [
-      'RNum',
+      'Relais Numérique',
       'Réseau national',
       'Structure standard : un devis puis une facture sont générés pour chaque commande, avec paiement demandé à la personne accompagnée.',
     ],
@@ -17,17 +17,17 @@ function vueInfoTypesStructure() {
     [
       'Interne',
       'Structure Emmaüs Connect',
-      'Ni devis ni facture non plus ; peut en plus créer et gérer ses propres structures partenaires ("BO").',
+      'Ni devis ni facture non plus ; peut en plus créer et gérer ses propres structures partenaires (Vente solidaire).',
     ],
     [
-      'BO',
+      'Vente solidaire',
       'Structure partenaire',
-      "Créée par une structure Interne — rejoint le suivi général sans pouvoir passer commande elle-même comme RNum/ESN/Interne ; gérée depuis l'espace de la structure Interne qui l'a créée.",
+      "Créée par une structure Interne — rejoint le suivi général sans pouvoir passer commande elle-même comme Relais Numérique/ESN/Interne ; gérée depuis l'espace de la structure Interne qui l'a créée.",
     ],
     [
       'Projets',
       'Structure liée à un projet dédié',
-      "Mêmes règles qu'une structure RNum : devis, facture et paiement s'appliquent normalement.",
+      "Mêmes règles qu'une structure Relais Numérique : devis, facture et paiement s'appliquent normalement.",
     ],
   ];
   return `

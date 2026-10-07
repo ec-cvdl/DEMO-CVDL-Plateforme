@@ -56,7 +56,7 @@ const DETAILS_TYPE_STRUCTURE = {
   rn: {
     ic: 'receipt',
     points: [
-      'Tarif « vente solidaire »',
+      'Tarif Relais Numérique',
       'Paiement par virement, imposé',
       'Devis puis facture à chaque commande',
       'Rapprochement comptable',
@@ -84,7 +84,7 @@ const DETAILS_TYPE_STRUCTURE = {
     points: [
       'Aucun paiement, aucune facture',
       'Flotte gérée dans la plateforme',
-      'Crée ses propres structures partenaires (BO)',
+      'Crée ses propres structures partenaires (Vente solidaire)',
     ],
   },
   esn: { ic: 'package', points: ['Aucun paiement, aucune facture', 'Quantités ESN', 'Prix masqués'] },
@@ -98,7 +98,7 @@ const AIDE_MOYENS_PAIEMENT = {
   Espèces: { ic: 'package', txt: 'Réglé en espèces auprès de la structure, qui reverse ensuite le montant.' },
   'Comptoir solidaire': {
     ic: 'building',
-    txt: 'Paiement en direct au comptoir solidaire du partenaire (propre aux structures BO).',
+    txt: 'Paiement en direct au comptoir solidaire du partenaire (propre aux structures Vente solidaire).',
   },
 };
 /** Pictogrammes des moyens de paiement — les mêmes que les cartes du formulaire de commande du portail. */
@@ -119,23 +119,25 @@ function iconeMoyenPaiementAdmin(m, t) {
 const ALPHABET_CODE_STRUCTURE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sans caractères ambigus (0/O, 1/I/l)
 function genererCodeStructure() {
   const groupe = () =>
-    Array.from(
-      { length: 4 },
-      () => ALPHABET_CODE_STRUCTURE[Math.floor(Math.random() * ALPHABET_CODE_STRUCTURE.length)],
-    ).join('');
+    Array.from(crypto.getRandomValues(new Uint8Array(4)))
+      .map((o) => ALPHABET_CODE_STRUCTURE[o % ALPHABET_CODE_STRUCTURE.length])
+      .join('');
   return `${groupe()}-${groupe()}-${groupe()}-${groupe()}`;
 }
-/** Robustesse d'un code saisi librement — simple repère, jamais bloquant. */
+/** Robustesse d'un code saisi librement (le serveur refuse moins de 12 caractères). */
 function robustesseCode(code) {
   const c = String(code || '');
   if (!c) return null;
   const familles = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z\d]/].filter((r) => r.test(c)).length;
   if (c.length >= 14 && familles >= 2) return { niveau: 'fort', txt: 'Code robuste.' };
-  if (c.length >= 10 && familles >= 2)
+  if (c.length >= 12 && familles >= 2)
     return { niveau: 'moyen', txt: 'Correct, mais un code généré (16 caractères aléatoires) est plus sûr.' };
   return {
     niveau: 'faible',
-    txt: 'Code facile à deviner : quiconque le trouve peut commander au nom de la structure. Mieux vaut le générer.',
+    txt:
+      c.length < 12
+        ? 'Code refusé : 12 caractères minimum (lettres, chiffres, tirets). Mieux vaut le générer.'
+        : 'Code facile à deviner : quiconque le trouve peut commander au nom de la structure. Mieux vaut le générer.',
   };
 }
 /** Valeurs de départ de l'assistant (structure existante, ou vide). */
@@ -147,7 +149,7 @@ function valeursInitialesStructure(s) {
     .map((x) => x.trim())
     .filter(Boolean);
   return {
-    type: s ? s.type || (typeAChoisir(s) ? '' : typeStructure(s).toLowerCase().replace('rnum', 'rn')) : '',
+    type: s ? s.type || (typeAChoisir(s) ? '' : cleTypeStructure(s)) : '',
     codeMode: 'generer',
     code: s ? '' : genererCodeStructure(),
     nouveauCode: '',
@@ -228,21 +230,28 @@ function vueCreerStructure() {
       </div>
     </div>`;
 }
+/** Types ouverts au lancement (Réglages → Périmètre), plus le type actuel d'une structure modifiée. */
+function typesProposes(s) {
+  const actifs = String((state.reglages && state.reglages.typesActifs) || 'rn,interne,bo').split(',');
+  return TYPES_STRUCTURE.filter((t) => actifs.includes(t.cle) || (s && s.type === t.cle));
+}
 function etapeStructureType(v, s) {
   return `
     ${s && typeAChoisir(s) ? `<div class="msg msg-warn">Type à définir : ${(s.casesCochees || []).length ? 'plusieurs types étaient cochés (' + echapper(s.casesCochees.join(', ')) + ')' : 'aucun type n’était coché'}. Choisissez-en un seul.</div>` : ''}
     ${s && v.type && s.type && v.type !== s.type ? '<div class="msg msg-warn">Changer le type modifie le tarif et la facturation des prochaines commandes de cette structure (les commandes passées ne changent pas).</div>' : ''}
     <div class="csw-types" role="radiogroup" aria-label="Type de structure">
-      ${TYPES_STRUCTURE.map((t) => {
-        const d = DETAILS_TYPE_STRUCTURE[t.cle] || { ic: 'building', points: [] };
-        return `
+      ${typesProposes(s)
+        .map((t) => {
+          const d = DETAILS_TYPE_STRUCTURE[t.cle] || { ic: 'building', points: [] };
+          return `
       <label class="csw-type${v.type === t.cle ? ' choisi' : ''}">
         <input type="radio" name="cs-type" value="${t.cle}" ${v.type === t.cle ? 'checked' : ''}>
         <span class="csw-type-ic" aria-hidden="true">${icon(d.ic, 20)}</span>
         <span class="csw-type-txt"><b>${echapper(t.libelle)}</b><ul>${d.points.map((p) => `<li>${echapper(p)}</li>`).join('')}</ul></span>
         <span class="coche-choix-admin" aria-hidden="true">✓</span>
       </label>`;
-      }).join('')}
+        })
+        .join('')}
     </div>`;
 }
 function etapeStructureIdentite(v, s) {
@@ -317,7 +326,7 @@ function etapeStructureCommande(v) {
       : t === 'rn'
         ? info(
             '__virement',
-            'Virement (RNum uniquement)',
+            'Virement (Relais Numérique)',
             'Imposé pour ce type : rien à choisir. Un devis puis une facture sont émis à chaque commande.',
           )
         : t === 'projets'
@@ -355,8 +364,8 @@ function etapeStructureOptions(v) {
   return `
     <label class="csw-option${v.depotVente ? ' choisi' : ''}">
       <span class="rp-switch"><input type="checkbox" id="cs-depot-vente" data-cs="depotVente" ${v.depotVente ? 'checked' : ''}><span class="rp-switch-piste"></span></span>
-      <span class="csw-option-txt"><b>Dépôt-vente</b>
-        <small>Le matériel est <strong>confié en dépôt</strong> : rien à payer à la commande (ni devis ni facture). La structure déclare chaque vente dans sa flotte (« Vendu ») et <strong>vous suivez tout depuis l’admin</strong>, sans les données des personnes : stock restant, ventes, alertes (appareil en stock depuis 2 mois, stock divisé par deux, stock bas) et « Stock restreint » (plafonds global et par produit).</small>
+      <span class="csw-option-txt"><b>Dépôt-vente : payé à la vente, pas à la commande</b>
+        <small>Le matériel est <strong>confié</strong> à la structure : ni paiement, ni devis, ni facture à la commande. Elle déclare chaque vente dans sa flotte (« Vendu » au lieu de « Remis »). Vous suivez depuis l’admin le stock confié, les ventes et les alertes (appareil en stock depuis 2 mois, stock bas), avec un plafond de stock possible (« Stock restreint »).</small>
       </span>
     </label>
     ${

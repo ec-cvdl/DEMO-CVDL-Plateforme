@@ -10,16 +10,6 @@ const BADGE = {
   'tag-orange': { bg: 'var(--color-orange-100)', fg: 'var(--color-orange-700)' },
   'tag-vert': { bg: 'var(--color-vert-100)', fg: 'var(--color-vert-700)' },
 };
-const BAR_COLOR = {
-  'tag-accent': 'var(--color-accent)',
-  'tag-accent-2': 'var(--color-accent-2)',
-  'tag-warn': 'var(--color-warn-700)',
-  'tag-neutral': 'var(--color-neutral-500)',
-  'tag-bleu': 'var(--color-bleu-700)',
-  'tag-violet': 'var(--color-violet-700)',
-  'tag-orange': 'var(--color-orange-700)',
-  'tag-vert': 'var(--color-vert-700)',
-};
 const ORDER_META = {
   Reçue: { cls: 'tag-warn', ic: 'inbox' },
   Validée: { cls: 'tag-bleu', ic: 'validation' },
@@ -43,9 +33,6 @@ const DOC_META = {
   Annulé: { cls: 'tag-neutral', ic: 'ban' },
   Annulée: { cls: 'tag-neutral', ic: 'ban' },
 };
-function metaDoc(statut) {
-  return DOC_META[statut] || DOC_META['En attente'];
-}
 /* Icônes de statut : style simple, un seul trait, sans aplat ni remplissage. */
 const ICONES_STATUT_SIMPLES = {
   inbox: '<path d="M4 13.5h4.5l1.5 2.5h4l1.5-2.5H20"/><path d="M6.5 5.5h11L20 13.5V19H4v-5.5z"/>',
@@ -94,22 +81,33 @@ function teinteSav(couleur) {
 }
 
 const TYPE_COLORS = {
-  RNum: { bg: 'var(--color-accent-2-100)', fg: 'var(--color-accent-2-700)' },
+  'Relais Numérique': { bg: 'var(--color-accent-2-100)', fg: 'var(--color-accent-2-700)' },
   Interne: { bg: 'var(--color-warn-100)', fg: 'var(--color-warn-800)' },
   ESN: { bg: 'var(--color-accent-100)', fg: 'var(--color-accent-700)' },
-  BO: { bg: 'var(--color-neutral-200)', fg: 'var(--color-neutral-700)' },
+  'Vente solidaire': { bg: 'var(--color-neutral-200)', fg: 'var(--color-neutral-700)' },
   Projets: { bg: 'var(--color-accent-2-100)', fg: 'var(--color-accent-2-700)' },
 };
+const LIBELLES_TYPE = {
+  rn: 'Relais Numérique',
+  esn: 'ESN',
+  interne: 'Interne',
+  bo: 'Vente solidaire',
+  projets: 'Projets',
+};
+function cleTypeStructure(s) {
+  if (s.type && LIBELLES_TYPE[s.type]) return s.type;
+  return s.esn ? 'esn' : s.interne ? 'interne' : s.bo ? 'bo' : s.projets ? 'projets' : 'rn';
+}
 function typeStructure(s) {
-  return s.esn ? 'ESN' : s.interne ? 'Interne' : s.bo ? 'BO' : s.projets ? 'Projets' : 'RNum';
+  return LIBELLES_TYPE[cleTypeStructure(s)];
 }
 /* Type unique (colonne « Type ») : une structure sans type enregistré et avec zéro ou plusieurs
    anciennes cases cochées doit être tranchée à la main (le changer modifierait son tarif). */
 const TYPES_STRUCTURE = [
   {
     cle: 'rn',
-    libelle: 'Vente solidaire (RNum)',
-    aide: 'Tarif RNum, paiement par virement, devis et facture, rapprochement comptable.',
+    libelle: 'Relais Numérique',
+    aide: 'Tarif Relais Numérique, paiement par virement, devis et facture, rapprochement comptable.',
   },
   {
     cle: 'projets',
@@ -118,7 +116,7 @@ const TYPES_STRUCTURE = [
   },
   {
     cle: 'bo',
-    libelle: 'Bon d’orientation (BO)',
+    libelle: 'Vente solidaire',
     aide: 'Personnes nominatives et attestations, jamais de devis ni de facture.',
   },
   {
