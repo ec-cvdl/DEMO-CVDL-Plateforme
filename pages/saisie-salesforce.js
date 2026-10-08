@@ -129,6 +129,15 @@ function carteDepliee(a, c, m) {
   const fait = !aSaisir(a);
   const nom = nomCompletDe(a);
   const linux = a.linux === true ? 'Oui' : a.linux === false ? 'Non' : '';
+  // « Vente suivie par » noté dans la fiche personne de la flotte, sinon la personne qui saisit.
+  const suivi = a.suiviPar || m;
+  const contact = `
+    ${ligneCopie('Prénom', a.prenom, 'le prénom')}
+    ${ligneCopie('Nom', a.nom, 'le nom')}
+    ${ligneCopie('Antenne', reglages.antenne, 'l’antenne', 'à rechercher')}
+    ${ligneCopie('Fiche créée par', m, 'le nom de la personne qui crée la fiche', m ? 'à rechercher' : 'choisissez qui saisit, en haut')}
+    ${ligneCopie('Date de naissance', a.dateNaissance, 'la date de naissance')}
+    ${ligneCopie('Prescripteur·trice', a.prescripteur, 'le prescripteur', 'à rechercher')}`;
   return `<section class="sf-bloc sf-carte active" aria-label="Vente de ${echapper(nom)}">
     <button type="button" class="sf-pers" data-ouvrir="${a.id}" aria-expanded="true" aria-label="Replier la vente de ${echapper(nom)}">
       <span class="sf-av" aria-hidden="true">${echapper(initiales(a))}</span>
@@ -136,28 +145,26 @@ function carteDepliee(a, c, m) {
       <span class="sf-tag${fait ? ' ok' : ''}">${fait ? 'Saisie' : 'À saisir'}</span>
     </button>
     <h3 class="sf-sous">Contact « Personne accompagnée »</h3>
-    <p class="sf-note">Si la personne n’existe pas encore dans Salesforce.</p>
-    ${ligneCopie('Prénom', a.prenom, 'le prénom')}
-    ${ligneCopie('Nom', a.nom, 'le nom')}
-    ${ligneCopie('Antenne', reglages.antenne, 'l’antenne', 'à rechercher')}
-    ${ligneCopie('Fiche créée par', m, 'le nom de la personne qui crée la fiche', m ? 'à rechercher' : 'choisissez qui saisit, en haut')}
-    ${ligneCopie('Date de naissance', a.dateNaissance, 'la date de naissance')}
-    ${ligneCopie('Prescripteur·trice', reglages.prescripteur, 'le prescripteur', 'à rechercher')}
+    ${
+      a.contactExistant
+        ? `<details class="sf-contact-connu"><summary>Contact déjà dans Salesforce : rechercher <b>${echapper(nom)}</b></summary>${contact}</details>`
+        : `<p class="sf-note">Si la personne n’existe pas encore dans Salesforce.</p>${contact}`
+    }
     <h3 class="sf-sous">Participant</h3>
     ${ligneInfo('Créneau', `le créneau du ${c.date.slice(0, 5)}`)}
     ${ligneCopie('Personne accompagnée', nom, 'le nom complet', 'à rechercher')}
     <h3 class="sf-sous">Vente — Matériel (Ordinateur / Téléphone / Tablette)</h3>
     ${ligneCopie('Date de vente', a.dateVente, 'la date de vente')}
     ${ligneChoix('Stock', reglages.stock)}
-    ${ligneCopie('Vente suivie par', m, 'le nom de la personne qui a suivi la vente', m ? 'à rechercher' : 'choisissez qui saisit, en haut')}
+    ${ligneCopie('Vente suivie par', suivi, 'le nom de la personne qui a suivi la vente', suivi ? 'à rechercher' : 'choisissez qui saisit, en haut')}
     ${ligneCopie('Montant de la vente', montant(a.prix), 'le montant')}
     ${ligneCopie('Identifiant EC', a.identifiantEc, 'l’identifiant EC', a.attestationGeneree ? '' : 'attestation à générer')}
     ${ligneChoix('Marque', a.marque)}
     ${ligneCopie('Modèle', a.modele, 'le modèle')}
     ${ligneCopie('N° série / IMEI', a.numeroSerie, 'le numéro de série')}
-    ${ligneChoix('Paiement complet', 'Oui')}
+    ${ligneChoix('Paiement complet', a.paiementComplet === false ? 'Non' : 'Oui')}
     <h3 class="sf-sous">Page suivante</h3>
-    ${ligneChoix('Linux', linux, linux ? '' : 'produit introuvable au catalogue : à vérifier')}
+    ${ligneChoix('Linux', linux, linux ? (a.linuxNote ? '' : 'd’après le produit') : 'produit introuvable au catalogue : à vérifier')}
     <div class="sf-actions">
       <button type="button" class="btn btn-secondary" data-attestation="${a.id}">⤓ ${a.attestationGeneree ? 'Attestation PDF' : 'Générer l’attestation PDF'}</button>
       ${
@@ -171,6 +178,16 @@ function carteDepliee(a, c, m) {
 }
 
 /* ── Actions ── */
+/** Prévient l'onglet de la gestion de flotte resté ouvert (même navigateur), sans recharger. */
+function publierFlotte(message) {
+  try {
+    const canal = new BroadcastChannel('cvdl-flotte');
+    canal.postMessage(message);
+    canal.close();
+  } catch (e) {
+    /* navigateur sans BroadcastChannel : la flotte se met à jour à son prochain chargement */
+  }
+}
 function trouver(id) {
   for (const c of creneaux) {
     const a = c.appareils.find((x) => x.id === id);
@@ -218,6 +235,7 @@ async function marquer(bouton) {
     return;
   }
   a.saisieSalesforce = bouton.dataset.valeur === 'Oui';
+  publierFlotte({ type: 'saisieSalesforce', id, valeur: a.saisieSalesforce });
   marqueesIci.add(id);
   if (a.saisieSalesforce) {
     // Replie et ouvre la vente suivante encore à saisir.
