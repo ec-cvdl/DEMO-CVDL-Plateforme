@@ -8,7 +8,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ma flotte — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=34">
+<link rel="stylesheet" href="cvdl-ui.css?v=35">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -101,6 +101,7 @@ main{ padding:var(--space-6) var(--space-4); }
 .tableau-flotte tr[data-statut-flotte="sav"] td{ background:color-mix(in srgb, #D97706 9%, #fff); }
 .tableau-flotte tr[data-statut-flotte="d3e"] td{ background:color-mix(in srgb, #8FA3B3 12%, #fff); }
 .tableau-flotte tr[data-statut-flotte] td:first-child{ box-shadow:inset 4px 0 0 var(--teinte-flotte, transparent); }
+.tableau-flotte tr.tl-alerte td{ background:var(--violet-fond); } .tableau-flotte tr.tl-alerte{ --teinte-flotte:var(--violet); }
 .tableau-flotte tr[data-statut-flotte="remis"]{ --teinte-flotte:#1F9D55; } .tableau-flotte tr[data-statut-flotte="sav"]{ --teinte-flotte:#D97706; } .tableau-flotte tr[data-statut-flotte="d3e"]{ --teinte-flotte:#8FA3B3; }
 .carte-dispositif[data-statut-flotte="remis"]{ background:color-mix(in srgb, #1F9D55 6%, #fff) !important; }
 .carte-dispositif[data-statut-flotte="sav"]{ background:color-mix(in srgb, #D97706 8%, #fff) !important; }
@@ -159,7 +160,7 @@ span.tl-personne{ cursor:default; }
 .grille-dispositifs{ display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:18px; }
 .fi3{ --st:#1F9D55; padding:0 !important; display:flex; flex-direction:column; border-left:5px solid var(--st) !important; background:#fff !important; }
 .fi3[data-statut-flotte="remis"]{ --st:#00ACB0; } .fi3[data-statut-flotte="sav"]{ --st:#E24B4A; } .fi3[data-statut-flotte="d3e"]{ --st:#8FA3B3; }
-.fi3.fi3-alerte{ box-shadow:4px 4px 0 color-mix(in srgb, #FECC38 70%, transparent) !important; }
+.fi3.fi3-alerte{ box-shadow:4px 4px 0 color-mix(in srgb, var(--violet) 55%, transparent) !important; }
 .fi3-tete{ display:flex; align-items:flex-start; gap:12px; padding:16px 16px 12px; }
 .fi3-tete .fi-case{ margin-top:4px; width:18px; height:18px; flex:none; }
 .fi3-vis{ width:50px; height:50px; flex:none; border-radius:12px; background:var(--fond-doux, #F3F6F8); display:flex; align-items:center; justify-content:center; }
@@ -189,7 +190,7 @@ span.tl-personne{ cursor:default; }
 .fi3-pied{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:10px 16px 14px; font-size:12px; opacity:1; color:var(--d-texte2, #5A6D7D); }
 .fi3-pied b{ color:#002743; }
 .fi3-puce{ font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; }
-.fi3-puce.att{ background:#FFF3CC; color:#7A5A00; } .fi3-puce.sav{ background:#FDECEC; color:#B42318; }
+.fi3-puce.att{ background:var(--violet-fond); color:var(--violet-texte); } .fi3-puce.sav{ background:#FDECEC; color:#B42318; }
 /* Vue Liste : produit en titre, marque · modèle · catégorie sur UNE ligne */
 .tl-produit-nom{ display:block; font-size:13.5px; line-height:1.3; }
 .tl-ident{ display:flex; align-items:center; gap:2px; flex-wrap:wrap; margin-top:2px; }
@@ -204,7 +205,8 @@ span.tl-personne{ cursor:default; }
 .fs-tuile .ill{ width:34px; height:34px; flex:none; }
 .fs-tuile b{ display:block; font-family:var(--police-titre); font-size:20px; line-height:1.1; }
 .fs-tuile span:not(.ill){ font-size:12px; color:var(--d-texte2, #5A6D7D); }
-.fs-alerte{ margin-top:10px; padding:9px 12px; border-radius:12px; background:#FFF3CC; color:#7A5A00; font-size:13px; font-weight:700; }
+.fs-alerte{ display:flex; align-items:center; gap:8px; margin-top:10px; padding:9px 12px; border-radius:12px; background:var(--violet-fond); color:var(--violet-texte); font-size:13px; font-weight:700; }
+.ic-2mois{ vertical-align:-2px; flex:none; color:var(--violet-texte); }
 .fs-grille{ display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:14px; margin-top:14px; }
 .fs-bloc{ border:1.5px solid color-mix(in srgb, #002743 14%, transparent); border-radius:16px; padding:14px 16px; min-width:0; }
 .fs-bloc h4{ margin:0 0 10px; font-family:var(--police-titre); font-size:15px; }
@@ -229,6 +231,10 @@ html.flotte-depuis-admin .flotte-entete{ justify-content:flex-end; margin-bottom
 html.flotte-depuis-admin main{ padding-top:14px !important; }
 
 .flotte-vues button[data-vue-flotte="compta"]{ margin-left:auto; }
+.flotte-vues button.flotte-vue-salesforce{ background:color-mix(in srgb, var(--tur, #00ACB0) 75%, #002743); border-color:transparent; color:#fff; box-shadow:4px 4px 0 color-mix(in srgb, #002743 55%, transparent); }
+.flotte-vues button.flotte-vue-salesforce:hover{ border-color:transparent; box-shadow:5px 5px 0 color-mix(in srgb, var(--acc, #E62460) 55%, transparent); }
+.flotte-vues button.flotte-vue-salesforce svg{ background:rgba(255,255,255,.14); }
+.flotte-vues button.flotte-vue-salesforce small{ opacity:.8; }
 @media (max-width:600px){ .flotte-vues button[data-vue-flotte="compta"]{ margin-left:0; } }
 
 /* Pastilles n° de série de la flotte : toutes de la même largeur (celle du plus long numéro),
@@ -254,15 +260,31 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 .fl-projet.on{ border-style:solid !important; border-color:var(--tur, #00ACB0) !important; background:color-mix(in srgb, var(--tur, #00ACB0) 12%, #fff) !important; font-weight:600; }
 .fi3-v .fl-projet{ margin-top:0; max-width:100%; }
 .fl-projet-lu{ display:inline-block; margin-top:6px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; background:color-mix(in srgb, var(--tur, #00ACB0) 12%, #fff); }
+/* Fiche personne de la flotte : deux colonnes (Personne / Vente), une seule sous 640px */
+.modale-personne{ max-width:800px; }
+.pp-grille{ display:grid; grid-template-columns:1fr 1fr; gap:12px 20px; margin-top:12px; }
+.pp-groupe{ display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; align-content:start; min-width:0; }
+.pp-titre{ grid-column:1 / -1; margin:0; font-family:var(--police-titre); font-size:14px; }
+.pp-titre em{ font-family:inherit; font-size:12px; font-weight:400; font-style:normal; opacity:.65; margin-left:6px; }
+.pp-large, .pp-pleine{ grid-column:1 / -1; }
+.pp-deux{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.modale-personne .field{ gap:4px; min-width:0; }
+.modale-personne .field em{ font-weight:400; }
+.modale-personne .input{ min-height:38px; padding:7px 12px; }
+.pp-note{ margin:-4px 0 0; font-size:12px; opacity:.6; }
+.pp-sf{ grid-column:1 / -1; grid-template-columns:minmax(0,1.15fr) repeat(3, minmax(0,1fr)); align-items:end; padding:10px 14px 14px; border-radius:14px; background:color-mix(in srgb, var(--tur, #00ACB0) 10%, #fff); border:1.5px solid color-mix(in srgb, var(--tur, #00ACB0) 35%, transparent); }
+.pp-case{ display:flex; align-items:center; gap:8px; min-height:38px; font-size:13px; font-weight:600; line-height:1.25; cursor:pointer; }
+.pp-case input{ flex:none; width:17px; height:17px; accent-color:var(--tur, #00ACB0); }
+@media (max-width:640px){ .pp-grille{ grid-template-columns:1fr; } .pp-sf{ grid-template-columns:1fr 1fr; } .pp-sf .pp-case{ grid-column:1 / -1; } }
 </style>
-<script src="portail-ui.js?v=32" defer></script>
+<script src="portail-ui.js?v=33" defer></script>
 <script src="cvdl-ui.js?v=13" defer></script>
 <link rel="stylesheet" href="retours.css?v=2">
 <script src="retours.js?v=2" defer></script>
 </head>
 <body data-famille="materiel">
 <div class="voile-modale-qr" id="modale-personne-portail">
-  <div class="modale-qr" style="text-align:left;max-width:420px;max-height:85vh;overflow-y:auto">
+  <div class="modale-qr modale-personne">
     <div class="modale-qr-entete">
       <span data-ill="personne" class="pk-modale-ill"></span><h3>Personne — <span id="personne-portail-titre"></span></h3>
       <button type="button" class="modale-fermer-rond-qr" id="personne-portail-fermer-x" aria-label="Fermer">
@@ -349,6 +371,6 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 </main>
 
 <script src="pages/flotte-structure-tete.js?v=1"></script>
-<script src="pages/flotte-structure.js?v=10"></script>
+<script src="pages/flotte-structure.js?v=13"></script>
 </body>
 </html>

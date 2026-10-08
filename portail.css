@@ -253,6 +253,9 @@ a.pk-sn:hover {
 .ill.m .ill-fond {
   fill: color-mix(in srgb, var(--th-bg-e62460ff, #e62460) 35%, var(--th-bg-ffffffff, white));
 }
+.ill.v .ill-fond {
+  fill: color-mix(in srgb, var(--violet, #8a6fe0) 45%, var(--th-bg-ffffffff, white));
+}
 a:hover .ill .ill-fond,
 button:hover .ill .ill-fond,
 .card:hover > .ill .ill-fond {

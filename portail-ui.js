@@ -62,6 +62,12 @@ window.urlSure = function (u) {
       '<rect x="7" y="13" width="24" height="16" rx="3"/><path transform="translate(19 11) scale(1.25)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
       '<rect x="5" y="11" width="24" height="16" rx="3"/><path d="M2 31h22"/><path vector-effect="non-scaling-stroke" transform="translate(17 9) scale(1.25)" fill="var(--ill-fond)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
     ],
+    // Carton en attente + sablier : en stock depuis longtemps (aplat violet, classe v).
+    stockAncien: [
+      'v',
+      '<rect x="6" y="22" width="24" height="19" rx="2"/><path d="M34.5 15h9c0 6.5-3.6 8.5-4.5 14 .9 5.5 4.5 7.5 4.5 14h-9c0-6.5 3.6-8.5 4.5-14-.9-5.5-4.5-7.5-4.5-14z"/>',
+      '<rect x="4" y="20" width="24" height="19" rx="2"/><path d="M4 20l4-6h16l4 6M16 14v6M9 26h7"/><path fill="var(--ill-fond)" d="M32.5 13h9c0 6.5-3.6 8.5-4.5 14 .9 5.5 4.5 7.5 4.5 14h-9c0-6.5 3.6-8.5 4.5-14-.9-5.5-4.5-7.5-4.5-14z"/><path d="M31 13h12M31 41h12M34.5 39h5L37 35.5zM35 18h4"/>',
+    ],
     suiviSav: [
       't',
       '<rect x="12" y="10" width="26" height="30" rx="3"/>',
@@ -884,10 +890,10 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
 /* ── Barre « Mode démo » ──
    Active quand demo.html a posé le repère cvdl-mode-demo (8 h), ou sur un site de démo dédié
    (dossier « …demo… ») : toutes les pages parlent alors à la fonction de démonstration.
-   · Barre pleine largeur en bas de l'écran, TOUJOURS visible, qui fait partie de la page : la
-     place est réservée (marge en bas de page) et toute fenêtre fixe (modale, fiche, voile,
-     menu latéral, boutons flottants) est remontée d'autant — rien ne passe dessous, et la barre
-     n'apparaît jamais dans une modale.
+   · Barre pleine largeur en bas de l'écran, qui fait partie de la page : la place est réservée
+     (marge en bas de page) et toute fenêtre fixe (fiche, voile, menu latéral, boutons
+     flottants) est remontée d'autant — rien ne passe dessous. Masquée tant qu'une fenêtre
+     modale est ouverte (SEL_MODALES), sur toutes les pages : elle ne passe jamais par-dessus.
    · Contenu : rappel « données fictives », interrupteur « Explications » (explications.js, chargé
      seulement en démo), « Tutoriels », « Changer de profil », « Quitter », et « Replier » (barre
      fine ; l'état est mémorisé). */
@@ -918,10 +924,20 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
     } catch (e) {}
   };
 
+  /* Fenêtres modales du site. SEL_MODALES_OUVERTES : présentes seulement quand elles sont
+     ouvertes (règle CSS, effet immédiat) ; SEL_MODALES ajoute celles qui restent dans la page
+     une fois fermées (écran de connexion de l'admin, aria-modal…), retenues seulement si elles
+     sont affichées (classe cvdl-demo-modale posée par reserver()). */
+  const SEL_MODALES_OUVERTES =
+    '.voile-modale-qr.visible, .cvdl-conf-voile, .cvdl-pp-voile, .vg-voile, .idr-voile, .sp-voile, .rt-fond, .ap-voile, .emb, .voile-tuto-portail, .rp-drawer-backdrop, #rp-modal-zone > *, dialog[open]';
+  const SEL_MODALES = `${SEL_MODALES_OUVERTES}, .dialog-backdrop, .pj-voile, .voile-envoi, .voile-envoi-commande, [aria-modal="true"]`;
+
   // Styles de la barre : injectés tout de suite (pas d'attente d'une feuille externe).
   const style = document.createElement('style');
   style.textContent = `
     html.cvdl-demo body{ padding-bottom:var(--demo-h, 0px) !important; }
+    html.cvdl-demo-modale #cvdl-bandeau-demo{ display:none !important; }
+    html.cvdl-demo body:has(${SEL_MODALES_OUVERTES}) #cvdl-bandeau-demo{ display:none !important; }
     #cvdl-bandeau-demo{ position:fixed; left:0; right:0; bottom:0; z-index:2147483000; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px;
       padding:7px 12px; background:#002743; color:#fff; font:600 13px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif; box-shadow:0 -3px 14px rgba(0,0,0,.18); }
     #cvdl-bandeau-demo .bd-marque{ display:inline-flex; align-items:center; gap:8px; white-space:nowrap; margin-right:4px; }
@@ -985,6 +1001,8 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   function reserver() {
     const b = document.getElementById('cvdl-bandeau-demo');
     if (!b) return;
+    // Modale ouverte : barre masquée, hauteur 0 (plus rien à réserver ni à remonter).
+    html.classList.toggle('cvdl-demo-modale', modaleOuverte());
     const h = Math.ceil(b.getBoundingClientRect().height);
     if (h !== hauteur) {
       hauteur = h;
@@ -1013,13 +1031,8 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       else
         el.style.setProperty('max-height', `calc(100vh - ${parseFloat(el.dataset.demoMaxh) + hauteur}px)`, 'important');
     }
-    document.documentElement.classList.toggle('cvdl-demo-modale', modaleOuverte());
   }
-  const SEL_MODALES =
-    '.dialog-backdrop, .rp-drawer-backdrop, .voile-modale-qr.visible, .cvdl-pp-voile, .vg-voile, .idr-voile, dialog[open], [aria-modal="true"]';
   function modaleOuverte() {
-    const zone = document.getElementById('rp-modal-zone'); // admin : fenêtres rendues dans cette zone
-    if (zone && [...zone.children].some((e) => e.getBoundingClientRect().width > 0)) return true;
     return [...document.querySelectorAll(SEL_MODALES)].some(
       (e) =>
         !e.closest('#cvdl-bandeau-demo, .xp-carte, .xp-bulle, .xp-panneau, .xp-aide') &&

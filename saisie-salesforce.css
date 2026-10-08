@@ -343,6 +343,13 @@ html.deja-identifie #voile-verification-precoce {
   padding: 8px 2px;
 }
 
+/* Contact déjà connu dans Salesforce : section repliée, dépliable au besoin */
+.sf-contact-connu summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  padding: 6px 0;
+}
+
 /* Réglages */
 .sf-reglages summary {
   cursor: pointer;
