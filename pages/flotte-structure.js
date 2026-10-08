@@ -45,6 +45,20 @@ function capitaliserPrenom(valeur) {
   return resultat;
 }
 
+/** « Prénom Nom » d'un appareil (champ `personne`, recalculé après une modification). */
+function majPersonneFlotte(a) {
+  a.personne = [a.prenom, a.nom]
+    .map((x) => String(x || '').trim())
+    .filter(Boolean)
+    .join(' ');
+}
+/** Prénom et nom modifiables sur place (structures sans fiche personne détaillée). */
+function champsPersonneFlotte(a) {
+  const champ = (cle, lib) =>
+    `<input type="text" class="tl-champ" data-id="${a.id}" data-champ="${cle}" value="${echapper(a[cle])}" placeholder="${lib}" aria-label="${lib}" size="${Math.max(6, String(a[cle] || '').length + 1)}">`;
+  return `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span>${champ('prenom', 'Prénom')}${champ('nom', 'Nom')}</span>`;
+}
+
 let codeValide = '';
 let estInterneFlotte = false;
 // Distinction entre la structure Interne elle-même (peut attribuer des appareils à ses BO
@@ -252,19 +266,11 @@ function ouvrirModalePersonnePortail(id) {
   if (!a) return;
   personnePortailIdCourant = id;
   $('personne-portail-titre').textContent = `${a.numeroSerie} — ${a.produit || ''}`.trim();
-  // Le champ "personne" reste une seule chaîne côté backend — on ne fait que scinder l'affichage
-  // en Prénom/NOM (comme le reste du site), reconstitués à la volée à l'enregistrement.
-  const motsPersonne = String(a.personne || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  const nomFamilleActuel = motsPersonne.length > 1 ? motsPersonne.pop() : '';
-  const prenomActuel = motsPersonne.join(' ');
   $('personne-portail-contenu').innerHTML = `
     <div class="field"><label>Prénom et nom</label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <input type="text" class="input" data-pp-champ="personne" data-pp-partie="prenom" placeholder="Prénom" value="${echapper(prenomActuel)}">
-        <input type="text" class="input" data-pp-champ="personne" data-pp-partie="nom" placeholder="NOM" style="text-transform:uppercase" value="${echapper(nomFamilleActuel)}">
+        <input type="text" class="input" data-pp-champ="prenom" data-pp-partie="prenom" placeholder="Prénom" aria-label="Prénom" value="${echapper(a.prenom)}">
+        <input type="text" class="input" data-pp-champ="nom" data-pp-partie="nom" placeholder="NOM" aria-label="Nom" style="text-transform:uppercase" value="${echapper(a.nom)}">
       </div>
     </div>
     <div class="field"><label>Genre
@@ -429,10 +435,9 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
     const el = document.querySelector(`#personne-portail-contenu [data-pp-champ="${champ}"]`);
     return el ? el.value.trim() : '';
   };
-  const prenom = (document.querySelector('[data-pp-partie="prenom"]') || {}).value || '';
-  const nom = (document.querySelector('[data-pp-partie="nom"]') || {}).value || '';
   const valeurs = {
-    personne: [prenom.trim(), nom.trim()].filter(Boolean).join(' '),
+    prenom: val('prenom'),
+    nom: val('nom'),
     genre: val('genre'),
     dateNaissance: val('dateNaissance'),
     typePaiement: val('typePaiement'),
@@ -443,7 +448,7 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
     commentaire: val('commentaire'),
   };
   const dateOk = (v) => !v || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v);
-  if (!prenom.trim() || !nom.trim()) {
+  if (!valeurs.prenom || !valeurs.nom) {
     retour.innerHTML = '<div class="msg msg-erreur">Indiquez le prénom et le NOM de la personne.</div>';
     return;
   }
@@ -471,6 +476,7 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
       });
       if (r.ok) {
         a[champ] = valeurs[champ];
+        majPersonneFlotte(a);
         if (champ === 'statut') noterRemise(valeurs[champ]);
       } else {
         erreur = r.erreur || 'Enregistrement impossible.';
@@ -684,7 +690,7 @@ function carteDispositif(a, opts) {
   const personne =
     opts.personneMode === 'button'
       ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-id="${a.id}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
-      : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-id="${a.id}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
+      : champsPersonneFlotte(a);
   const alerte = a.alerte2Mois && a.statut === 'En stock';
   const champIdent = (champ, lib) =>
     `<label class="fi3-champ"><span>${lib}</span><input type="text" class="tl-champ" data-id="${a.id}" data-champ="${champ}" value="${echapper(a[champ])}" placeholder="—"></label>`;
@@ -808,7 +814,7 @@ function construireTableauFlotteInterne(appareils, opts) {
       const personne =
         opts.personneMode === 'button'
           ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-id="${a.id}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
-          : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-id="${a.id}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
+          : champsPersonneFlotte(a);
       return `
     <tr data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="${alerte ? 'tl-alerte' : ''}${a.statut === 'D3E' ? ' tl-d3e' : ''}${idsSelectionnesAttribution.has(a.id) ? ' tl-selection' : ''}">
       ${colonneAttribution ? `<td class="tl-col-case"><input type="checkbox" class="tl-case" data-select-attribution="${a.id}" ${idsSelectionnesAttribution.has(a.id) ? 'checked' : ''} aria-label="Sélectionner pour attribution"></td>` : ''}
@@ -1029,6 +1035,7 @@ function rendreFlotteInterneParitePortail(appareils) {
       <div class="flotte-actions">
         <button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-actualiser-flotte">↻ Actualiser</button>
         ${VUE_MATERIEL ? '' : '<button type="button" class="flotte-bouton flotte-bouton-contour" data-role="responsable" data-ouvrir-tarifs-revente>€ Tarifs de revente</button>'}
+        ${estProprietaireInterne && !VUE_MATERIEL ? '<button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-saisie-salesforce" title="Les ventes à recopier dans Salesforce, dans un nouvel onglet">Saisie Salesforce ↗</button>' : ''}
         <button type="button" class="flotte-bouton flotte-bouton-plein" id="btn-stats-flotte-portail">Statistiques</button>
       </div>
     </div>
@@ -1167,6 +1174,9 @@ function cablerBarreOutilsPortailInterne() {
     rendreFlotteInterneParitePortail(appareilsCourants);
   });
   $('btn-stats-flotte-portail')?.addEventListener('click', () => afficherStatsFlottePortail(appareilsCourants));
+  // Nouvel onglet ouvert par le script (et non un lien) : il reçoit une copie de la session de
+  // l'onglet (sessionStorage), donc le même code structure.
+  $('btn-saisie-salesforce')?.addEventListener('click', () => window.open('saisie-salesforce.html', '_blank'));
   document.querySelector('.flotte-barre')?.addEventListener('click', (e) => {
     const filtreStatut = e.target.closest('[data-filtre-statut-flotte]');
     if (filtreStatut) {
@@ -1497,7 +1507,10 @@ function cablerChampsFlotte() {
           rerendreFlotte(); // remet l'affichage sur la vraie valeur enregistrée
           return;
         }
-        if (item) item[nomChamp] = valeur;
+        if (item) {
+          item[nomChamp] = valeur;
+          majPersonneFlotte(item);
+        }
         if (nomChamp === 'statut') noterRemise(valeur);
         if (item && r.dateVente) item.dateVente = r.dateVente;
         if (r.facture && !r.facture.deja)
@@ -1654,7 +1667,7 @@ $('btn-generer-attestation-flotte').addEventListener('click', async () => {
     if (r.ok) {
       if (window.CvdlRetours) CvdlRetours.action('attestation');
       $('retour-attestation-flotte').innerHTML =
-        `<div class="msg msg-succes">Prête — <a href="${echapper(urlSure(r.url))}" target="_blank" rel="noopener" download="Attestation de paiement.pdf">l'ouvrir ↗</a></div>`;
+        `<div class="msg msg-succes">Prête — <a href="${echapper(urlSure(r.url))}" target="_blank" rel="noopener" download="${echapper(r.nomFichier || 'Attestation de paiement.pdf')}">l'ouvrir ↗</a></div>`;
     } else {
       $('retour-attestation-flotte').innerHTML =
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Génération impossible.')}</div>`;
