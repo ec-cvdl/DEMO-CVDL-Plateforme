@@ -424,9 +424,9 @@
     return S.tickets.find((t) => t.reference === S.ouvert) || null;
   }
   function revele(t) {
-    const r = S.reveles[t.ligne];
+    const r = S.reveles[t.id];
     if (r && Date.now() > r.expire) {
-      delete S.reveles[t.ligne];
+      delete S.reveles[t.id];
       return null;
     }
     return r ? r.d : null;
@@ -478,7 +478,7 @@
     if (bonAFaire(t))
       return {
         texte: 'L’adresse d’envoi est reçue : déposez le bon Colissimo.',
-        bouton: `<label class="sp-btn">Déposer le bon (PDF)<input type="file" accept="application/pdf,.pdf" data-sp-bon="${t.ligne}" hidden></label>`,
+        bouton: `<label class="sp-btn">Déposer le bon (PDF)<input type="file" accept="application/pdf,.pdf" data-sp-bon="${t.id}" hidden></label>`,
       };
     const s = statut(t.statut);
     if (s && s.colissimo && !String(t.colissimo || '').trim())
@@ -508,9 +508,9 @@
       illustrer(d);
       return;
     }
-    const f = S.fils[t.ligne];
+    const f = S.fils[t.id];
     if (!f) chargerFil(t);
-    const mode = S.mode[t.ligne] || 'repondre';
+    const mode = S.mode[t.id] || 'repondre';
     const rv = revele(t);
     const email = t.email || (rv && rv.contact && rv.contact.email) || '';
     const tel = t.telephone || (rv && rv.contact && rv.contact.telephone) || '';
@@ -535,8 +535,8 @@
         <span class="sp-ill">${window.illustrationCvdl ? window.illustrationCvdl(ill) || '' : ''}</span>
         <div class="sp-conv-titre"><div class="sp-s"><b>${esc(t.reference)}</b> · ouvert le ${esc(t.date)}</div><h2>${esc(t.symptome || 'Symptôme non précisé')}</h2><div class="sp-s">${esc(qui(t))}${t.nomBeneficiaire ? ' · ' + esc(t.nomBeneficiaire) : ''}${t.responsableSav && !t.contactPersonnel ? ' · ' + esc(t.responsableSav) : ''}${t.marque || t.modele ? ' · ' + esc([t.marque, t.modele].filter(Boolean).join(' ')) : ''}</div></div>
         <div class="sp-props">
-          <label class="sp-prop sp-prop-st" style="--c:${c}"><span class="sp-sr">Statut</span><i></i><select data-sp-statut="${t.ligne}">${S.statuts.map((s) => `<option${s.statut === t.statut ? ' selected' : ''}>${esc(s.statut)}</option>`).join('')}</select></label>
-          <label class="sp-prop${t.assigne ? '' : ' libre'}"><span class="sp-sr">Assigné à</span>${t.assigne ? `<span class="sp-av xs">${esc(initiales((S.membres.find((m) => m.email === t.assigne) || {}).nom || '–'))}</span>` : '<span class="sp-av xs vide">+</span>'}<select data-sp-assigner="${t.ligne}"><option value="">Non assigné</option>${S.membres.map((m) => `<option value="${esc(m.email)}"${t.assigne === m.email ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
+          <label class="sp-prop sp-prop-st" style="--c:${c}"><span class="sp-sr">Statut</span><i></i><select data-sp-statut="${t.id}">${S.statuts.map((s) => `<option${s.statut === t.statut ? ' selected' : ''}>${esc(s.statut)}</option>`).join('')}</select></label>
+          <label class="sp-prop${t.assigne ? '' : ' libre'}"><span class="sp-sr">Assigné à</span>${t.assigne ? `<span class="sp-av xs">${esc(initiales((S.membres.find((m) => m.email === t.assigne) || {}).nom || '–'))}</span>` : '<span class="sp-av xs vide">+</span>'}<select data-sp-assigner="${t.id}"><option value="">Non assigné</option>${S.membres.map((m) => `<option value="${esc(m.email)}"${t.assigne === m.email ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
           ${moi && t.assigne !== moi && S.membres.some((m) => m.email === moi) ? '<button type="button" class="sp-lien-btn" data-sp="m-assigner">M’assigner</button>' : ''}
         </div>
         <ol class="sp-avance" aria-label="Avancement" style="--c:${c}">${etapes.map((s, i) => `<li class="${i === idx ? 'cur' : idx > -1 && i < idx ? 'ok' : 'fut'}"${i === idx ? ' aria-current="step"' : ''}><span class="sp-anneau">${idx > -1 && i < idx ? svg(ICO.ok, 18) : i + 1}</span><span class="sp-avance-l">${esc(s.statut)}</span></li>`).join('')}</ol>
@@ -545,13 +545,13 @@
       <div class="sp-corps">
         <section class="sp-conv" aria-label="Échanges">
           <div class="sf-msgs sp-fil">${f ? (f.ok ? bulles(t, f) || '<p class="sp-vide">Aucun échange pour l’instant.</p>' : `<p class="sp-vide">${esc(f.erreur || 'Échanges indisponibles')}</p>`) : '<p class="sp-vide">Chargement…</p>'}${t.commentaire ? `<div class="sp-origine"><span class="sf-qui">Demande initiale · ${esc(t.date)}</span>${esc(t.commentaire).replace(/\n/g, '<br>')}</div>` : ''}</div>
-          <form class="sp-compo${mode === 'note' ? ' note' : ''}" data-sp-compo="${t.ligne}">
+          <form class="sp-compo${mode === 'note' ? ' note' : ''}" data-sp-compo="${t.id}">
             <div class="sp-compo-h">
               <div class="sp-onglets" role="tablist"><button type="button" role="tab" aria-selected="${mode === 'repondre'}" data-sp-mode="repondre">Répondre</button><button type="button" role="tab" aria-selected="${mode === 'note'}" data-sp-mode="note">Note interne</button></div>
               ${mode === 'repondre' ? `<div class="sp-modeles" aria-label="Réponses toutes faites">${MODELES.map((m, i) => `<button type="button" data-sp-modele="${i}">${esc(m.l)}</button>`).join('')}</div>` : ''}
             </div>
-            <label class="sp-sr" for="sp-texte-${t.ligne}">${mode === 'note' ? 'Note interne' : 'Votre réponse'}</label>
-            <textarea class="input" id="sp-texte-${t.ligne}" name="texte" rows="3" maxlength="3000" placeholder="${mode === 'note' ? 'Note visible seulement par l’équipe…' : t.contactPersonnel ? 'Répondre à la personne… (prévenue par e-mail, son adresse n’est jamais affichée)' : 'Répondre à la structure… (prévenue par e-mail)'}">${esc(S.brouillons[t.ligne + mode] || '')}</textarea>
+            <label class="sp-sr" for="sp-texte-${t.id}">${mode === 'note' ? 'Note interne' : 'Votre réponse'}</label>
+            <textarea class="input" id="sp-texte-${t.id}" name="texte" rows="3" maxlength="3000" placeholder="${mode === 'note' ? 'Note visible seulement par l’équipe…' : t.contactPersonnel ? 'Répondre à la personne… (prévenue par e-mail, son adresse n’est jamais affichée)' : 'Répondre à la structure… (prévenue par e-mail)'}">${esc(S.brouillons[t.id + mode] || '')}</textarea>
             <div class="sp-cb">
               ${
                 mode === 'repondre'
@@ -583,9 +583,9 @@
             ${f && f.ok && f.adresseRecue && !adr && t.contactPersonnel && !t.bonColissimo ? `<button type="button" class="sp-mini sp-retrait" data-sp="reveler" data-motif="Créer le bon Colissimo">Afficher l’adresse (tracé)</button>` : ''}
             <div class="sp-etape">${pas(2, !!t.bonColissimo, adrOk && !t.bonColissimo)}<span class="sp-etape-l">Bon Colissimo</span>
               ${t.bonColissimo ? `<a class="sp-mini" href="${esc(urlSure(t.bonColissimo))}" target="_blank" rel="noopener">PDF</a>` : ''}
-              <label class="sp-btn petit${t.bonColissimo ? ' discret' : ''}">${t.bonColissimo ? 'Remplacer' : 'Déposer'}<input type="file" accept="application/pdf,.pdf" data-sp-bon="${t.ligne}" hidden></label></div>
+              <label class="sp-btn petit${t.bonColissimo ? ' discret' : ''}">${t.bonColissimo ? 'Remplacer' : 'Déposer'}<input type="file" accept="application/pdf,.pdf" data-sp-bon="${t.id}" hidden></label></div>
             <div class="sp-etape">${pas(3, suiviOk, !!t.bonColissimo && !suiviOk)}<span class="sp-etape-l">Lien de suivi</span></div>
-            <label class="sp-champ sp-retrait"><span class="sp-sr">Lien de suivi Colissimo</span><input class="input" data-sp-suivi="${t.ligne}" value="${esc(t.colissimo || '')}" placeholder="https://www.laposte.fr/outils/suivre-vos-envois?code=…"></label></div>
+            <label class="sp-champ sp-retrait"><span class="sp-sr">Lien de suivi Colissimo</span><input class="input" data-sp-suivi="${t.id}" value="${esc(t.colissimo || '')}" placeholder="https://www.laposte.fr/outils/suivre-vos-envois?code=…"></label></div>
           <div class="sp-bloc"><span class="sp-h">Contact</span>
             ${t.contactPersonnel ? '<b class="sp-gros">Personne accompagnée</b>' : `<b class="sp-gros">${esc(t.structureNom || t.nom)}</b>${t.responsableSav ? `<span class="sp-gris">${esc(t.responsableSav)}</span>` : ''}`}
             ${email ? `<a href="mailto:${esc(email)}">${esc(email)}</a>` : t.emailIndice ? `<span class="sp-masq">${esc(t.emailIndice)}</span>` : ''}
@@ -604,11 +604,11 @@
   }
 
   async function chargerFil(t) {
-    if (S.fils['_' + t.ligne]) return;
-    S.fils['_' + t.ligne] = true;
-    const r = await api('sav-fil-admin', { ligne: t.ligne }, true);
-    delete S.fils['_' + t.ligne];
-    S.fils[t.ligne] = r;
+    if (S.fils['_' + t.id]) return;
+    S.fils['_' + t.id] = true;
+    const r = await api('sav-fil-admin', { id: t.id }, true);
+    delete S.fils['_' + t.id];
+    S.fils[t.id] = r;
     if (r.ok && t.fil) t.fil.nonLusAdmin = 0;
     if (!enSaisie()) {
       peindreListe();
@@ -665,9 +665,9 @@
   async function reveler(t, motifDefaut) {
     const motif = await demanderMotif(motifDefaut);
     if (!motif) return;
-    const r = await api('identite-reveler', { objet: 'sav', ligne: t.ligne, motif });
+    const r = await api('identite-reveler', { objet: 'sav', id: t.id, motif });
     if (!r.ok) return;
-    S.reveles[t.ligne] = { d: r, expire: Date.now() + 5 * 60000 };
+    S.reveles[t.id] = { d: r, expire: Date.now() + 5 * 60000 };
     setTimeout(() => peindreDetail(), 5 * 60000 + 100);
     etat('Coordonnées affichées — consultation enregistrée', 'succes');
     peindreDetail();
@@ -687,7 +687,7 @@
     if (tk) {
       S.ouvert = tk.dataset.ticket;
       const t = ticketOuvert();
-      if (t) delete S.fils[t.ligne];
+      if (t) delete S.fils[t.id];
       peindre();
       return;
     }
@@ -698,7 +698,7 @@
     const m = e.target.closest('[data-sp-mode]');
     if (m) {
       const t = ticketOuvert();
-      S.mode[t.ligne] = m.dataset.spMode;
+      S.mode[t.id] = m.dataset.spMode;
       peindreDetail();
       const ta = document.querySelector('.sp-compo textarea');
       if (ta) ta.focus();
@@ -711,7 +711,7 @@
       if (!t || !ta) return;
       const txt = MODELES[Number(mo.dataset.spModele)].t(t);
       ta.value = ta.value.trim() ? ta.value.replace(/\s+$/, '') + '\n\n' + txt : txt;
-      S.brouillons[t.ligne + 'repondre'] = ta.value;
+      S.brouillons[t.id + 'repondre'] = ta.value;
       ta.focus();
       ta.setSelectionRange(ta.value.length, ta.value.length);
       return;
@@ -724,7 +724,7 @@
       peindre();
     }
     if (a.dataset.sp === 'ecrire') {
-      S.mode[t.ligne] = 'repondre';
+      S.mode[t.id] = 'repondre';
       peindreDetail();
       const ta = document.querySelector('.sp-compo textarea');
       if (ta) {
@@ -740,16 +740,16 @@
       }
     }
     if (a.dataset.sp === 'avancer') {
-      const r = await api('sav-update', { ligne: t.ligne, champ: 'statut', valeur: a.dataset.statut });
+      const r = await api('sav-update', { id: t.id, champ: 'statut', valeur: a.dataset.statut });
       if (r.ok) {
         etat('Statut mis à jour', 'succes');
         t.statut = a.dataset.statut;
-        delete S.fils[t.ligne];
+        delete S.fils[t.id];
         charger();
       }
     }
     if (a.dataset.sp === 'm-assigner') {
-      const r = await api('sav-assigner', { ligne: t.ligne, email: S.compte.email });
+      const r = await api('sav-assigner', { id: t.id, email: S.compte.email });
       if (r.ok) {
         t.assigne = S.compte.email;
         etat('Ticket assigné', 'succes');
@@ -758,7 +758,7 @@
     }
     if (a.dataset.sp === 'reveler') reveler(t, a.dataset.motif);
     if (a.dataset.sp === 'masquer') {
-      delete S.reveles[t.ligne];
+      delete S.reveles[t.id];
       peindreDetail();
     }
     if (a.dataset.sp === 'adresse') {
@@ -766,10 +766,10 @@
         !confirm('Demander l’adresse d’envoi ? Elle sera prévenue par e-mail et la renseignera sur sa page de suivi.')
       )
         return;
-      const r = await api('sav-fil-demander-adresse', { ligne: t.ligne });
+      const r = await api('sav-fil-demander-adresse', { id: t.id });
       if (r.ok) {
         etat('Adresse demandée', 'succes');
-        delete S.fils[t.ligne];
+        delete S.fils[t.id];
         peindreDetail();
       }
     }
@@ -791,16 +791,16 @@
     const t = ticketOuvert();
     if (!t) return;
     if (e.target.matches('[data-sp-statut]')) {
-      const r = await api('sav-update', { ligne: t.ligne, champ: 'statut', valeur: e.target.value });
+      const r = await api('sav-update', { id: t.id, champ: 'statut', valeur: e.target.value });
       if (r.ok) {
         etat('Statut mis à jour', 'succes');
         t.statut = e.target.value;
-        delete S.fils[t.ligne];
+        delete S.fils[t.id];
         charger();
       }
     }
     if (e.target.matches('[data-sp-assigner]')) {
-      const r = await api('sav-assigner', { ligne: t.ligne, email: e.target.value });
+      const r = await api('sav-assigner', { id: t.id, email: e.target.value });
       if (r.ok) {
         t.assigne = e.target.value;
         etat('Ticket assigné', 'succes');
@@ -813,7 +813,7 @@
         etat('Le lien de suivi doit commencer par https://', 'erreur');
         return;
       }
-      const r = await api('sav-update', { ligne: t.ligne, champ: 'colissimo', valeur: v });
+      const r = await api('sav-update', { id: t.id, champ: 'colissimo', valeur: v });
       if (r.ok) {
         t.colissimo = v;
         etat('Suivi enregistré', 'succes');
@@ -835,13 +835,13 @@
       });
       etat('Dépôt du bon…');
       const r = await api('sav-bon-colissimo', {
-        ligne: t.ligne,
+        id: t.id,
         fichier: { nom: fi.name, type: fi.type || 'application/pdf', base64 },
       });
       if (r.ok) {
         t.bonColissimo = r.url || '';
         etat('Bon déposé : la personne est prévenue', 'succes');
-        delete S.fils[t.ligne];
+        delete S.fils[t.id];
         charger();
       }
     }
@@ -852,7 +852,7 @@
     e.preventDefault();
     const t = ticketOuvert();
     if (!t) return;
-    const mode = S.mode[t.ligne] || 'repondre';
+    const mode = S.mode[t.id] || 'repondre';
     const texte = c.elements.texte.value.trim();
     if (!texte) {
       c.elements.texte.focus();
@@ -860,18 +860,18 @@
     }
     const b = c.querySelector('[type=submit]');
     b.disabled = true;
-    const r = await api(mode === 'note' ? 'sav-fil-note' : 'sav-fil-repondre', { ligne: t.ligne, texte });
+    const r = await api(mode === 'note' ? 'sav-fil-note' : 'sav-fil-repondre', { id: t.id, texte });
     b.disabled = false;
     if (!r.ok) return;
-    delete S.brouillons[t.ligne + mode];
+    delete S.brouillons[t.id + mode];
     const apres = mode === 'repondre' && c.elements.apres && c.elements.apres.value;
     if (apres) {
-      const rs = await api('sav-update', { ligne: t.ligne, champ: 'statut', valeur: apres });
+      const rs = await api('sav-update', { id: t.id, champ: 'statut', valeur: apres });
       if (rs.ok) t.statut = apres;
     }
     etat(mode === 'note' ? 'Note ajoutée' : 'Réponse envoyée', 'succes');
     document.activeElement && document.activeElement.blur && document.activeElement.blur();
-    delete S.fils[t.ligne];
+    delete S.fils[t.id];
     charger();
   });
 
@@ -891,7 +891,7 @@
     minuteur = setInterval(() => {
       if (!document.hidden && !enSaisie() && document.body.dataset.vue === 'boite') {
         const t = ticketOuvert();
-        if (t) delete S.fils[t.ligne];
+        if (t) delete S.fils[t.id];
         charger();
       }
     }, 45000);
