@@ -533,9 +533,14 @@ function rechercherAppareils(liste) {
     ),
   );
 }
-/** Colonnes « Lieu de stockage » et « Salesforce » : structures Internes (propriétaires) et ESN uniquement. */
+/** Colonne « Lieu de stockage » : structures Internes (propriétaires) et ESN uniquement. */
 function aColonnesStockage() {
   return estProprietaireInterne || estEsnFlotte;
+}
+/** Case et page « Saisie Salesforce » : Internes uniquement (vues structure et conseiller),
+ *  même règle que regles/salesforce.js côté serveur. */
+function aSaisieSalesforce() {
+  return estProprietaireInterne && !VUE_MATERIEL;
 }
 function statutVenduFlotte() {
   return estInterneFlotte && !estDepotVenteFlotte ? 'Remis' : 'Vendu';
@@ -704,7 +709,7 @@ function carteDispositif(a, opts) {
     opts.stockage
       ? `<div class="fi3-l"><span class="fi3-k">Lieu</span><span class="fi3-v tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.id)}</span></div>`
       : '',
-    opts.stockage && !VUE_MATERIEL
+    aSaisieSalesforce()
       ? `<div class="fi3-l"><span class="fi3-k">Salesforce</span><span class="fi3-v fi-sf">${caseSalesforce(a)}</span></div>`
       : '',
     selectProjetFlotte(a)
@@ -781,7 +786,7 @@ function construireTableauFlotteInterne(appareils, opts) {
   const entetes = `
     <tr>
       ${colonneAttribution ? '<th class="tl-col-case"></th>' : ''}
-      <th>Appareil</th><th>N° de série</th>${VUE_MATERIEL ? '' : '<th>Personne</th>'}<th>Statut</th>${VUE_MATERIEL ? '' : '<th>Prix</th>'}${opts.stockage ? `<th>Lieu de stockage</th>${VUE_MATERIEL ? '' : '<th class="tl-centre">Salesforce</th>'}` : ''}<th>Livré le</th>
+      <th>Appareil</th><th>N° de série</th>${VUE_MATERIEL ? '' : '<th>Personne</th>'}<th>Statut</th>${VUE_MATERIEL ? '' : '<th>Prix</th>'}${opts.stockage ? '<th>Lieu de stockage</th>' : ''}${aSaisieSalesforce() ? '<th class="tl-centre">Salesforce</th>' : ''}<th>Livré le</th>
     </tr>`;
   const celluleAppareil = (a, modifiable) => `
       <td><div class="tl-appareil">
@@ -807,7 +812,7 @@ function construireTableauFlotteInterne(appareils, opts) {
         ${VUE_MATERIEL ? '' : `<td><span class="tl-personne vide">${a.masque ? '<span class="tl-muet">Géré par la structure</span>' : a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '—'}</span></td>`}
         <td><span class="tl-verrou"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> ${echapper(a.attribueANom || a.attribueA)}</span></td>
         ${VUE_MATERIEL ? '' : `<td>${a.masque ? '<span class="tl-muet">—</span>' : prixFlotteHtml(a, true)}</td>`}
-        ${opts.stockage ? `<td class="tl-muet">${echapper(a.lieuStockage) || '—'}</td>${VUE_MATERIEL ? '' : `<td class="tl-centre">${a.saisieSalesforce === 'Oui' ? '✓' : '—'}</td>`}` : ''}
+        ${opts.stockage ? `<td class="tl-muet">${echapper(a.lieuStockage) || '—'}</td>` : ''}${aSaisieSalesforce() ? `<td class="tl-centre">${a.saisieSalesforce === 'Oui' ? '✓' : '—'}</td>` : ''}
         <td class="tl-muet">${a.dateLivraison ? echapper(a.dateLivraison) : '—'}</td>
       </tr>`;
       }
@@ -827,7 +832,7 @@ function construireTableauFlotteInterne(appareils, opts) {
         </select>${selectProjetFlotte(a, true)}
       </td>
       ${VUE_MATERIEL ? '' : `<td>${prixFlotteHtml(a, true)}</td>`}
-      ${opts.stockage ? `<td class="tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.id)}</td>${VUE_MATERIEL ? '' : `<td class="tl-centre">${caseSalesforce(a)}</td>`}` : ''}
+      ${opts.stockage ? `<td class="tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.id)}</td>` : ''}${aSaisieSalesforce() ? `<td class="tl-centre">${caseSalesforce(a)}</td>` : ''}
       <td class="tl-muet">${a.dateLivraison ? echapper(a.dateLivraison) : '—'}</td>
     </tr>`;
     })
@@ -1035,7 +1040,7 @@ function rendreFlotteInterneParitePortail(appareils) {
       <div class="flotte-actions">
         <button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-actualiser-flotte">↻ Actualiser</button>
         ${VUE_MATERIEL ? '' : '<button type="button" class="flotte-bouton flotte-bouton-contour" data-role="responsable" data-ouvrir-tarifs-revente>€ Tarifs de revente</button>'}
-        ${estProprietaireInterne && !VUE_MATERIEL ? '<button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-saisie-salesforce" title="Les ventes à recopier dans Salesforce, dans un nouvel onglet">Saisie Salesforce ↗</button>' : ''}
+        ${aSaisieSalesforce() ? '<button type="button" class="flotte-bouton flotte-bouton-contour" id="btn-saisie-salesforce" title="Les ventes à recopier dans Salesforce, dans un nouvel onglet">Saisie Salesforce ↗</button>' : ''}
         <button type="button" class="flotte-bouton flotte-bouton-plein" id="btn-stats-flotte-portail">Statistiques</button>
       </div>
     </div>
