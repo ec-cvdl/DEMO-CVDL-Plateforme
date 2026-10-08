@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script src="api.js?v=2"></script>
+<script src="commun.js?v=1"></script>
+<meta charset="utf-8">
+<script src="anti-cadre.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saisie Salesforce — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=34">
+<link rel="stylesheet" href="saisie-salesforce.css?v=1">
+<script src="portail-ui.js?v=32" defer></script>
+<script src="cvdl-ui.js?v=13" defer></script>
+<link rel="stylesheet" href="retours.css?v=2">
+<script src="retours.js?v=2" defer></script>
+</head>
+<body data-famille="materiel">
+
+<script src="deja-identifie.js?v=1"></script>
+<div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
+<button type="button" class="btn-deconnexion-fixe" id="btn-deconnexion" hidden>
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  Déconnexion
+</button>
+
+<main id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+  <div id="etape-code" style="max-width:460px;margin:0 auto">
+    <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
+      <span data-ill="cle" class="pk-titre-ill"></span>
+      <h1 style="margin:0">Saisie <em>Salesforce</em></h1>
+      <p style="opacity:0.6;margin:0">Identifiez-vous avec votre code structure. Réservé aux structures Interne.</p>
+      <div class="field">
+        <label for="id-code" class="sr-only">Code structure</label>
+        <input type="text" class="input" id="id-code" autocomplete="off" spellcheck="false" placeholder="Votre code structure">
+      </div>
+      <div id="retour-id-code" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary btn-block" id="btn-verifier-code">Continuer</button>
+    </div>
+  </div>
+
+  <div id="etape-saisie" hidden>
+    <div class="sf-ent">
+      <h1 id="sf-titre">Saisie Salesforce</h1>
+      <span class="sf-prog" id="sf-prog"></span>
+    </div>
+    <p class="sf-aide">Les ventes de votre flotte, dans l’ordre des formulaires Salesforce : copiez chaque valeur, collez-la dans Salesforce. Rien n’est envoyé à Salesforce.</p>
+    <div class="sf-membre">
+      <label for="sf-membre">Vous saisissez en tant que</label>
+      <select id="sf-membre" class="input"></select>
+    </div>
+    <div class="sf-filtre" role="toolbar" aria-label="Filtrer les ventes">
+      <button type="button" class="sf-chip" data-filtre="a-saisir"></button>
+      <button type="button" class="sf-chip" data-filtre="saisies"></button>
+      <label for="sf-creneau" class="sr-only">Créneau (date de vente)</label>
+      <select id="sf-creneau" class="sf-chip sf-select"></select>
+    </div>
+    <div id="retour-saisie" aria-live="polite"></div>
+    <div id="sf-contenu"></div>
+
+    <details class="sf-bloc sf-reglages" id="sf-reglages" data-role="responsable">
+      <summary>Réglages Salesforce</summary>
+      <p class="sf-note">Valeurs communes à toutes vos saisies, telles qu’elles s’écrivent dans Salesforce.</p>
+      <div class="sf-grille">
+        <label>Antenne<input type="text" class="input" data-reglage="antenne" maxlength="200"></label>
+        <label>Stock<input type="text" class="input" data-reglage="stock" maxlength="200"></label>
+        <label>Heure du créneau<input type="text" class="input" data-reglage="heure" placeholder="14:00" maxlength="5"></label>
+        <label>Durée (heures)<input type="text" class="input" data-reglage="duree" inputmode="decimal"></label>
+        <label>Bénévoles souhaités (max)<input type="text" class="input" data-reglage="benevoles" inputmode="numeric"></label>
+        <label>Prescripteur·trice<input type="text" class="input" data-reglage="prescripteur" maxlength="200"></label>
+        <label class="large">Opération<input type="text" class="input" data-reglage="operation" maxlength="200"></label>
+        <label class="large">Adresse de l’opération (facultatif)<input type="url" class="input" data-reglage="operationUrl" placeholder="https://….lightning.force.com/…"></label>
+        <label class="large">Équipe (un nom par ligne, comme dans Salesforce)<textarea class="input" data-reglage="equipe" rows="4"></textarea></label>
+      </div>
+      <div id="retour-reglages" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary" id="btn-enregistrer-reglages">Enregistrer</button>
+    </details>
+  </div>
+</main>
+
+<script src="pages/saisie-salesforce.js?v=1"></script>
+</body>
+</html>
