@@ -61,7 +61,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
     .map((x) => x.trim())
     .filter(Boolean).length;
   const seriesOk = quantiteAttendue === 0 || nbSeries === quantiteAttendue;
-  const conf = state.confirmSubEtapes[c.ligne] || {};
+  const conf = state.confirmSubEtapes[c.id] || {};
   const motSeries = c.dematerialisee ? 'Codes' : 'Numéros de série';
   const resumeSeries = () => (c.dematerialisee ? pilulesCodes(c.numerosSerie) : pilulesNumerosSerie(c.numerosSerie));
   const t = [];
@@ -77,7 +77,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
         titre: 'Transférée par la structure Interne',
         detail: 'Le partenaire n’avait pas le matériel en stock.',
       });
-    if (!exempte && c.devisDemande === 'Oui')
+    if (!exempte && c.devisDemande)
       t.push(
         c.referenceDevis
           ? { etat: 'ok', titre: 'Devis envoyé', detail: `Devis ${echapper(c.referenceDevis)}` }
@@ -398,7 +398,7 @@ async function corrigerSeriesCommande(ref) {
   if (!c) return;
   const valeur = $('pn-series-passee').value;
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'numerosSerie', valeur },
+    { action: 'update', id: c.id, champ: 'numerosSerie', valeur },
     'Enregistrement…',
     'Numéros mis à jour',
   );
@@ -421,7 +421,7 @@ async function corrigerColissimoCommande(ref) {
     return;
   }
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'colissimo', valeur },
+    { action: 'update', id: c.id, champ: 'colissimo', valeur },
     'Enregistrement…',
     'Lien(s) mis à jour',
   );
@@ -456,11 +456,7 @@ async function demanderValidationCommande(ref) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;
   try {
-    const r = await posterEtat(
-      { action: 'demander-validation-logistique', ligne: c.ligne },
-      'Envoi…',
-      'Demande envoyée',
-    );
+    const r = await posterEtat({ action: 'demander-validation-logistique', id: c.id }, 'Envoi…', 'Demande envoyée');
     if (r.ok) {
       c.validationLogistiqueEnAttente = !r.valideDirectement;
       if (r.valideDirectement) c.statutCommande = 'Validée';
@@ -486,13 +482,13 @@ async function confirmerColissimoPreparation(ref) {
     return;
   }
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'colissimo', valeur },
+    { action: 'update', id: c.id, champ: 'colissimo', valeur },
     'Enregistrement…',
     'Lien(s) confirmé(s)',
   );
   if (r.ok) {
     c.colissimo = valeur;
-    (state.confirmSubEtapes[c.ligne] ||= {}).colissimo = true;
+    (state.confirmSubEtapes[c.id] ||= {}).colissimo = true;
     render();
   }
 }
@@ -515,10 +511,10 @@ async function confirmerSeriesCommande(ref) {
   }
   etat('Enregistrement…', 'chargement');
   try {
-    const r = await poster({ action: 'update', ligne: c.ligne, champ: 'numerosSerie', valeur });
+    const r = await poster({ action: 'update', id: c.id, champ: 'numerosSerie', valeur });
     if (r.ok) {
       c.numerosSerie = valeur;
-      (state.confirmSubEtapes[c.ligne] ||= {}).series = true;
+      (state.confirmSubEtapes[c.id] ||= {}).series = true;
       // BO : réécrit « personnes » pour associer chaque personne à son numéro de série, au format
       // nom|dateNaissance|produit|numeroSerie (lu par le suivi, les attestations et la flotte)
       const structure = state.structures.find((s) => s.code === c.code);
@@ -538,7 +534,7 @@ async function confirmerSeriesCommande(ref) {
           if (u.nom) lignesFinales.push(`${u.nom}|${u.dateNaissance}|${u.produit}|${numeroDeCetteUnite}`);
         });
         const valeurPersonnes = lignesFinales.join('\n');
-        const rp = await poster({ action: 'update', ligne: c.ligne, champ: 'personnes', valeur: valeurPersonnes });
+        const rp = await poster({ action: 'update', id: c.id, champ: 'personnes', valeur: valeurPersonnes });
         if (rp.ok) c.personnes = valeurPersonnes;
       }
       etat('Numéros confirmés', 'succes');
@@ -569,7 +565,7 @@ async function genererDocumentCommande(ref, type) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;
   const action = type === 'devis' ? 'commande-devis-direct' : 'commande-facturer-direct';
-  const donnees = { action, ligne: c.ligne };
+  const donnees = { action, id: c.id };
   if (type === 'facture') {
     const numero = await demanderCvdl('Numéro de facture :');
     if (!numero) return;
@@ -592,7 +588,7 @@ async function choisirModeLivraison(ref, mode) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'modeLivraison', valeur: mode },
+    { action: 'update', id: c.id, champ: 'modeLivraison', valeur: mode },
     'Enregistrement…',
     'Mode de livraison enregistré',
   );
@@ -615,7 +611,7 @@ async function enregistrerColissimoCommande(ref) {
     return;
   }
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'colissimo', valeur },
+    { action: 'update', id: c.id, champ: 'colissimo', valeur },
     'Enregistrement…',
     'Lien(s) enregistré(s)',
   );
@@ -635,7 +631,7 @@ async function validerPreparationCommande(ref, btn) {
     // bon de livraison désactivé : passage direct au statut suivant
     const rStatut = await poster({
       action: 'update',
-      ligne: c.ligne,
+      id: c.id,
       champ: 'statutCommande',
       valeur: 'En cours de livraison',
     });
@@ -671,7 +667,7 @@ async function genererFactureDepuisLivree(ref) {
     return;
   }
   const r = await posterEtat(
-    { action: 'commande-facturer-direct', ligne: c.ligne, numeroFacture: numero },
+    { action: 'commande-facturer-direct', id: c.id, numeroFacture: numero },
     'Génération…',
     'Facture générée',
   );
@@ -699,7 +695,7 @@ async function enregistrerLienPaiement(ref) {
     return;
   }
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'lienPaiement', valeur },
+    { action: 'update', id: c.id, champ: 'lienPaiement', valeur },
     'Enregistrement…',
     'Lien(s) de paiement enregistré(s)',
   );
@@ -727,7 +723,7 @@ async function enregistrerLiensPaiementPersonnes(ref) {
   }
   const valeur = valeurs.join('\n');
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'lienPaiement', valeur },
+    { action: 'update', id: c.id, champ: 'lienPaiement', valeur },
     'Enregistrement…',
     'Lien(s) de paiement enregistré(s)',
   );
@@ -744,7 +740,7 @@ async function enregistrerDateLivraisonCommande(ref) {
   const [y, mo, d] = iso.split('-');
   const valeur = `${d}/${mo}/${y}`;
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'dateLivraison', valeur },
+    { action: 'update', id: c.id, champ: 'dateLivraison', valeur },
     'Enregistrement…',
     'Date enregistrée',
   );
@@ -761,7 +757,7 @@ async function enregistrerDateCibleCommande(ref) {
   const [y, mo, d] = iso.split('-');
   const valeur = `${d}/${mo}/${y}`;
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'dateLivraisonCible', valeur },
+    { action: 'update', id: c.id, champ: 'dateLivraisonCible', valeur },
     'Enregistrement…',
     'Date estimée enregistrée',
   );
@@ -775,7 +771,7 @@ async function annulerCommande(ref) {
   if (!c) return;
   if (!(await confirmerCvdl(`Annuler la commande ${c.reference} ?`))) return;
   const r = await posterEtat(
-    { action: 'update', ligne: c.ligne, champ: 'statutCommande', valeur: 'Annulée' },
+    { action: 'update', id: c.id, champ: 'statutCommande', valeur: 'Annulée' },
     'Annulation…',
     'Commande annulée',
   );

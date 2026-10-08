@@ -256,15 +256,18 @@ async function afficherPasseport(numeroSerie) {
     `;
 
     $('qr-code-passeport-admin').innerHTML = '';
-    try {
-      new QRCode($('qr-code-passeport-admin'), {
-        text: location.href.split('?')[0] + '?sn=' + encodeURIComponent(r.numeroSerie),
-        width: 180,
-        height: 180,
-        colorDark: '#002743',
-        colorLight: '#ffffff',
-      });
-    } catch (e) {}
+    // QR de l'étiquette : adresse publique du site (voir urlPublique dans api.js).
+    urlPublique('passeport.html?sn=' + encodeURIComponent(r.numeroSerie)).then((url) => {
+      try {
+        new QRCode($('qr-code-passeport-admin'), {
+          text: url,
+          width: 180,
+          height: 180,
+          colorDark: '#002743',
+          colorLight: '#ffffff',
+        });
+      } catch (e) {}
+    });
     $('btn-imprimer-etiquette-admin').addEventListener('click', () => {
       const fenetre = window.open('', '_blank', 'width=400,height=500');
       fenetre.document

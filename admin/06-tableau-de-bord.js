@@ -193,7 +193,7 @@ const COMMANDE_ACTIVE = (c) => !['Livrée', 'Annulée'].includes(c.statutCommand
 /** Devis demandé par la structure, pas encore généré (hors Interne/ESN/BO). */
 /** Petites pastilles « Devis demandé » / « Transférée » sur les lignes et cartes de commandes. */
 function badgesCommandeListe(c) {
-  const devis = c.devisDemande === 'Oui' && !c.referenceDevis && COMMANDE_ACTIVE(c) && !structureExclueDevisFacture(c);
+  const devis = c.devisDemande && !c.referenceDevis && COMMANDE_ACTIVE(c) && !structureExclueDevisFacture(c);
   return (
     (devis
       ? ` <span class="rp-mini-badge rp-mb-devis" title="Devis demandé par la structure, pas encore généré">Devis demandé</span>`
@@ -205,7 +205,7 @@ function badgesCommandeListe(c) {
 }
 function commandesDevisDemande() {
   return state.commandes.filter(
-    (c) => COMMANDE_ACTIVE(c) && c.devisDemande === 'Oui' && !c.referenceDevis && !structureExclueDevisFacture(c),
+    (c) => COMMANDE_ACTIVE(c) && c.devisDemande && !c.referenceDevis && !structureExclueDevisFacture(c),
   );
 }
 /** Commandes transférées par une structure Interne (matériel manquant chez elle), encore à traiter. */

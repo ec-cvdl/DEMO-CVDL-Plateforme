@@ -104,7 +104,7 @@ document.addEventListener('click', (e) => {
   }
   const o = e.target.closest('[data-ouvrir]');
   if (o) {
-    ouvrirDetail(o.dataset.ouvrir);
+    ouvrirDetail(Number(o.dataset.ouvrir));
     return;
   }
 });

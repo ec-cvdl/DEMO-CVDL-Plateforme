@@ -199,7 +199,7 @@ function finVueBalance(t) {
             <td>${x.joursRetard > 0 ? `<span class="fin-badge ko">${x.joursRetard} j</span>` : '<span class="fin-badge">à échoir</span>'}</td>
             <td>${x.relances ? `${x.relances} · dernière le ${finDate(x.derniereRelance)}` : '—'}</td>
             <td class="fin-actions">${x.joursRetard > 0 ? `<button type="button" class="btn btn-ghost fin-mini" data-fin-relancer="${echapper(x.reference)}">Relancer</button>` : ''}
-              <button type="button" class="btn btn-ghost fin-mini" data-fin-payee="${echapper(x.reference)}" data-ligne="${x.ligne}">Marquer payée</button></td></tr>`,
+              <button type="button" class="btn btn-ghost fin-mini" data-fin-payee="${echapper(x.reference)}" data-id="${x.id}">Marquer payée</button></td></tr>`,
             )
             .join('')}
         </tbody></table></td></tr>`
@@ -353,11 +353,11 @@ async function finRelancer(references) {
     await finCharger();
   }
 }
-async function finMarquerPayee(reference, ligne) {
+async function finMarquerPayee(reference, id) {
   if (!(await confirmerCvdl(`Marquer la facture ${reference} comme payée ?`, { ok: 'Marquer payée' }))) return;
   const facture = (fin.d.factures || []).find((f) => f.reference === reference);
   const r = await posterEtat(
-    { action: 'facture-update', ligne, champ: 'statut', valeur: 'Payée' },
+    { action: 'facture-update', id, champ: 'statut', valeur: 'Payée' },
     'Enregistrement…',
     'Facture marquée payée',
   );
@@ -367,7 +367,7 @@ async function finMarquerPayee(reference, ligne) {
       facture.referenceCommande &&
       (state.commandes || []).find((x) => x.reference === facture.referenceCommande);
     if (c)
-      await poster({ action: 'update', ligne: c.ligne, champ: 'statutPaiement', valeur: 'Payé' }).then((x) => {
+      await poster({ action: 'update', id: c.id, champ: 'statutPaiement', valeur: 'Payé' }).then((x) => {
         if (x && x.ok) c.statutPaiement = 'Payé';
       });
     const f = (state.factures || []).find((x) => x.referenceFacture === reference);
@@ -394,7 +394,7 @@ document.addEventListener('click', (e) => {
   const pay = e.target.closest('[data-fin-payee]');
   if (pay) {
     e.stopPropagation();
-    return finMarquerPayee(pay.dataset.finPayee, parseInt(pay.dataset.ligne, 10));
+    return finMarquerPayee(pay.dataset.finPayee, parseInt(pay.dataset.id, 10));
   }
   const exp = e.target.closest('[data-fin-export]');
   if (exp) return finExporter(exp.dataset.finExport);

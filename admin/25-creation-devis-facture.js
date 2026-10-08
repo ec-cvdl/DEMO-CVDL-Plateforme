@@ -3,7 +3,7 @@ function vueCreerDevis() {
   const libre = state.modal.libre;
   const eligibles = state.commandes.filter((c) => !c.referenceDevis && !structureExclueDevisFacture(c));
   const options = eligibles
-    .map((c) => `<option value="${c.ligne}">${echapper(c.reference)} — ${echapper(c.nom)}</option>`)
+    .map((c) => `<option value="${c.id}">${echapper(c.reference)} — ${echapper(c.nom)}</option>`)
     .join('');
   const optionsStructures =
     '<option value="">— Non listée / saisie libre —</option>' +
@@ -60,7 +60,7 @@ function vueCreerDevis() {
       </div>
     `
         : eligibles.length
-          ? champ('Commande *', `<select class="input" id="cd-ligne">${options}</select>`)
+          ? champ('Commande *', `<select class="input" id="cd-commande">${options}</select>`)
           : '<p style="opacity:0.6;font-size:13px;margin-top:var(--space-2)">Aucune commande sans devis à facturer.</p>'
     }
     ${liensRaccourcis('devis')}
@@ -70,17 +70,17 @@ function vueCreerDevis() {
 }
 async function enregistrerDevis() {
   if (state.modal.libre) return enregistrerDevisLibre();
-  const select = $('cd-ligne');
+  const select = $('cd-commande');
   if (!select) {
     state.modal = null;
     render();
     return;
   }
-  const ligne = parseInt(select.value, 10);
+  const id = parseInt(select.value, 10);
   $('cd-enregistrer').disabled = true;
   try {
     etat('Génération…', 'chargement');
-    const r = await poster({ action: 'commande-devis-direct', ligne });
+    const r = await poster({ action: 'commande-devis-direct', id });
     if (r.ok) {
       etat(r.avertissement || 'Devis généré', 'succes', r.avertissement ? 6000 : 2600);
       const [rc, rd] = await Promise.all([
@@ -102,9 +102,9 @@ async function enregistrerDevis() {
     $('cd-enregistrer').disabled = false;
   }
 }
-async function annulerDocumentAction(type, ligne, motif) {
+async function annulerDocumentAction(type, id, motif) {
   const r = await posterEtat(
-    { action: `${type}-annuler`, ligne, motif },
+    { action: `${type}-annuler`, id, motif },
     'Annulation…',
     type === 'devis' ? 'Devis annulé' : 'Facture annulée',
   );
@@ -134,7 +134,7 @@ async function genererDocumentPdf() {
   dg.erreur = null;
   render();
   try {
-    const r = await poster({ action: estDevis ? 'devis-generer-pdf' : 'facture-generer-pdf', ligne: doc.ligne });
+    const r = await poster({ action: estDevis ? 'devis-generer-pdf' : 'facture-generer-pdf', id: doc.id });
     if (r.ok) {
       dg.url = r.url;
     } else {
@@ -167,7 +167,7 @@ async function envoyerDocumentGenere() {
   try {
     const r = await poster({
       action: dg.type === 'devis' ? 'devis-envoyer' : 'facture-envoyer',
-      ligne: doc.ligne,
+      id: doc.id,
       email,
       url: dg.url,
       sujet: $('dg-sujet').value.trim(),
@@ -234,7 +234,7 @@ async function enregistrerDevisLibre() {
 function vueCreerFacture() {
   const eligibles = state.commandes.filter((c) => !c.referenceFacture && !structureExclueDevisFacture(c));
   const options = eligibles
-    .map((c) => `<option value="${c.ligne}">${echapper(c.reference)} — ${echapper(c.nom)}</option>`)
+    .map((c) => `<option value="${c.id}">${echapper(c.reference)} — ${echapper(c.nom)}</option>`)
     .join('');
   return dialogShell(
     'Nouvelle facture',
@@ -242,7 +242,7 @@ function vueCreerFacture() {
     ${
       eligibles.length
         ? `
-      ${champ('Commande *', `<select class="input" id="cf-ligne">${options}</select>`)}
+      ${champ('Commande *', `<select class="input" id="cf-commande">${options}</select>`)}
       ${champ('Numéro de facture *', '<input class="input" id="cf-numero">')}
     `
         : '<p style="opacity:0.6;font-size:13px;margin-top:var(--space-2)">Aucune commande sans facture à facturer.</p>'
@@ -253,13 +253,13 @@ function vueCreerFacture() {
   );
 }
 async function enregistrerFacture() {
-  const select = $('cf-ligne');
+  const select = $('cf-commande');
   if (!select) {
     state.modal = null;
     render();
     return;
   }
-  const ligne = parseInt(select.value, 10);
+  const id = parseInt(select.value, 10);
   const numeroFacture = $('cf-numero').value.trim();
   if (!numeroFacture) {
     $('rp-retour-modale').innerHTML = '<div class="msg msg-erreur">Le numéro de facture est obligatoire.</div>';
@@ -268,7 +268,7 @@ async function enregistrerFacture() {
   $('cf-enregistrer').disabled = true;
   try {
     const r = await posterEtat(
-      { action: 'commande-facturer-direct', ligne, numeroFacture },
+      { action: 'commande-facturer-direct', id, numeroFacture },
       'Génération…',
       'Facture générée',
     );

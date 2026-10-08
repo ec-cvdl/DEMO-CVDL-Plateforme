@@ -435,14 +435,8 @@ async function enregistrerSav() {
     // via sav-update, sur le ticket qui vient d'être créé.
     const marque = v.marque.trim(),
       modele = v.modele.trim();
-    if (marque || modele) {
-      const rl = await jsonp({ action: 'sav-list', password: motDePasse, limite: 1, recherche: r.reference });
-      const ligne = rl.ok && rl.tickets && rl.tickets[0] ? rl.tickets[0].ligne : null;
-      if (ligne) {
-        if (marque) await poster({ action: 'sav-update', ligne, champ: 'marque', valeur: marque });
-        if (modele) await poster({ action: 'sav-update', ligne, champ: 'modele', valeur: modele });
-      }
-    }
+    if (marque) await poster({ action: 'sav-update', id: r.id, champ: 'marque', valeur: marque });
+    if (modele) await poster({ action: 'sav-update', id: r.id, champ: 'modele', valeur: modele });
     etat('Ticket créé', 'succes');
     const rs = await jsonp({ action: 'sav-list', password: motDePasse, limite: 0 });
     if (rs.ok) state.sav = rs.tickets;
@@ -475,7 +469,7 @@ function ouvrirOrganisationMateriel() {
     groupes[cat.id] = items
       .slice()
       .sort((a, b) => (a.ordre || 0) - (b.ordre || 0))
-      .map((p) => p.ligne);
+      .map((p) => p.id);
   });
   state.materielGroupes = groupes;
   state.modal = { kind: 'organiser-materiel' };
@@ -499,14 +493,14 @@ function vueOrganiserMateriel() {
               <div class="card-kicker" style="margin-bottom:8px">${echapper(cat.titre)} (${refs.length})</div>
               <div style="display:flex;flex-direction:column;gap:6px">
                 ${refs
-                  .map((ligne, i) => {
-                    const p = state.produits.find((x) => x.ligne === ligne);
+                  .map((id, i) => {
+                    const p = state.produits.find((x) => x.id === id);
                     if (!p) return '';
                     return `
-                  <div class="card elev-sm" draggable="true" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;cursor:grab;${p.masqueCategorieMateriel ? 'opacity:0.5' : ''}" data-materiel-carte="${ligne}" data-materiel-cat="${cat.id}" data-materiel-index="${i}">
+                  <div class="card elev-sm" draggable="true" style="flex-direction:row;align-items:center;gap:10px;padding:10px 12px;cursor:grab;${p.masqueCategorieMateriel ? 'opacity:0.5' : ''}" data-materiel-carte="${id}" data-materiel-cat="${cat.id}" data-materiel-index="${i}">
                     <span style="opacity:0.4;display:flex;flex:none">${icon('grip', 16)}</span>
                     <span style="flex:1;font-size:13.5px;font-weight:600">${echapper(p.nom)}</span>
-                    <button type="button" class="btn btn-ghost btn-icon" style="width:30px;height:30px;flex:none" data-materiel-masquer="${ligne}" title="${p.masqueCategorieMateriel ? 'Masqué de la page catégories — cliquer pour afficher' : 'Visible sur la page catégories — cliquer pour masquer'}">${icon(p.masqueCategorieMateriel ? 'eyeoff' : 'eye', 16)}</button>
+                    <button type="button" class="btn btn-ghost btn-icon" style="width:30px;height:30px;flex:none" data-materiel-masquer="${id}" title="${p.masqueCategorieMateriel ? 'Masqué de la page catégories — cliquer pour afficher' : 'Visible sur la page catégories — cliquer pour masquer'}">${icon(p.masqueCategorieMateriel ? 'eyeoff' : 'eye', 16)}</button>
                   </div>`;
                   })
                   .join('')}
@@ -525,11 +519,11 @@ async function enregistrerOrganisationMateriel() {
   try {
     const appels = [];
     Object.values(state.materielGroupes).forEach((liste) => {
-      liste.forEach((ligne, index) => {
-        const p = state.produits.find((x) => x.ligne === ligne);
+      liste.forEach((id, index) => {
+        const p = state.produits.find((x) => x.id === id);
         if (!p) return;
         appels.push(
-          poster({ action: 'produit-update', ligne, champ: 'ordre', valeur: index }).then((r) => {
+          poster({ action: 'produit-update', id, champ: 'ordre', valeur: index }).then((r) => {
             p.ordre = index;
             return r;
           }),
@@ -537,7 +531,7 @@ async function enregistrerOrganisationMateriel() {
         appels.push(
           poster({
             action: 'produit-update',
-            ligne,
+            id,
             champ: 'masqueCategorieMateriel',
             valeur: !!p.masqueCategorieMateriel,
           }),

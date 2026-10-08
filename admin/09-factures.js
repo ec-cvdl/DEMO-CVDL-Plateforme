@@ -11,7 +11,7 @@ function vueFactures() {
         c.referenceDevis ||
         c.referenceFacture ||
         c.statutComptable ||
-        (c.devisDemande === 'Oui' && !structureExclueDevisFacture(c)),
+        (c.devisDemande && !structureExclueDevisFacture(c)),
     )
     .map((c) => ({
       c,
@@ -28,9 +28,9 @@ function vueFactures() {
   // Un devis "en attente" est un devis pas encore généré pour une commande qui en a demandé un
   // — pas un devis déjà émis (qui restait compté indéfiniment tant que son statut ne progresse
   // jamais au-delà de "Émis" côté back, ce qui revenait à compter TOUS les devis existants).
-  const nbDevisAttente = dossiers.filter(({ c, d }) => !d && c.devisDemande === 'Oui').length;
+  const nbDevisAttente = dossiers.filter(({ c, d }) => !d && c.devisDemande).length;
   const nbFactureImpayee = dossiers.filter(({ f }) => f && f.statut !== 'Payée' && f.statut !== 'Annulée').length;
-  if (state.docsFiltre === 'devis-attente') dossiers = dossiers.filter(({ c, d }) => !d && c.devisDemande === 'Oui');
+  if (state.docsFiltre === 'devis-attente') dossiers = dossiers.filter(({ c, d }) => !d && c.devisDemande);
   if (state.docsFiltre === 'facture-impayee')
     dossiers = dossiers.filter(({ f }) => f && f.statut !== 'Payée' && f.statut !== 'Annulée');
 
@@ -249,7 +249,7 @@ function vueFactures() {
               <span style="font-size:13px;font-weight:700;flex:none">${echapper(d.referenceDevis)}</span>
               <span style="font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${echapper(d.nomStructure)} — ${echapper(d.produit)}</span>
               <span style="font-size:13px;font-weight:600;flex:none">${echapper(formaterMontant(d.montantTotal))}</span>
-              <button type="button" class="btn btn-secondary" style="flex:none" data-rattacher-devis="${d.ligne}">Rattacher une commande</button>
+              <button type="button" class="btn btn-secondary" style="flex:none" data-rattacher-devis="${d.id}">Rattacher une commande</button>
             </div>`,
             )
             .join('')}

@@ -69,7 +69,7 @@ function vueDossierSav(s) {
               const st = state.structures.find((x) => x.code === s.code);
               const n = s.structureNom || s.nom || '';
               return st
-                ? `<button type="button" class="lien-structure" data-structure-vue="${st.ligne}" title="Ouvrir la fiche 360° de la structure">${echapper(n)}</button>`
+                ? `<button type="button" class="lien-structure" data-structure-vue="${st.id}" title="Ouvrir la fiche 360° de la structure">${echapper(n)}</button>`
                 : echapper(n);
             })()}<small>Ouvert le ${echapper(s.date)}${s.dateResolution ? ' · clos le ' + echapper(s.dateResolution) : ''}</small></div></div>
           </div>
@@ -93,23 +93,23 @@ function vueDossierSav(s) {
             ${s.problemeEffectif ? `<div class="rpd-row">${icon('wrench', 14)}Constaté : ${echapper(s.problemeEffectif)}</div>` : ''}</div>
           ${(() => {
             // Identité pseudonymisée par le serveur ; révélation tracée (identite-admin.js).
-            const rv = s.identiteMasquee ? identiteRevelee('sav', s.ligne) : null;
+            const rv = s.identiteMasquee ? identiteRevelee('sav', s.id) : null;
             const email = s.email || (rv && rv.contact && rv.contact.email) || '';
             const tel = s.telephone || (rv && rv.contact && rv.contact.telephone) || '';
-            const nomPers = (p) => (p ? nomPersonneAdmin('sav', s.ligne, p) : '');
+            const nomPers = (p) => (p ? nomPersonneAdmin('sav', s.id, p) : '');
             return `<div class="rpd-sec"><span class="rpd-k">Contact${s.contactPersonnel ? ' · la personne directement' : ''}</span>
             ${s.nomBeneficiaire ? `<div class="rpd-row">${icon('personne', 14)}${echapper(nomPers(s.nomBeneficiaire))}</div>` : ''}
             ${s.nom ? `<div class="rpd-row">${icon(s.code ? 'building' : 'personne', 14)}${echapper(s.code ? s.nom : nomPers(s.nom))}</div>` : ''}
             ${email ? `<div class="rpd-row">${icon('mail', 14)}<a href="mailto:${echapper(email)}">${echapper(email)}</a>${copie(email)}</div>` : s.emailIndice ? `<div class="rpd-row idr-indice">${icon('mail', 14)}${echapper(s.emailIndice)}</div>` : ''}
             ${tel ? `<div class="rpd-row">${icon('telephone', 14)}${echapper(tel)}${copie(tel)}</div>` : s.telephoneIndice ? `<div class="rpd-row idr-indice">${icon('telephone', 14)}${echapper(s.telephoneIndice)}</div>` : ''}
-            ${s.identiteMasquee ? `<div class="rpd-row">${boutonIdentite('sav', s.ligne, s.contactPersonnel ? 'Afficher les coordonnées' : 'Afficher l’identité')}</div>` : ''}
+            ${s.identiteMasquee ? `<div class="rpd-row">${boutonIdentite('sav', s.id, s.contactPersonnel ? 'Afficher les coordonnées' : 'Afficher l’identité')}</div>` : ''}
           </div>`;
           })()}
           ${s.commentaire ? `<div class="rpd-comm">« ${echapper(s.commentaire)} »</div>` : ''}
           <div class="rpd-menu rpd-menu-v2">
             ${!estSurTerminal ? `<button type="button" class="btn-annuler" data-annuler-sav="${echapper(s.reference)}">${iconeAnnuler()}Annuler ce SAV</button>` : ''}
             ${s.email ? `<a class="rpd-mbtn" href="mailto:${echapper(s.email)}?subject=${encodeURIComponent('Votre demande SAV ' + s.reference)}">${icon('mail', 13)}Écrire</a>` : ''}
-            ${!s.email && s.aEmail ? `<button type="button" class="rpd-mbtn" data-idr-ecrire="sav|${s.ligne}|${echapper(s.reference)}">${icon('mail', 13)}Écrire</button>` : ''}
+            ${!s.email && s.aEmail ? `<button type="button" class="rpd-mbtn" data-idr-ecrire="sav|${s.id}|${echapper(s.reference)}">${icon('mail', 13)}Écrire</button>` : ''}
           </div>
         </aside>
         <section class="rpd-parcours">
@@ -173,7 +173,7 @@ function panneauDevisPaiementCommande(c) {
   const structure = state.structures.find((s) => s.code === c.code);
   const exempte = !!(structure && (structure.interne || structure.esn));
   if (exempte) return '';
-  const devisEligible = c.devisDemande === 'Oui' && !structureExclueDevisFacture(c);
+  const devisEligible = c.devisDemande && !structureExclueDevisFacture(c);
   const factureEligible = !structureExclueDevisFacture(c);
   const paiementCB = c.moyenPaiement === 'Paiement en ligne (CB)';
   const paiementEnAttente =

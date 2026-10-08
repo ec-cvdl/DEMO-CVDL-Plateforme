@@ -14,7 +14,7 @@ async function afficherPrerequisPartenaire(c) {
   zone.innerHTML = '';
   try {
     // Composant partagé avec l'admin (fiche-commande.js) : même frise, même checklist.
-    const etat = await window.FicheCommande.charger(jsonp, { codeCreateur: codeValide, ligne: c.ligne });
+    const etat = await window.FicheCommande.charger(jsonp, { codeCreateur: codeValide, id: c.id });
     if (!etat || commandeOuverte !== c) return;
     $('dc-timeline').innerHTML = window.FicheCommande.frise(etat);
     if (!etat.etapeSuivante) return;
@@ -33,7 +33,7 @@ async function afficherPrerequisPartenaire(c) {
   }
 }
 
-let lignesFlotteSelectionnees = [];
+let appareilsFlotteSelectionnes = [];
 // par commande : la tâche « Passer à … » était-elle déjà affichée ?
 
 // Circuit Interne (même règle que le back, regles/circuits.js) : l'Interne valide elle-même.
@@ -319,7 +319,7 @@ async function ouvrirDetailCommande(reference) {
   const c = commandesCourantes.find((x) => x.reference === reference);
   if (!c) return;
   commandeOuverte = c;
-  lignesFlotteSelectionnees = [];
+  appareilsFlotteSelectionnes = [];
   const fenetre = document.querySelector('.dc-v2');
   if (fenetre) fenetre.scrollTop = 0;
   $('dc-reference').textContent = c.reference;
@@ -455,7 +455,7 @@ async function ouvrirDetailCommande(reference) {
         const r = await poster({
           action: 'commande-partenaire-update',
           codeCreateur: codeValide,
-          ligne: c.ligne,
+          id: c.id,
           champ: 'statutPaiement',
           valeur: nouveauStatut,
         });
@@ -488,7 +488,7 @@ async function ouvrirDetailCommande(reference) {
         const r = await poster({
           action: 'commande-partenaire-update',
           codeCreateur: codeValide,
-          ligne: c.ligne,
+          id: c.id,
           champ: 'lienPaiement',
           valeur,
         });
@@ -660,8 +660,8 @@ async function ouvrirDetailCommande(reference) {
         const correspondants = flotteDisponible.filter((a) => a.produit === l.produit);
         const autres = flotteDisponible.filter((a) => a.produit !== l.produit);
         const ligneAppareil = (a) => `
-        <div class="ligne-appareil-choix" data-ligne-flotte="${a.ligne}" data-groupe-idx="${groupeIdx}">
-          <input type="checkbox" data-case-flotte="${a.ligne}" data-produit-flotte="${echapper(l.produit)}" data-quantite-max="${quantite}" data-groupe-idx="${groupeIdx}">
+        <div class="ligne-appareil-choix" data-id-flotte="${a.id}" data-groupe-idx="${groupeIdx}">
+          <input type="checkbox" data-case-flotte="${a.id}" data-produit-flotte="${echapper(l.produit)}" data-quantite-max="${quantite}" data-groupe-idx="${groupeIdx}">
           ${illustrationProduitCP(a.produit || l.produit, 30)}
           <div class="lac-txt">
             <div class="lac-sn mono">${echapper(a.numeroSerie)}</div>
@@ -689,12 +689,12 @@ async function ouvrirDetailCommande(reference) {
     majCompteurSelection();
     document.querySelectorAll('[data-case-flotte]').forEach((cb) => {
       cb.addEventListener('change', () => {
-        const ligne = parseInt(cb.dataset.caseFlotte, 10);
+        const id = parseInt(cb.dataset.caseFlotte, 10);
         const produit = cb.dataset.produitFlotte;
         const groupeIdx = cb.dataset.groupeIdx;
         const quantiteMax = parseInt(cb.dataset.quantiteMax, 10) || 0;
         const conteneur = cb.closest('.ligne-appareil-choix');
-        const dejaPourCeProduit = lignesFlotteSelectionnees.filter((x) => x.produit === produit).length;
+        const dejaPourCeProduit = appareilsFlotteSelectionnes.filter((x) => x.produit === produit).length;
         if (cb.checked) {
           if (dejaPourCeProduit >= quantiteMax) {
             cb.checked = false;
@@ -702,7 +702,7 @@ async function ouvrirDetailCommande(reference) {
               `<div class="msg msg-erreur">Déjà ${quantiteMax} appareil(s) sélectionné(s) pour "${echapper(produit)}".</div>`;
             return;
           }
-          lignesFlotteSelectionnees.push({ ligne, produit });
+          appareilsFlotteSelectionnes.push({ id, produit });
           conteneur.classList.add('selectionnee');
           majCompteurSelection();
 
@@ -712,20 +712,20 @@ async function ouvrirDetailCommande(reference) {
           const listePersonnes = personnesParProduit[produit] || [];
           const utilisees = personnesUtiliseesParProduit[produit] || (personnesUtiliseesParProduit[produit] = {});
           const indexParDefaut = listePersonnes.findIndex((p, idx) => utilisees[idx] === undefined);
-          if (indexParDefaut !== -1) utilisees[indexParDefaut] = ligne;
+          if (indexParDefaut !== -1) utilisees[indexParDefaut] = id;
 
           const zonePersonne = document.createElement('div');
-          zonePersonne.dataset.personnePour = ligne;
+          zonePersonne.dataset.personnePour = id;
           zonePersonne.innerHTML = `
-            <select class="input" data-personne-select="${ligne}" data-groupe-idx="${groupeIdx}" data-produit="${echapper(produit)}" style="margin-top:6px">
+            <select class="input" data-personne-select="${id}" data-groupe-idx="${groupeIdx}" data-produit="${echapper(produit)}" style="margin-top:6px">
               <option value="">Choisir une personne accompagnée…</option>
-              ${optionsPersonnes(produit, ligne)}
+              ${optionsPersonnes(produit, id)}
               <option value="autre">Autre / saisir manuellement…</option>
             </select>
-            <div class="grille-personne-appareil" data-personne-manuel="${ligne}" hidden style="margin-top:6px">
-              <input type="text" class="input" placeholder="Prénom" data-personne-prenom="${ligne}">
-              <input type="text" class="input" placeholder="NOM" style="text-transform:uppercase" data-personne-nom="${ligne}">
-              <input type="text" class="input" placeholder="Date de naissance (jj/mm/aaaa)" data-personne-naissance="${ligne}">
+            <div class="grille-personne-appareil" data-personne-manuel="${id}" hidden style="margin-top:6px">
+              <input type="text" class="input" placeholder="Prénom" data-personne-prenom="${id}">
+              <input type="text" class="input" placeholder="NOM" style="text-transform:uppercase" data-personne-nom="${id}">
+              <input type="text" class="input" placeholder="Date de naissance (jj/mm/aaaa)" data-personne-naissance="${id}">
             </div>`;
           conteneur.after(zonePersonne);
 
@@ -741,22 +741,22 @@ async function ouvrirDetailCommande(reference) {
           }
           select.addEventListener('change', () => {
             Object.keys(utilisees).forEach((idx) => {
-              if (utilisees[idx] === ligne) delete utilisees[idx];
+              if (utilisees[idx] === id) delete utilisees[idx];
             });
             zoneManuelle.hidden = select.value !== 'autre';
-            if (select.value !== '' && select.value !== 'autre') utilisees[select.value] = ligne;
+            if (select.value !== '' && select.value !== 'autre') utilisees[select.value] = id;
             rafraichirSelectsProduit(groupeIdx);
           });
           rafraichirSelectsProduit(groupeIdx);
         } else {
-          lignesFlotteSelectionnees = lignesFlotteSelectionnees.filter((x) => x.ligne !== ligne);
+          appareilsFlotteSelectionnes = appareilsFlotteSelectionnes.filter((x) => x.id !== id);
           conteneur.classList.remove('selectionnee');
           majCompteurSelection();
           const utilisees = personnesUtiliseesParProduit[produit] || {};
           Object.keys(utilisees).forEach((idx) => {
-            if (utilisees[idx] === ligne) delete utilisees[idx];
+            if (utilisees[idx] === id) delete utilisees[idx];
           });
-          const zonePersonne = document.querySelector(`[data-personne-pour="${ligne}"]`);
+          const zonePersonne = document.querySelector(`[data-personne-pour="${id}"]`);
           if (zonePersonne) zonePersonne.remove();
           rafraichirSelectsProduit(groupeIdx);
         }
@@ -774,7 +774,7 @@ function majCompteurSelection() {
     .map((s) => s.trim())
     .filter(Boolean).length;
   const reste = Math.max(0, (c.quantiteAvecNumeroSerie || 0) - deja);
-  const n = lignesFlotteSelectionnees.length;
+  const n = appareilsFlotteSelectionnes.length;
   $('dc-compteur-selection').textContent = `${n} sélectionné${n > 1 ? 's' : ''} sur ${reste} à attribuer`;
   $('dc-confirmer-attribution').disabled = !n;
 }
@@ -797,7 +797,7 @@ $('dc-transferer-admin').addEventListener('click', async () => {
     const r = await poster({
       action: 'commande-partenaire-transferer-admin',
       codeCreateur: codeValide,
-      ligne: commandeOuverte.ligne,
+      id: commandeOuverte.id,
     });
     if (r.ok) {
       $('modale-detail-commande').classList.remove('visible');
@@ -813,7 +813,7 @@ $('dc-transferer-admin').addEventListener('click', async () => {
 });
 
 $('dc-confirmer-attribution').addEventListener('click', async () => {
-  if (!lignesFlotteSelectionnees.length) {
+  if (!appareilsFlotteSelectionnes.length) {
     $('dc-retour-attribution').innerHTML = '<div class="msg msg-erreur">Sélectionnez au moins un appareil.</div>';
     return;
   }
@@ -828,24 +828,24 @@ $('dc-confirmer-attribution').addEventListener('click', async () => {
       (personnesParProduitCommande[p.produit] ||= []).push(p);
     });
 
-    const personnes = lignesFlotteSelectionnees.map(({ ligne, produit }) => {
-      const select = document.querySelector(`[data-personne-select="${ligne}"]`);
+    const personnes = appareilsFlotteSelectionnes.map(({ id, produit }) => {
+      const select = document.querySelector(`[data-personne-select="${id}"]`);
       const valeurSelect = select ? select.value : 'autre';
       if (valeurSelect !== '' && valeurSelect !== 'autre') {
         const p = (personnesParProduitCommande[produit] || [])[parseInt(valeurSelect, 10)];
         return { nomComplet: p ? p.nomComplet : '', dateNaissance: p ? p.dateNaissance : '' };
       }
-      const prenom = document.querySelector(`[data-personne-prenom="${ligne}"]`)?.value.trim() || '';
-      const nom = document.querySelector(`[data-personne-nom="${ligne}"]`)?.value.trim() || '';
-      const dateNaissance = document.querySelector(`[data-personne-naissance="${ligne}"]`)?.value.trim() || '';
+      const prenom = document.querySelector(`[data-personne-prenom="${id}"]`)?.value.trim() || '';
+      const nom = document.querySelector(`[data-personne-nom="${id}"]`)?.value.trim() || '';
+      const dateNaissance = document.querySelector(`[data-personne-naissance="${id}"]`)?.value.trim() || '';
       return { nomComplet: [prenom, nom].filter(Boolean).join(' '), dateNaissance };
     });
 
     const r = await poster({
       action: 'commande-partenaire-attribuer-flotte',
       codeCreateur: codeValide,
-      ligneCommande: commandeOuverte.ligne,
-      lignesFlotte: lignesFlotteSelectionnees.map((x) => x.ligne),
+      idCommande: commandeOuverte.id,
+      idsFlotte: appareilsFlotteSelectionnes.map((x) => x.id),
       personnes,
     });
     if (r.ok) {
@@ -880,7 +880,7 @@ $('dc-enregistrer-colissimo').addEventListener('click', async () => {
     const r = await poster({
       action: 'commande-partenaire-update',
       codeCreateur: codeValide,
-      ligne: commandeOuverte.ligne,
+      id: commandeOuverte.id,
       champ: 'colissimo',
       valeur,
     });
@@ -906,7 +906,7 @@ $('dc-avancer-statut').addEventListener('click', async function () {
     const r = await poster({
       action: 'commande-partenaire-update',
       codeCreateur: codeValide,
-      ligne: commandeOuverte.ligne,
+      id: commandeOuverte.id,
       champ: 'statutCommande',
       valeur: prochain,
     });

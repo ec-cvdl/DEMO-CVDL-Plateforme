@@ -16,27 +16,27 @@ const IDR_MOTIFS = [
 ];
 const idr = { reveles: {} };
 
-/** Identité révélée (et encore valide) d'un dossier, ou null. */
-function identiteRevelee(objet, ligne) {
-  const r = idr.reveles[objet + ':' + ligne];
+/** Identité révélée (et encore valide) d'un dossier, ou null. cle : id de la commande ou du ticket SAV. */
+function identiteRevelee(objet, cle) {
+  const r = idr.reveles[objet + ':' + cle];
   if (!r) return null;
   if (Date.now() > r.expire) {
-    delete idr.reveles[objet + ':' + ligne];
+    delete idr.reveles[objet + ':' + cle];
     return null;
   }
   return r.donnees;
 }
 /** Nom à afficher pour un pseudonyme : « Nom · P-XXXXX » si révélé, sinon le pseudonyme. */
-function nomPersonneAdmin(objet, ligne, pseudo) {
-  const r = identiteRevelee(objet, ligne);
+function nomPersonneAdmin(objet, cle, pseudo) {
+  const r = identiteRevelee(objet, cle);
   const p = r && (r.personnes || []).find((x) => x.pseudonyme === pseudo);
   return p ? `${p.nom}${p.dateNaissance ? ' (' + p.dateNaissance + ')' : ''} · ${pseudo}` : pseudo;
 }
-function boutonIdentite(objet, ligne, libelle) {
-  const r = identiteRevelee(objet, ligne);
+function boutonIdentite(objet, cle, libelle) {
+  const r = identiteRevelee(objet, cle);
   return r
-    ? `<button type="button" class="idr-btn on" data-idr-masquer="${objet}|${ligne}" title="Masquer maintenant">${icon('x', 12)}Masquer l’identité</button>`
-    : `<button type="button" class="idr-btn" data-idr-reveler="${objet}|${ligne}">${icon('personne', 12)}${libelle || 'Afficher l’identité'}</button>`;
+    ? `<button type="button" class="idr-btn on" data-idr-masquer="${objet}|${cle}" title="Masquer maintenant">${icon('x', 12)}Masquer l’identité</button>`
+    : `<button type="button" class="idr-btn" data-idr-reveler="${objet}|${cle}">${icon('personne', 12)}${libelle || 'Afficher l’identité'}</button>`;
 }
 const idrPar = () => {
   try {
@@ -46,7 +46,7 @@ const idrPar = () => {
   }
 };
 
-function idrDemander(objet, ligne, motifDefaut) {
+function idrDemander(objet, cle, motifDefaut) {
   return new Promise((resolve) => {
     const v = document.createElement('div');
     v.className = 'idr-voile';
@@ -101,7 +101,13 @@ function idrDemander(objet, ligne, motifDefaut) {
       } catch (x) {}
       const bouton = f.querySelector('[type="submit"]');
       bouton.disabled = true;
-      const r = await poster({ action: 'identite-reveler', objet, ligne, motif, par });
+      const r = await poster({
+        action: 'identite-reveler',
+        objet,
+        id: cle,
+        motif,
+        par,
+      });
       bouton.disabled = false;
       if (!r || !r.ok) {
         err.textContent = (r && r.erreur) || 'Affichage impossible.';
@@ -115,12 +121,12 @@ function idrDemander(objet, ligne, motifDefaut) {
   });
 }
 
-async function revelerIdentite(objet, ligne, motifDefaut) {
-  const r = await idrDemander(objet, ligne, motifDefaut);
+async function revelerIdentite(objet, cle, motifDefaut) {
+  const r = await idrDemander(objet, cle, motifDefaut);
   if (!r) return null;
-  idr.reveles[objet + ':' + ligne] = { donnees: r, expire: Date.now() + IDR_DUREE_MS };
+  idr.reveles[objet + ':' + cle] = { donnees: r, expire: Date.now() + IDR_DUREE_MS };
   setTimeout(() => {
-    identiteRevelee(objet, ligne);
+    identiteRevelee(objet, cle);
     render();
   }, IDR_DUREE_MS + 50);
   etat('Identité affichée — consultation enregistrée', 'succes');

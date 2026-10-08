@@ -29,7 +29,7 @@ function etatServeurCommande(c) {
   const entree = cacheEtatsCommandes[c.reference];
   if (!entree || (entree.sig !== sig && !entree.enCours)) {
     cacheEtatsCommandes[c.reference] = { sig, enCours: true, etat: entree ? entree.etat : null };
-    jsonp({ action: 'commande-etat', password: motDePasse, ligne: c.ligne })
+    jsonp({ action: 'commande-etat', password: motDePasse, id: c.id })
       .then((r) => {
         cacheEtatsCommandes[c.reference] = { sig, enCours: false, etat: r.ok ? r.etat : null };
         if (state.modal && state.modal.kind === 'commande' && state.modal.ref === c.reference) render();
@@ -124,7 +124,7 @@ document.addEventListener(
   true,
 );
 
-/** Historique d'une commande (onglet « Historique » côté serveur) — mis en cache, rechargé si
+/** Journal des événements d'une commande — mis en cache, rechargé si
  *  plus vieux de 20 s (le dossier se ré-affiche après chaque action). */
 const cacheHistoriqueCommandes = {};
 function historiqueCommande(c) {
@@ -138,7 +138,6 @@ function historiqueCommande(c) {
           t: Date.now(),
           enCours: false,
           evenements: r && r.ok ? r.evenements || [] : [],
-          ongletAbsent: !!(r && r.ongletAbsent),
         };
         if (state.modal && state.modal.kind === 'commande' && state.modal.ref === ref) render();
       })
@@ -193,7 +192,7 @@ function vueDossierCommande(c) {
             s: `${c.referenceDevis}${devis && devis.statut ? ' · ' + devis.statut : ''}`,
             goto: 'factures',
           }
-        : c.devisDemande === 'Oui'
+        : c.devisDemande
           ? { cls: 'vio', ic: 'file', t: 'Devis', s: 'demandé — à générer', vide: 1 }
           : null,
     exempte
@@ -315,7 +314,7 @@ function vueDossierCommande(c) {
         ${c.telephone ? `<div class="rpd-row">${icon('telephone', 14)}${echapper(c.telephone)}${copie(c.telephone)}</div>` : ''}
       </section>
     </div>
-    ${personnes.length ? `<section class="fc2-bloc"><div class="fc2-k">Personnes accompagnées · ${personnes.length}${c.identiteMasquee ? boutonIdentite('commande', c.ligne) : ''}</div><div class="fc2-personnes">${personnes.map((n) => `<span>${icon('personne', 13)}${echapper(c.identiteMasquee ? nomPersonneAdmin('commande', c.ligne, n) : n)}</span>`).join('')}</div>${c.identiteMasquee && !identiteRevelee('commande', c.ligne) ? '<p class="idr-note">Pseudonymes : l’identité reste utilisée pour les attestations et bons, sans être affichée.</p>' : ''}</section>` : ''}
+    ${personnes.length ? `<section class="fc2-bloc"><div class="fc2-k">Personnes accompagnées · ${personnes.length}${c.identiteMasquee ? boutonIdentite('commande', c.id) : ''}</div><div class="fc2-personnes">${personnes.map((n) => `<span>${icon('personne', 13)}${echapper(c.identiteMasquee ? nomPersonneAdmin('commande', c.id, n) : n)}</span>`).join('')}</div>${c.identiteMasquee && !identiteRevelee('commande', c.id) ? '<p class="idr-note">Pseudonymes : l’identité reste utilisée pour les attestations et bons, sans être affichée.</p>' : ''}</section>` : ''}
     ${blocAppareilsCommande(c)}
     ${commentaireReel(c) ? `<section class="fc2-bloc"><div class="fc2-k">Commentaire de la structure</div><p class="fc2-comm">« ${echapper(c.commentaire)} »</p></section>` : ''}
     ${panneauDevisPaiementCommande(c)}`;
@@ -340,7 +339,7 @@ function vueDossierCommande(c) {
                   `<li><i></i><span>${echapper(e.evenement)}${e.auteur ? `<small>${echapper(e.auteur)}</small>` : ''}</span><small>${echapper(e.date)}</small></li>`,
               )
               .join('')}</ol>`
-          : `<p class="rpd-apercu">${histo && histo.ongletAbsent ? "L'onglet « Historique » n'existe pas encore dans le classeur — créez-le pour garder la trace des actions." : histo && histo.enCours ? 'Chargement…' : 'Aucun événement enregistré pour cette commande.'}</p>`
+          : `<p class="rpd-apercu">${histo && histo.enCours ? 'Chargement…' : 'Aucun événement enregistré pour cette commande.'}</p>`
       }
     </div>`;
   const ong = (cle, lib) =>
@@ -355,7 +354,7 @@ function vueDossierCommande(c) {
             <div class="fc2-nom">${(() => {
               const st = structure;
               return st
-                ? `<button type="button" class="lien-structure" data-structure-vue="${st.ligne}" title="Ouvrir la fiche 360° de la structure">${echapper(c.nom)}</button>`
+                ? `<button type="button" class="lien-structure" data-structure-vue="${st.id}" title="Ouvrir la fiche 360° de la structure">${echapper(c.nom)}</button>`
                 : echapper(c.nom);
             })()}</div>
             <div class="fc2-puces">${infoType ? `<span class="tag">${echapper(infoType)}</span>` : ''}${badgeUrgentCommande(c)}${c.transfereAdmin ? '<span class="tag">Transférée</span>' : ''}</div>
@@ -384,7 +383,7 @@ function vueDossierCommande(c) {
             <button type="button" class="btn btn-secondary" data-et-menu aria-expanded="false" aria-haspopup="true">Autres actions <span aria-hidden="true">▾</span></button>
             <div class="et-menu-l" role="menu" hidden>
               ${c.email ? `<a role="menuitem" href="mailto:${echapper(c.email)}?subject=${encodeURIComponent('Votre commande ' + c.reference)}">${icon('mail', 14)}Écrire à la structure</a>` : ''}
-              ${structure ? `<button type="button" role="menuitem" data-structure-vue="${structure.ligne}">${icon('building', 14)}Fiche 360° de la structure</button>` : ''}
+              ${structure ? `<button type="button" role="menuitem" data-structure-vue="${structure.id}">${icon('building', 14)}Fiche 360° de la structure</button>` : ''}
               ${livree ? `<button type="button" role="menuitem" data-rapport-commande="${echapper(c.reference)}">${icon('file', 14)}Rapport d’impact</button>` : ''}
               ${!livree && !annulee ? `<button type="button" role="menuitem" class="danger" data-annuler-commande="${echapper(c.reference)}">${iconeAnnuler()}Annuler la commande…</button>` : ''}
             </div>

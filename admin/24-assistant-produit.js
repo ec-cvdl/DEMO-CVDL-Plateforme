@@ -358,9 +358,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 function vueCreerProduit() {
-  const ligne = state.modal.ligne;
-  if (!ligne) return vueAssistantProduit();
-  const p = ligne ? state.produits.find((x) => x.ligne === ligne) : null;
+  const id = state.modal.id;
+  if (!id) return vueAssistantProduit();
+  const p = id ? state.produits.find((x) => x.id === id) : null;
   const icone = p ? p.icone : '';
   const estOrdiOuTelephone = ['portable', 'fixe', 'telephone'].includes(icone);
   const estTablette = icone === 'tablette';
@@ -418,7 +418,7 @@ function vueCreerProduit() {
   `,
     'cp-enregistrer',
     p
-      ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-supprimer-produit="${p.ligne}" data-nom-produit="${echapper(p.nom)}">Supprimer</button>`
+      ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-supprimer-produit="${p.id}" data-nom-produit="${echapper(p.nom)}">Supprimer</button>`
       : null,
   );
 }
@@ -442,8 +442,8 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#btn-synchroniser-tectech')) synchroniserStockTecTech();
 });
 
-async function supprimerProduitAction(ligne) {
-  const r = await posterEtat({ action: 'produit-supprimer', ligne }, 'Suppression…', 'Produit supprimé');
+async function supprimerProduitAction(id) {
+  const r = await posterEtat({ action: 'produit-supprimer', id }, 'Suppression…', 'Produit supprimé');
   if (r.ok) {
     const rp = await jsonp({ action: 'produits', password: motDePasse });
     if (rp.ok) state.produits = rp.produits;
@@ -451,20 +451,20 @@ async function supprimerProduitAction(ligne) {
     render();
   }
 }
-async function supprimerStructureAction(ligne) {
-  const r = await posterEtat({ action: 'structure-delete', ligne }, 'Suppression…', 'Structure supprimée');
+async function supprimerStructureAction(id) {
+  const r = await posterEtat({ action: 'structure-delete', id }, 'Suppression…', 'Structure supprimée');
   if (r.ok) {
     const rst = await jsonp({ action: 'structures', password: motDePasse });
-    if (rst.ok) state.structures = rst.structures.slice().sort((a, b) => b.ligne - a.ligne);
+    if (rst.ok) state.structures = rst.structures.slice().sort((a, b) => b.id - a.id);
     state.modal = null;
     render();
   }
 }
 async function enregistrerProduit() {
-  const ligne = state.modal.ligne;
+  const id = state.modal.id;
   // Assistant (nouveau produit) : les valeurs viennent de state.modal.v, pas des champs
   // (seule l'étape affichée est dans la page). Formulaire complet (modification) : les champs.
-  const assistant = !ligne && state.modal.v;
+  const assistant = !id && state.modal.v;
   if (assistant) {
     for (let i = 0; i < ETAPES_PRODUIT.length - 1; i++) {
       const err = verifierEtapeProduit(i);
@@ -534,14 +534,14 @@ async function enregistrerProduit() {
     appels: estRecharge ? lire('cp-appels').trim() : '',
   };
   try {
-    etat(ligne ? 'Enregistrement…' : 'Création…', 'chargement');
+    etat(id ? 'Enregistrement…' : 'Création…', 'chargement');
     let ok, reponses, r;
-    if (ligne) {
+    if (id) {
       // chaque appel a son propre catch : un champ en erreur ne doit pas faire échouer
       // l'enregistrement des autres, déjà envoyés
       reponses = await Promise.all(
         Object.keys(champsCommuns).map((c) =>
-          poster({ action: 'produit-update', ligne, champ: c, valeur: champsCommuns[c] })
+          poster({ action: 'produit-update', id, champ: c, valeur: champsCommuns[c] })
             .then((res) => ({ ...res, champ: c }))
             .catch((err) => ({
               ok: false,
@@ -559,12 +559,11 @@ async function enregistrerProduit() {
         // tous les champs saisis sont envoyés dès la création
         action: 'produit-create',
         ...champsCommuns,
-        structureDediee: '',
       });
       ok = r.ok;
     }
     if (ok) {
-      etat(ligne ? 'Produit mis à jour' : 'Produit créé', 'succes');
+      etat(id ? 'Produit mis à jour' : 'Produit créé', 'succes');
       const rp = await jsonp({ action: 'produits', password: motDePasse });
       if (rp.ok) state.produits = rp.produits;
       // Les commandes déjà chargées portent des champs calculés à partir de la config produit du
@@ -572,15 +571,15 @@ async function enregistrerProduit() {
       // toggle produit (ex. "dématérialisé") pendant que l'onglet Commandes est déjà ouvert
       // laissait ces commandes figées sur l'ancienne config : l'étape de saisie affichait "aucun
       // code requis" au lieu du champ Codes, jusqu'au prochain rechargement complet de la page.
-      if (ligne) {
+      if (id) {
         const rc = await jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' });
         if (rc.ok) state.commandes = rc.commandes;
       }
       state.modal = null;
       render();
     } else {
-      const echecTrouve = ligne ? reponses.find((x) => !x.ok && x.erreur !== 'Champ non modifiable') : null;
-      const messageErreur = ligne ? (echecTrouve ? `${echecTrouve.champ} : ${echecTrouve.erreur}` : null) : r.erreur;
+      const echecTrouve = id ? reponses.find((x) => !x.ok && x.erreur !== 'Champ non modifiable') : null;
+      const messageErreur = id ? (echecTrouve ? `${echecTrouve.champ} : ${echecTrouve.erreur}` : null) : r.erreur;
       etat(messageErreur || 'Enregistrement impossible', 'erreur');
       $('rp-retour-modale').innerHTML =
         `<div class="msg msg-erreur">${echapper(messageErreur || 'Enregistrement impossible.')}</div>`;

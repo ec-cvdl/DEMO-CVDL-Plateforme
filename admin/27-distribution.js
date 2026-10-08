@@ -200,7 +200,7 @@ document.addEventListener('click', (e) => {
   if (o) {
     state.modal = {
       kind: 'distribution-detail',
-      ref: o.dataset.distOuvrir,
+      ref: Number(o.dataset.distOuvrir),
       modalParent: modalParentPour('distribution-detail'),
     };
     render();
@@ -208,7 +208,7 @@ document.addEventListener('click', (e) => {
   }
   const m = e.target.closest('[data-dist-modifier]');
   if (m) {
-    state.modal = { kind: 'distribution-form', ref: m.dataset.distModifier, modalParent: state.modal };
+    state.modal = { kind: 'distribution-form', ref: Number(m.dataset.distModifier), modalParent: state.modal };
     render();
     return;
   }
@@ -380,7 +380,7 @@ function vueDistributionDetail() {
   const deps = Object.entries(av.parDepartement || {}).sort((a, b) => b[1] - a[1]);
   const maxDep = Math.max(1, ...deps.map((d) => d[1]));
   const structs = Object.entries(av.parStructure || {}).sort((a, b) => b[1] - a[1]);
-  const lien = new URL('commande.html?programme=' + encodeURIComponent(p.id), location.href).toString();
+  const lien = urlPubliqueImmediate('commande.html?programme=' + encodeURIComponent(p.id));
   const corps = `<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:16px;min-width:0">
     <div class="di-tags">${resumePerimetre(p)
       .map((t) => `<span class="di-tag">${echapper(t)}</span>`)
@@ -456,7 +456,7 @@ function telechargerCsv(nom, lignes) {
 document.addEventListener('click', async (e) => {
   const ex = e.target.closest('[data-dist-export]');
   if (ex) {
-    const p = state.distributions.find((x) => x.id === ex.dataset.distExport);
+    const p = state.distributions.find((x) => x.id === Number(ex.dataset.distExport));
     if (!p) return;
     const lignes = [['Programme', 'Commande', 'Structure', 'Département', 'Produit', 'Quantité', 'État', 'Livrée le']];
     (p.avancement.commandes || []).forEach((c) =>
@@ -537,7 +537,7 @@ function tacheProgrammeCommande(c) {
 }
 async function enregistrerRattachement(c, valeur) {
   const r = await posterEtat(
-    { action: 'commande-programmes', ligne: c.ligne, valeur },
+    { action: 'commande-programmes', id: c.id, valeur },
     'Enregistrement…',
     'Rattachement enregistré',
   );
@@ -560,7 +560,7 @@ document.addEventListener('click', (e) => {
       );
       return;
     }
-    const p = c.distribution.aDemander.find((x) => x.id === b.dataset.programme);
+    const p = c.distribution.aDemander.find((x) => x.id === Number(b.dataset.programme));
     if (!p) return;
     const a = { ...(c.distribution.affectation || {}) };
     Object.keys(p.compte).forEach((prod) => {

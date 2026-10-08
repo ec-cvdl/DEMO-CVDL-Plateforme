@@ -214,7 +214,7 @@ function dpaOuvrir(a) {
   dpa.edition = dpaCopie(a);
   delete dpa.edition.stats;
   delete dpa.edition.alertes;
-  delete dpa.edition.ligne;
+  delete dpa.edition.id;
   dpa.etape = dpa.edition.depart;
   dpa.modifie = !a.identifiant;
   render();

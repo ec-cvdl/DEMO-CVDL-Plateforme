@@ -62,6 +62,15 @@
     location.replace('portail.html');
     return;
   }
+  // Les structures entrent par un code d'essai (accueil.html, « Essayer la plateforme ») : un
+  // ancien lien ?vue=… y renvoie. L'équipe garde ?cle=… / ?pour=equipe.
+  {
+    const p = new URLSearchParams(location.search);
+    if (p.get('vue') && !p.get('cle') && p.get('pour') !== 'equipe') {
+      location.replace('accueil.html#essayer');
+      return;
+    }
+  }
   // Toutes les pages du site parlent à la fonction de démo tant que ce repère est valable (8 h).
   try {
     localStorage.setItem('cvdl-mode-demo', JSON.stringify({ jusqua: Date.now() + DUREE }));
@@ -72,12 +81,11 @@
   /* Démo présentée aux structures (lien ?pour=structures, mémorisé pour « Changer de profil ») :
      seulement les vues structure du lancement, sur l'Association Le Tremplin. */
   const params = new URLSearchParams(location.search);
-  // Lien d'une structure (?vue=rn|vs|interne|conseiller) : la démo reste sur cette vue, sans
-  // changement de profil (mémorisé pour l'onglet ; ?cle=… ou ?pour=equipe le lève).
+  // Code d'essai d'une structure (posé par accueil.html) : la démo reste sur cette vue, sans
+  // changement de profil, pour l'onglet ; ?cle=… ou ?pour=equipe le lève.
   let vueVerrouillee = '';
   try {
     if (params.get('cle') || params.get('pour') === 'equipe') sessionStorage.removeItem('cvdl-demo-vue');
-    else if (params.get('vue')) sessionStorage.setItem('cvdl-demo-vue', params.get('vue').toLowerCase());
     vueVerrouillee = sessionStorage.getItem('cvdl-demo-vue') || '';
   } catch (e) {}
   if (vueVerrouillee) {
@@ -97,9 +105,7 @@
       else localStorage.removeItem('cvdl-demo-pour');
     } catch (e) {}
   }
-  // Lien direct vers une vue (?vue=rn|vs|interne|conseiller) : démo structures.
-  let pourStructures =
-    !!vueVerrouillee || params.get('pour') === 'structures' || (!!params.get('vue') && params.get('pour') !== 'equipe');
+  let pourStructures = !!vueVerrouillee || params.get('pour') === 'structures';
   try {
     pourStructures = pourStructures || (!params.get('pour') && localStorage.getItem('cvdl-demo-pour') === 'structures');
   } catch (e) {}
@@ -151,7 +157,7 @@
       groupe: 'Structures',
       id: 'interne',
       type: 'interne',
-      code: 'ECLYON26',
+      code: 'ECCHER26',
       ill: 'structure',
       titre: 'Structure Interne',
       role: 'Responsable de territoire',
@@ -189,7 +195,7 @@
       groupe: 'Structures',
       id: 'projets',
       type: 'projets',
-      code: 'PSC69',
+      code: 'PSC18',
       ill: 'distribution',
       titre: 'Structure Projets',
       role: 'Grande distribution',
@@ -201,7 +207,7 @@
       groupe: 'Structures',
       id: 'bo',
       type: 'bo',
-      code: 'BOGERL26',
+      code: 'BOVIER26',
       ill: 'partenairesCmd',
       titre: 'Vente solidaire',
       role: 'Structure partenaire d’une Interne',
@@ -213,7 +219,7 @@
       groupe: 'Structures',
       id: 'rn',
       type: 'rn',
-      code: 'MLNI2026',
+      code: 'MLCHER26',
       ill: 'commander',
       titre: 'Relais Numérique',
       role: 'Mission Locale, CCAS…',
@@ -293,7 +299,7 @@
   }
 
   function structurePour(v) {
-    if (v.type === 'interne' && profils.interne) return { code: profils.interne.code, nom: profils.interne.nom }; // Interne avec équipe (Lyon)
+    if (v.type === 'interne' && profils.interne) return { code: profils.interne.code, nom: profils.interne.nom }; // Interne avec équipe (Cher)
     const liste = profils.structures || [];
     const trouvee =
       liste.find((s) => s.code === v.code) ||
@@ -482,6 +488,11 @@
       const t = VUES.at(i).type;
       if (t && t !== 'depot' && !actifs.includes(t)) VUES.splice(i, 1);
     }
+    if (!p.beneficiaires) {
+      const i = VUES.findIndex((v) => v.id === 'personne');
+      if (i >= 0) VUES.splice(i, 1);
+      document.querySelectorAll('.demo-pour .pil.public').forEach((e) => e.remove());
+    }
     if (p.partenaires) return;
     const bo = VUES.find((v) => v.id === 'bo');
     if (bo)
@@ -518,7 +529,7 @@
       appliquerPerimetre(r.perimetre);
       appliquerModeStructures();
       construireListe();
-      const vue = ALIAS_VUES[String(vueVerrouillee || params.get('vue') || '').toLowerCase()];
+      const vue = ALIAS_VUES[String(vueVerrouillee).toLowerCase()];
       if (vueVerrouillee && vue) {
         for (let i = VUES.length - 1; i >= 0; i--) if (VUES.at(i).id !== vue) VUES.splice(i, 1);
         construireListe();

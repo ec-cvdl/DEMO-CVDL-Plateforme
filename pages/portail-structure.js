@@ -496,3 +496,11 @@ try {
     });
   }
 } catch (e) {}
+
+// « Retour » vers le choix structure / personne : seulement si l'espace bénéficiaires est ouvert
+// (fermé, portail.html renvoie ici).
+jsonp({ action: 'perimetre' })
+  .then((p) => {
+    if (p.ok && p.beneficiaires) $('retour-portail').hidden = false;
+  })
+  .catch(() => {});

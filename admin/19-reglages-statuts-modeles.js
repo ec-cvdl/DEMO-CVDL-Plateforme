@@ -15,26 +15,26 @@ function vueReglagesStatutsSav() {
             <div class="card elev-sm" style="padding:var(--space-4);gap:14px">
               <div style="display:flex;align-items:center;gap:10px">
                 <div style="display:flex;flex-direction:column;gap:2px">
-                  <button type="button" class="btn btn-ghost btn-icon" style="width:22px;height:22px" data-statut-monter="${s.ligne}" ${i === 0 ? 'disabled' : ''} title="Monter"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
-                  <button type="button" class="btn btn-ghost btn-icon" style="width:22px;height:22px" data-statut-descendre="${s.ligne}" ${i === state.statutsSav.length - 1 ? 'disabled' : ''} title="Descendre"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7"/></svg></button>
+                  <button type="button" class="btn btn-ghost btn-icon" style="width:22px;height:22px" data-statut-monter="${s.id}" ${i === 0 ? 'disabled' : ''} title="Monter"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 15l7-7 7 7"/></svg></button>
+                  <button type="button" class="btn btn-ghost btn-icon" style="width:22px;height:22px" data-statut-descendre="${s.id}" ${i === state.statutsSav.length - 1 ? 'disabled' : ''} title="Descendre"><svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9l-7 7-7-7"/></svg></button>
                 </div>
-                <input class="input" style="flex:1;min-width:100px" value="${echapper(s.statut)}" data-statut-config="${s.ligne}" data-champ="statut">
+                <input class="input" style="flex:1;min-width:100px" value="${echapper(s.statut)}" data-statut-config="${s.id}" data-champ="statut">
                 <span class="tag rs-apercu" style="flex:none;color:${teinteSav(s.couleur).fg}" title="Aperçu de la pastille">${echapper(s.statut)}</span>
-                <select class="input" style="width:120px;flex:none" data-statut-config="${s.ligne}" data-champ="couleur">
+                <select class="input" style="width:120px;flex:none" data-statut-config="${s.id}" data-champ="couleur">
                   ${COULEURS_SAV_DISPONIBLES.map((c) => `<option value="${c}" ${c === s.couleur ? 'selected' : ''}>${c.replace('t-', '')}</option>`).join('')}
                 </select>
                 <span style="width:32px;height:32px;border-radius:999px;flex:none;display:flex;align-items:center;justify-content:center;background:${teinteSav(s.couleur).bg};color:${teinteSav(s.couleur).fg}">${icon(iconeStatutSav(s.statut, s.icone), 15)}</span>
-                <select class="input" style="width:170px;flex:none" data-statut-config="${s.ligne}" data-champ="icone">
+                <select class="input" style="width:170px;flex:none" data-statut-config="${s.id}" data-champ="icone">
                   ${ICONES_STATUT_SAV_OPTIONS.map((o) => `<option value="${o.value}" ${o.value === (s.icone || '') ? 'selected' : ''}>${echapper(o.label)}</option>`).join('')}
                 </select>
-                <button type="button" class="btn btn-ghost btn-icon" style="color:var(--color-accent-700)" data-statut-supprimer="${s.ligne}" data-statut-nom="${echapper(s.statut)}" title="Supprimer">${icon('x', 15)}</button>
+                <button type="button" class="btn btn-ghost btn-icon" style="color:var(--color-accent-700)" data-statut-supprimer="${s.id}" data-statut-nom="${echapper(s.statut)}" title="Supprimer">${icon('x', 15)}</button>
               </div>
               <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 16px;padding-top:12px;border-top:1px solid var(--color-divider)">
-                <label class="rp-switch" title="Affiche le champ et la pilule de suivi Colissimo"><input type="checkbox" data-statut-config="${s.ligne}" data-champ="colissimo" ${s.colissimo ? 'checked' : ''}><span class="rp-switch-piste"></span>Colissimo</label>
-                <label class="rp-switch" title="Phase de diagnostic technique"><input type="checkbox" data-statut-config="${s.ligne}" data-champ="diagnostic" ${s.diagnostic ? 'checked' : ''}><span class="rp-switch-piste"></span>Diagnostic</label>
-                <label class="rp-switch" title="Point de départ du décompte du délai"><input type="checkbox" data-statut-config="${s.ligne}" data-champ="departDelai" ${s.departDelai ? 'checked' : ''}><span class="rp-switch-piste"></span>Départ délai</label>
-                <label class="rp-switch" title="Clôture le ticket"><input type="checkbox" data-statut-config="${s.ligne}" data-champ="terminal" ${s.terminal ? 'checked' : ''}><span class="rp-switch-piste"></span>Terminal</label>
-                <label class="rp-switch" title="Ferme l'anneau de progression à 100%"><input type="checkbox" data-statut-config="${s.ligne}" data-champ="finCycle" ${s.finCycle ? 'checked' : ''}><span class="rp-switch-piste"></span>Fin de cycle</label>
+                <label class="rp-switch" title="Affiche le champ et la pilule de suivi Colissimo"><input type="checkbox" data-statut-config="${s.id}" data-champ="colissimo" ${s.colissimo ? 'checked' : ''}><span class="rp-switch-piste"></span>Colissimo</label>
+                <label class="rp-switch" title="Phase de diagnostic technique"><input type="checkbox" data-statut-config="${s.id}" data-champ="diagnostic" ${s.diagnostic ? 'checked' : ''}><span class="rp-switch-piste"></span>Diagnostic</label>
+                <label class="rp-switch" title="Point de départ du décompte du délai"><input type="checkbox" data-statut-config="${s.id}" data-champ="departDelai" ${s.departDelai ? 'checked' : ''}><span class="rp-switch-piste"></span>Départ délai</label>
+                <label class="rp-switch" title="Clôture le ticket"><input type="checkbox" data-statut-config="${s.id}" data-champ="terminal" ${s.terminal ? 'checked' : ''}><span class="rp-switch-piste"></span>Terminal</label>
+                <label class="rp-switch" title="Ferme l'anneau de progression à 100%"><input type="checkbox" data-statut-config="${s.id}" data-champ="finCycle" ${s.finCycle ? 'checked' : ''}><span class="rp-switch-piste"></span>Fin de cycle</label>
               </div>
             </div>`,
             )
@@ -53,9 +53,9 @@ async function rechargerStatutsSav() {
   const r = await jsonp({ action: 'sav-statuts-list', password: motDePasse });
   if (r.ok) state.statutsSav = r.statuts;
 }
-async function modifierStatutSav(ligne, champ, valeur) {
+async function modifierStatutSav(id, champ, valeur) {
   const r = await posterEtat(
-    { action: 'sav-statut-modifier', ligne, champ, valeur },
+    { action: 'sav-statut-modifier', id, champ, valeur },
     'Enregistrement…',
     'Statut mis à jour',
   );
@@ -64,16 +64,16 @@ async function modifierStatutSav(ligne, champ, valeur) {
     render();
   }
 }
-async function deplacerStatutSav(ligne, direction) {
-  const r = await posterEtat({ action: 'sav-statut-deplacer', ligne, direction }, 'Déplacement…', 'Ordre mis à jour');
+async function deplacerStatutSav(id, direction) {
+  const r = await posterEtat({ action: 'sav-statut-deplacer', id, direction }, 'Déplacement…', 'Ordre mis à jour');
   if (r.ok) {
     await rechargerStatutsSav();
     render();
   }
 }
-async function supprimerStatutSav(ligne, nom) {
+async function supprimerStatutSav(id, nom) {
   if (!(await confirmerCvdl(`Supprimer le statut « ${nom} » ?`))) return;
-  const r = await posterEtat({ action: 'sav-statut-supprimer', ligne }, 'Suppression…', 'Statut supprimé');
+  const r = await posterEtat({ action: 'sav-statut-supprimer', id }, 'Suppression…', 'Statut supprimé');
   if (r.ok) {
     await rechargerStatutsSav();
     render();

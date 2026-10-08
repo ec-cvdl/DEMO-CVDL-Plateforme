@@ -53,7 +53,7 @@ let estInterneFlotte = false;
 let estProprietaireInterne = false;
 let attributionPartenaires = false; // Interne, structures partenaires ouvertes (Réglages → Périmètre)
 let estPartenaireFlotte = false;
-let lignesSelectionneesAttribution = new Set();
+let idsSelectionnesAttribution = new Set();
 let estEsnFlotte = false;
 let estPayanteFlotte = false;
 const formatEurFlotte = (v) =>
@@ -216,22 +216,21 @@ function selectProjetFlotte(a, compact) {
     (p) => p.id === a.projet || (p.statut !== 'archive' && projetCompteProduit(p, a.produit)),
   );
   if (!choix.length) return '';
-  return `<select class="fl-projet${a.projet ? ' on' : ''}${compact ? ' compact' : ''}" data-projet-ligne="${a.ligne}" aria-label="Projet de distribution" title="Projet de distribution">
-    <option value="">${actuel || a.projet ? 'Aucun projet' : 'Projet de distribution…'}</option>
+  return `<select class="fl-projet${a.projet ? ' on' : ''}${compact ? ' compact' : ''}" data-projet-id="${a.id}" aria-label="Projet de distribution" title="Projet de distribution">
+    <option value="">${actuel ? 'Aucun projet' : 'Projet de distribution…'}</option>
     ${choix.map((p) => `<option value="${echapper(p.id)}" ${p.id === a.projet ? 'selected' : ''}>${echapper(p.nom)}${p.statut === 'archive' ? ' (archivé)' : ''}</option>`).join('')}
-    ${a.projet && !actuel ? `<option value="${echapper(a.projet)}" selected>Projet supprimé</option>` : ''}
   </select>`;
 }
 document.addEventListener('change', async (e) => {
-  const sel = e.target.closest('[data-projet-ligne]');
+  const sel = e.target.closest('[data-projet-id]');
   if (!sel) return;
-  const ligne = parseInt(sel.dataset.projetLigne, 10);
-  const item = appareilsCourants.find((a) => a.ligne == ligne);
+  const id = parseInt(sel.dataset.projetId, 10);
+  const item = appareilsCourants.find((a) => a.id === id);
   sel.disabled = true;
   try {
-    const r = await posterVue({ action: 'flotte-rattacher-projet', code: codeValide, ligne, projet: sel.value });
+    const r = await posterVue({ action: 'flotte-rattacher-projet', code: codeValide, id, projet: sel.value });
     if (r && r.ok) {
-      if (item) item.projet = sel.value;
+      if (item) item.projet = Number(sel.value) || null;
       sel.classList.toggle('on', !!sel.value);
     } else {
       alerteCvdl((r && r.erreur) || 'Enregistrement impossible.');
@@ -244,14 +243,14 @@ document.addEventListener('change', async (e) => {
   sel.disabled = false;
 });
 
-let personnePortailLigneCourante = null;
+let personnePortailIdCourant = null;
 let listesPersoFlottePortail = { lieux: [], vendeurs: [] };
 const TYPES_PAIEMENT_PORTAIL = ['', 'Chèque x1', 'Chèque x2', 'CB', 'Monétaire', 'Mixte'];
 
-function ouvrirModalePersonnePortail(ligne) {
-  const a = appareilsCourants.find((x) => x.ligne === ligne);
+function ouvrirModalePersonnePortail(id) {
+  const a = appareilsCourants.find((x) => x.id === id);
   if (!a) return;
-  personnePortailLigneCourante = ligne;
+  personnePortailIdCourant = id;
   $('personne-portail-titre').textContent = `${a.numeroSerie} — ${a.produit || ''}`.trim();
   // Le champ "personne" reste une seule chaîne côté backend — on ne fait que scinder l'affichage
   // en Prénom/NOM (comme le reste du site), reconstitués à la volée à l'enregistrement.
@@ -296,9 +295,9 @@ function ouvrirModalePersonnePortail(ligne) {
 }
 
 document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-personne-ligne]');
+  const b = e.target.closest('[data-personne-id]');
   if (!b) return;
-  ouvrirModalePersonnePortail(parseInt(b.dataset.personneLigne, 10));
+  ouvrirModalePersonnePortail(parseInt(b.dataset.personneId, 10));
 });
 // Largeur commune des pastilles n° de série = longueur du plus long numéro affiché.
 (function () {
@@ -423,7 +422,7 @@ $('personne-portail-contenu')?.addEventListener('change', async (e) => {
   }
 });
 $('personne-portail-enregistrer')?.addEventListener('click', async () => {
-  const a = appareilsCourants.find((x) => x.ligne === personnePortailLigneCourante);
+  const a = appareilsCourants.find((x) => x.id === personnePortailIdCourant);
   if (!a) return;
   const retour = $('retour-personne-portail');
   const val = (champ) => {
@@ -466,7 +465,7 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
       const r = await posterVue({
         action: 'flotte-modifier',
         code: codeValide,
-        ligne: personnePortailLigneCourante,
+        id: personnePortailIdCourant,
         champ,
         valeur: valeurs[champ],
       });
@@ -544,13 +543,13 @@ function majLargeurMain() {
   document.querySelector('main').classList.toggle('tableur', true);
 }
 /** Menu déroulant alimenté par une liste partagée entre toutes les structures (lieux, vendeurs). */
-function selectListePerso(champ, liste, valeur, ligne) {
+function selectListePerso(champ, liste, valeur, id) {
   const options = ['', ...liste];
   if (valeur && !liste.includes(valeur)) options.push(valeur);
-  return `<select data-ligne="${ligne}" data-champ="${champ}">${options.map((o) => `<option value="${echapper(o)}" ${o === (valeur || '') ? 'selected' : ''}>${echapper(o) || '—'}</option>`).join('')}<option value="__nouveau__">+ Nouveau…</option></select>`;
+  return `<select data-id="${id}" data-champ="${champ}">${options.map((o) => `<option value="${echapper(o)}" ${o === (valeur || '') ? 'selected' : ''}>${echapper(o) || '—'}</option>`).join('')}<option value="__nouveau__">+ Nouveau…</option></select>`;
 }
 function caseSalesforce(a) {
-  return `<label class="flotte-toggle"><input type="checkbox" data-ligne="${a.ligne}" data-champ="saisieSalesforce" data-checkbox="1" ${a.saisieSalesforce === 'Oui' ? 'checked' : ''} aria-label="Saisi dans Salesforce"><span class="piste"></span></label>`;
+  return `<label class="flotte-toggle"><input type="checkbox" data-id="${a.id}" data-champ="saisieSalesforce" data-checkbox="1" ${a.saisieSalesforce === 'Oui' ? 'checked' : ''} aria-label="Saisi dans Salesforce"><span class="piste"></span></label>`;
 }
 
 let resoudreLieuStockage = null;
@@ -684,11 +683,11 @@ function carteDispositif(a, opts) {
   }
   const personne =
     opts.personneMode === 'button'
-      ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-ligne="${a.ligne}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
-      : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-ligne="${a.ligne}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
+      ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-id="${a.id}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
+      : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-id="${a.id}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
   const alerte = a.alerte2Mois && a.statut === 'En stock';
   const champIdent = (champ, lib) =>
-    `<label class="fi3-champ"><span>${lib}</span><input type="text" class="tl-champ" data-ligne="${a.ligne}" data-champ="${champ}" value="${echapper(a[champ])}" placeholder="—"></label>`;
+    `<label class="fi3-champ"><span>${lib}</span><input type="text" class="tl-champ" data-id="${a.id}" data-champ="${champ}" value="${echapper(a[champ])}" placeholder="—"></label>`;
   const lignesInfos = [
     VUE_MATERIEL
       ? ''
@@ -697,7 +696,7 @@ function carteDispositif(a, opts) {
       ? ''
       : `<div class="fi3-l"><span class="fi3-k">Prix</span><span class="fi3-v">${prixFlotteHtml(a)}</span></div>`,
     opts.stockage
-      ? `<div class="fi3-l"><span class="fi3-k">Lieu</span><span class="fi3-v tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.ligne)}</span></div>`
+      ? `<div class="fi3-l"><span class="fi3-k">Lieu</span><span class="fi3-v tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.id)}</span></div>`
       : '',
     opts.stockage && !VUE_MATERIEL
       ? `<div class="fi3-l"><span class="fi3-k">Salesforce</span><span class="fi3-v fi-sf">${caseSalesforce(a)}</span></div>`
@@ -709,7 +708,7 @@ function carteDispositif(a, opts) {
       ? `<div class="fi3-l"><span class="fi3-k">Remis le</span><span class="fi3-v">${echapper(a.dateVente)}</span></div>`
       : '',
     opts.showPaye && !VUE_MATERIEL
-      ? `<div class="fi3-l"><span class="fi3-k">Paiement</span><span class="fi3-v"><select class="fi-paye" data-ligne="${a.ligne}" data-champ="paye">
+      ? `<div class="fi3-l"><span class="fi3-k">Paiement</span><span class="fi3-v"><select class="fi-paye" data-id="${a.id}" data-champ="paye">
           <option value=""${!a.paye ? ' selected' : ''}>Payé ?</option>
           <option value="Oui"${a.paye === 'Oui' ? ' selected' : ''}>Payé</option>
           <option value="Non"${a.paye === 'Non' ? ' selected' : ''}>Non payé</option>
@@ -721,7 +720,7 @@ function carteDispositif(a, opts) {
   return `
   <div data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="carte-dispositif fiche fi3${alerte ? ' fi3-alerte' : ''}">
     <div class="fi3-tete">
-      ${opts.checkbox ? `<input type="checkbox" class="tl-case fi-case" data-select-attribution="${a.ligne}" ${opts.checkbox.checked ? 'checked' : ''} aria-label="Sélectionner pour attribution">` : ''}
+      ${opts.checkbox ? `<input type="checkbox" class="tl-case fi-case" data-select-attribution="${a.id}" ${opts.checkbox.checked ? 'checked' : ''} aria-label="Sélectionner pour attribution">` : ''}
       <span class="fi3-vis">${visuel}</span>
       <div class="fi3-titre">
         <b class="fi3-produit">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b>
@@ -730,7 +729,7 @@ function carteDispositif(a, opts) {
     </div>
     <div class="fi3-sn-ligne">
       <span class="fi3-sn">${pillePasseportFlotte(a.numeroSerie, false)}</span>
-      <select class="cd-select-statut fi3-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${statutKit}" data-ligne="${a.ligne}" data-champ="statut" aria-label="Statut de l'appareil">
+      <select class="cd-select-statut fi3-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${statutKit}" data-id="${a.id}" data-champ="statut" aria-label="Statut de l'appareil">
         ${opts.statuts.map((s) => `<option value="${echapper(s)}" ${a.statut === s ? 'selected' : ''}>${echapper(s)}</option>`).join('')}
       </select>
     </div>
@@ -785,7 +784,7 @@ function construireTableauFlotteInterne(appareils, opts) {
           <b class="tl-produit-nom">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b>
           ${
             modifiable
-              ? `<span class="tl-ident">${['marque', 'modele', 'categorie'].map((ch) => `<input type="text" class="tl-champ tl-ident-champ" data-ligne="${a.ligne}" data-champ="${ch}" value="${echapper(a[ch])}" placeholder="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}" size="${Math.max(6, String(a[ch] || '').length + 1)}" aria-label="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}">`).join('<i aria-hidden="true">·</i>')}</span>`
+              ? `<span class="tl-ident">${['marque', 'modele', 'categorie'].map((ch) => `<input type="text" class="tl-champ tl-ident-champ" data-id="${a.id}" data-champ="${ch}" value="${echapper(a[ch])}" placeholder="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}" size="${Math.max(6, String(a[ch] || '').length + 1)}" aria-label="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}">`).join('<i aria-hidden="true">·</i>')}</span>`
               : `<span class="tl-ident tl-ident-lu">${[a.marque, a.modele, a.categorie].filter(Boolean).map(echapper).join(' · ') || '—'}</span>`
           }
         </span>
@@ -808,21 +807,21 @@ function construireTableauFlotteInterne(appareils, opts) {
       }
       const personne =
         opts.personneMode === 'button'
-          ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-ligne="${a.ligne}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
-          : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-ligne="${a.ligne}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
+          ? `<button type="button" class="tl-personne${a.personne ? '' : ' vide'}" data-personne-id="${a.id}">${a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '<span class="tl-av tl-av-plus">+</span>Attribuer'}</button>`
+          : `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span><input type="text" class="tl-champ" data-id="${a.id}" data-champ="personne" value="${echapper(a.personne)}" placeholder="Personne"></span>`;
       return `
-    <tr data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="${alerte ? 'tl-alerte' : ''}${a.statut === 'D3E' ? ' tl-d3e' : ''}${lignesSelectionneesAttribution.has(a.ligne) ? ' tl-selection' : ''}">
-      ${colonneAttribution ? `<td class="tl-col-case"><input type="checkbox" class="tl-case" data-select-attribution="${a.ligne}" ${lignesSelectionneesAttribution.has(a.ligne) ? 'checked' : ''} aria-label="Sélectionner pour attribution"></td>` : ''}
+    <tr data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="${alerte ? 'tl-alerte' : ''}${a.statut === 'D3E' ? ' tl-d3e' : ''}${idsSelectionnesAttribution.has(a.id) ? ' tl-selection' : ''}">
+      ${colonneAttribution ? `<td class="tl-col-case"><input type="checkbox" class="tl-case" data-select-attribution="${a.id}" ${idsSelectionnesAttribution.has(a.id) ? 'checked' : ''} aria-label="Sélectionner pour attribution"></td>` : ''}
       ${celluleAppareil(a, true)}
       <td>${pillePasseportFlotte(a.numeroSerie, a.alerte2Mois)}</td>
       ${VUE_MATERIEL ? '' : `<td>${personne}</td>`}
       <td>
-        <select class="cd-select-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${classeStatutKitFlotte(a.statut)}" data-ligne="${a.ligne}" data-champ="statut">
+        <select class="cd-select-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${classeStatutKitFlotte(a.statut)}" data-id="${a.id}" data-champ="statut">
           ${opts.statuts.map((s) => `<option value="${echapper(s)}" ${a.statut === s ? 'selected' : ''}>${echapper(s)}</option>`).join('')}
         </select>${selectProjetFlotte(a, true)}
       </td>
       ${VUE_MATERIEL ? '' : `<td>${prixFlotteHtml(a, true)}</td>`}
-      ${opts.stockage ? `<td class="tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.ligne)}</td>${VUE_MATERIEL ? '' : `<td class="tl-centre">${caseSalesforce(a)}</td>`}` : ''}
+      ${opts.stockage ? `<td class="tl-lieu">${selectListePerso('lieuStockage', listesPersoFlottePortail.lieux, a.lieuStockage, a.id)}</td>${VUE_MATERIEL ? '' : `<td class="tl-centre">${caseSalesforce(a)}</td>`}` : ''}
       <td class="tl-muet">${a.dateLivraison ? echapper(a.dateLivraison) : '—'}</td>
     </tr>`;
     })
@@ -890,13 +889,13 @@ function construireTableauComptaFlotte(appareils) {
       <td>${echapper(a.modele) || '—'}</td>
       <td>${echapper(a.personne) || '—'}</td>
       <td style="white-space:nowrap">${a.dateVente ? echapper(a.dateVente) : '—'}</td>
-      <td><select data-ligne="${a.ligne}" data-champ="typePaiement">${TYPES_PAIEMENT_PORTAIL.map((t) => `<option value="${t}" ${(a.typePaiement || '') === t ? 'selected' : ''}>${t || '—'}</option>`).join('')}</select></td>
-      <td>${selectListePerso('vendeur', listesPersoFlottePortail.vendeurs, a.vendeur, a.ligne)}</td>
-      <td><input type="text" data-ligne="${a.ligne}" data-champ="numeroRapprochement" value="${echapper(a.numeroRapprochement)}" placeholder="Zettle / dépôt"></td>
+      <td><select data-id="${a.id}" data-champ="typePaiement">${TYPES_PAIEMENT_PORTAIL.map((t) => `<option value="${t}" ${(a.typePaiement || '') === t ? 'selected' : ''}>${t || '—'}</option>`).join('')}</select></td>
+      <td>${selectListePerso('vendeur', listesPersoFlottePortail.vendeurs, a.vendeur, a.id)}</td>
+      <td><input type="text" data-id="${a.id}" data-champ="numeroRapprochement" value="${echapper(a.numeroRapprochement)}" placeholder="Zettle / dépôt"></td>
       <td style="text-align:center">
-        <input type="checkbox" data-ligne="${a.ligne}" data-champ="statutRapprochement" data-checkbox="1" data-checkbox-on="Rapproché" data-checkbox-off="À traiter" ${a.statutRapprochement === 'Rapproché' ? 'checked' : ''} aria-label="Rapproché">
+        <input type="checkbox" data-id="${a.id}" data-champ="statutRapprochement" data-checkbox="1" data-checkbox-on="Rapproché" data-checkbox-off="À traiter" ${a.statutRapprochement === 'Rapproché' ? 'checked' : ''} aria-label="Rapproché">
       </td>
-      <td><input type="date" data-ligne="${a.ligne}" data-champ="dateRapprochement" data-date="1" value="${echapper(dateVersISO(a.dateRapprochement))}" aria-label="Date de rapprochement"></td>
+      <td><input type="date" data-id="${a.id}" data-champ="dateRapprochement" data-date="1" value="${echapper(dateVersISO(a.dateRapprochement))}" aria-label="Date de rapprochement"></td>
     </tr>`,
     )
     .join('');
@@ -1020,7 +1019,7 @@ $('modale-stats-flotte-portail')?.addEventListener('click', (e) => {
 });
 
 function rendreFlotteInterneParitePortail(appareils) {
-  lignesSelectionneesAttribution.clear();
+  idsSelectionnesAttribution.clear();
   const entete = `
     <div class="flotte-entete">
       <div>
@@ -1077,9 +1076,7 @@ function rendreFlotteInterneParitePortail(appareils) {
             .map((a) =>
               carteDispositif(a, {
                 checkbox:
-                  attributionPartenaires && !a.verrouille
-                    ? { checked: lignesSelectionneesAttribution.has(a.ligne) }
-                    : null,
+                  attributionPartenaires && !a.verrouille ? { checked: idsSelectionnesAttribution.has(a.id) } : null,
                 verrouille: !!a.verrouille,
                 statuts: STATUTS_FLOTTE_INTERNE_PORTAIL,
                 personneMode: 'button',
@@ -1217,7 +1214,7 @@ function cablerBarreOutilsPortailInterne() {
 function cablerAttributionFlottePortail() {
   const barre = $('barre-attribution-flotte');
   const majBarre = () => {
-    const n = lignesSelectionneesAttribution.size;
+    const n = idsSelectionnesAttribution.size;
     if (barre) barre.style.display = n ? 'flex' : 'none';
     const compteur = $('compteur-selection-attribution');
     if (compteur) compteur.textContent = `${n} appareil${n > 1 ? 's' : ''} sélectionné${n > 1 ? 's' : ''}`;
@@ -1225,9 +1222,9 @@ function cablerAttributionFlottePortail() {
 
   document.querySelectorAll('[data-select-attribution]').forEach((cb) => {
     cb.addEventListener('change', () => {
-      const ligne = parseInt(cb.dataset.selectAttribution, 10);
-      if (cb.checked) lignesSelectionneesAttribution.add(ligne);
-      else lignesSelectionneesAttribution.delete(ligne);
+      const id = parseInt(cb.dataset.selectAttribution, 10);
+      if (cb.checked) idsSelectionnesAttribution.add(id);
+      else idsSelectionnesAttribution.delete(id);
       const ligneTableau = cb.closest('tr');
       if (ligneTableau) ligneTableau.classList.toggle('tl-selection', cb.checked);
       majBarre();
@@ -1260,11 +1257,11 @@ function cablerAttributionFlottePortail() {
     const codePartenaire = select?.value;
     if (!codePartenaire)
       return afficherMsg('retour-attribution-flotte', 'Choisissez une structure partenaire.', 'erreur');
-    if (!lignesSelectionneesAttribution.size) return;
+    if (!idsSelectionnesAttribution.size) return;
     const nomPartenaire = select.options[select.selectedIndex].textContent;
     if (
       !(await confirmerCvdl(
-        `Attribuer définitivement ${lignesSelectionneesAttribution.size} appareil(s) à ${nomPartenaire} ? Cette action est irréversible depuis cette interface — seule ${nomPartenaire} pourra ensuite les modifier.`,
+        `Attribuer définitivement ${idsSelectionnesAttribution.size} appareil(s) à ${nomPartenaire} ? Cette action est irréversible depuis cette interface — seule ${nomPartenaire} pourra ensuite les modifier.`,
       ))
     )
       return;
@@ -1273,20 +1270,20 @@ function cablerAttributionFlottePortail() {
     // avant le transfert (l'appareil est ensuite verrouillé côté Interne) : proposer de mettre à
     // jour le lieu de stockage
     if (aColonnesStockage()) {
-      const lignesTransfert = [...lignesSelectionneesAttribution];
+      const idsTransfert = [...idsSelectionnesAttribution];
       const lieuxActuels = new Set(
-        lignesTransfert.map((l) => (appareilsCourants.find((a) => a.ligne === l) || {}).lieuStockage || ''),
+        idsTransfert.map((id) => (appareilsCourants.find((a) => a.id === id) || {}).lieuStockage || ''),
       );
       const lieu = await demanderLieuStockage(
-        `${lignesTransfert.length} appareil${lignesTransfert.length > 1 ? 's' : ''} transféré${lignesTransfert.length > 1 ? 's' : ''} à ${nomPartenaire}`,
+        `${idsTransfert.length} appareil${idsTransfert.length > 1 ? 's' : ''} transféré${idsTransfert.length > 1 ? 's' : ''} à ${nomPartenaire}`,
         lieuxActuels.size === 1 ? [...lieuxActuels][0] : '',
       );
       if (lieu !== null) {
-        for (const l of lignesTransfert) {
+        for (const id of idsTransfert) {
           const rLieu = await posterVue({
             action: 'flotte-modifier',
             code: codeValide,
-            ligne: l,
+            id,
             champ: 'lieuStockage',
             valeur: lieu,
           }).catch(() => ({ ok: false }));
@@ -1308,7 +1305,7 @@ function cablerAttributionFlottePortail() {
         action: 'flotte-attribuer-partenaire',
         codeCreateur: codeValide,
         codePartenaire,
-        lignes: [...lignesSelectionneesAttribution],
+        ids: [...idsSelectionnesAttribution],
       });
       if (r.ok) {
         await chargerAppareils();
@@ -1450,7 +1447,7 @@ function rendreAppareils(appareils) {
 function cablerChampsFlotte() {
   document.querySelectorAll('#zone-flotte [data-champ]').forEach((champ) => {
     champ.addEventListener('change', async () => {
-      const ligne = champ.dataset.ligne;
+      const id = parseInt(champ.dataset.id, 10);
       const nomChamp = champ.dataset.champ;
       let valeur = champ.dataset.checkbox
         ? champ.checked
@@ -1493,8 +1490,8 @@ function cablerChampsFlotte() {
 
       champ.disabled = true;
       try {
-        const r = await posterVue({ action: 'flotte-modifier', code: codeValide, ligne, champ: nomChamp, valeur });
-        const item = appareilsCourants.find((a) => a.ligne == ligne);
+        const r = await posterVue({ action: 'flotte-modifier', code: codeValide, id, champ: nomChamp, valeur });
+        const item = appareilsCourants.find((a) => a.id === id);
         if (!r.ok) {
           alerteCvdl(r.erreur || 'Enregistrement impossible.');
           rerendreFlotte(); // remet l'affichage sur la vraie valeur enregistrée
@@ -1517,7 +1514,7 @@ function cablerChampsFlotte() {
             const rLieu = await posterVue({
               action: 'flotte-modifier',
               code: codeValide,
-              ligne,
+              id,
               champ: 'lieuStockage',
               valeur: lieu,
             }).catch(() => ({ ok: false }));
@@ -1604,43 +1601,6 @@ function dateVersISO(dateStr) {
   if (!j || !m || !a) return '';
   return `${a}-${m}-${j}`;
 }
-
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-qr-serie]');
-  if (!b) return;
-  const numeroSerie = b.dataset.qrSerie;
-  // URL résolue par rapport à la page courante : fonctionne que l'adresse se termine par
-  // « flotte-structure.html » ou non
-  const lien = new URL('passeport.html', location.href);
-  lien.search = '';
-  lien.hash = '';
-  lien.searchParams.set('sn', numeroSerie);
-  const urlQr = lien.toString();
-  lien.searchParams.set('code', codeValide);
-  const urlOuvrir = lien.toString();
-
-  $('qr-code-conteneur').innerHTML = '';
-  try {
-    new QRCode($('qr-code-conteneur'), {
-      text: urlQr,
-      width: 200,
-      height: 200,
-      colorDark: '#002743',
-      colorLight: '#ffffff',
-    });
-  } catch (err) {
-    $('qr-code-conteneur').innerHTML =
-      '<p style="opacity:0.6;font-size:13px">QR indisponible — le lien reste utilisable ci-dessous.</p>';
-  }
-  $('qr-url-affichee').textContent = urlQr;
-  $('qr-ouvrir-passeport').href = urlOuvrir;
-  $('modale-qr-passeport').dataset.numeroSerie = numeroSerie;
-  $('modale-qr-passeport').classList.add('visible');
-});
-$('qr-fermer').addEventListener('click', () => $('modale-qr-passeport').classList.remove('visible'));
-$('modale-qr-passeport').addEventListener('click', (e) => {
-  if (e.target.id === 'modale-qr-passeport') $('modale-qr-passeport').classList.remove('visible');
-});
 
 let attestationSerieCourante = '';
 document.addEventListener('click', (e) => {

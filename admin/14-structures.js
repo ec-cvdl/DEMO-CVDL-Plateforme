@@ -65,14 +65,6 @@ function vueStructures() {
       </div>
       <button type="button" class="btn btn-primary" data-ouvrir-creation="structure">${icon('plus', 15)}Nouvelle structure</button>
     </div>
-    ${
-      state.structures.some((x) => !x.typeDefini)
-        ? `<div class="msg msg-warn st-migration">
-      <span style="flex:1">${state.structures.filter((x) => !x.typeDefini).length} structure(s) n’ont pas encore de type enregistré${state.structures.some(typeAChoisir) ? `, dont ${state.structures.filter(typeAChoisir).length} à trancher à la main` : ''}.</span>
-      <button type="button" class="btn btn-secondary" data-migrer-types>Voir et appliquer</button>
-    </div>`
-        : ''
-    }
     ${(() => {
       const regions = [...new Set(state.structures.map((x) => x.region).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, 'fr'),
@@ -97,9 +89,9 @@ function vueStructures() {
           .map((s) => {
             const type = typeStructure(s);
             const c = TYPE_COLORS[type];
-            const revealed = !!state.revealedCodes[s.ligne];
+            const revealed = !!state.revealedCodes[s.id];
             return `
-        <div class="st-ligne" style="display:grid;grid-template-columns:38px minmax(240px, 2.2fr) 140px minmax(0, 1fr) auto;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-6);border-top:1px solid var(--color-divider);min-width:0;cursor:pointer;min-height:70px" data-structure-vue="${s.ligne}" role="button" tabindex="0" aria-label="Ouvrir la fiche 360 de ${echapper(s.nom)}">
+        <div class="st-ligne" style="display:grid;grid-template-columns:38px minmax(240px, 2.2fr) 140px minmax(0, 1fr) auto;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-6);border-top:1px solid var(--color-divider);min-width:0;cursor:pointer;min-height:70px" data-structure-vue="${s.id}" role="button" tabindex="0" aria-label="Ouvrir la fiche 360 de ${echapper(s.nom)}">
           <span style="width:38px;height:38px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:${c.bg};color:${c.fg}">${icon('building', 18)}</span>
           <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;min-width:0;min-height:38px">
             <span style="font-weight:700;font-size:14px;line-height:1.3;overflow-wrap:anywhere" title="${echapper(s.nom)}">${echapper(s.nom)}</span>
@@ -117,8 +109,8 @@ function vueStructures() {
           <div style="min-width:0;font-size:13px;opacity:0.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${echapper(s.email || '')}</div>
           <div style="display:flex;align-items:center;gap:8px;background:var(--color-neutral-100);padding:6px 10px;border-radius:var(--radius-md)">
             <span style="font-family:ui-monospace,monospace;font-size:13px">${revealed ? echapper(s.code) : '••••••••••'}</span>
-            <button type="button" class="btn btn-ghost btn-icon" style="width:26px;height:26px;flex:none" data-reveal-code="${s.ligne}" aria-label="${revealed ? 'Masquer' : 'Afficher'} le code">${icon(revealed ? 'eyeoff' : 'eye', 15)}</button>
-            <button type="button" class="btn btn-ghost btn-icon" style="width:26px;height:26px;flex:none" data-structure-modifier="${s.ligne}" aria-label="Modifier ${echapper(s.nom)}">${icon('gear', 15)}</button>
+            <button type="button" class="btn btn-ghost btn-icon" style="width:26px;height:26px;flex:none" data-reveal-code="${s.id}" aria-label="${revealed ? 'Masquer' : 'Afficher'} le code">${icon(revealed ? 'eyeoff' : 'eye', 15)}</button>
+            <button type="button" class="btn btn-ghost btn-icon" style="width:26px;height:26px;flex:none" data-structure-modifier="${s.id}" aria-label="Modifier ${echapper(s.nom)}">${icon('gear', 15)}</button>
           </div>
         </div>`;
           })

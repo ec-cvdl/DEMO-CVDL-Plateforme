@@ -22,7 +22,7 @@ const state = {
   role: 'admin',
   modal: null, // { kind:'commande'|'sav'|'creer-structure'|'creer-commande'|'creer-produit', ref? }
   highlightRef: null,
-  confirmSubEtapes: {}, // { [ligneCommande]: { series:bool, colissimo:bool } } — en mémoire seulement, comme côté back
+  confirmSubEtapes: {}, // { [idCommande]: { series:bool, colissimo:bool } } — en mémoire seulement, comme côté back
   etapeCommandeOuverte: null, // étape déjà passée actuellement dépliée pour consultation/modification, dans la modale commande
   accordeonTerminalOuvert: false, // section "Clôturer le dossier" (SAV), repliée par défaut
   commandesVue: 'liste', // 'liste' (par défaut, dense) ou 'kanban'
@@ -208,7 +208,7 @@ async function chargerTout() {
   if (rc && rc.ok) state.commandes = rc.commandes || [];
   if (rs && rs.ok) state.sav = rs.tickets || [];
   if (rss && rss.ok) state.statutsSav = rss.statuts || [];
-  if (rst && rst.ok) state.structures = (rst.structures || []).slice().sort((a, b) => b.ligne - a.ligne);
+  if (rst && rst.ok) state.structures = (rst.structures || []).slice().sort((a, b) => b.id - a.id);
   if (rd && rd.ok) state.devis = rd.devis || [];
   if (rf && rf.ok) state.factures = rf.factures || [];
   if (rp && rp.ok) state.produits = rp.produits || [];
@@ -245,6 +245,7 @@ const NAV_DEFS = [
   { key: 'calendrier', label: 'Calendrier', ic: 'calendrier' },
   { key: 'bilan', label: 'Statistiques', ic: 'stats' },
   { key: 'retours', label: 'Retours', ic: 'bulle' }, // avis et erreurs des utilisateurs (retours-admin.js)
+  { key: 'acces-demo', label: 'Accès démo', ic: 'key' }, // codes d'essai des structures (38-acces-demo.js)
   { key: 'equipe', label: 'Équipe', ic: 'personne' }, // comptes Google de l'équipe, rôles (equipe-admin.js)
   { key: 'reglages', label: 'Réglages', ic: 'gear' },
 ];
@@ -392,6 +393,7 @@ function render() {
   else if (state.activeTab === 'depannage') main.innerHTML = typeof vueDepannage === 'function' ? vueDepannage() : '';
   else if (state.activeTab === 'retours') main.innerHTML = typeof vueRetours === 'function' ? vueRetours() : '';
   else if (state.activeTab === 'equipe') main.innerHTML = typeof vueEquipe === 'function' ? vueEquipe() : '';
+  else if (state.activeTab === 'acces-demo') main.innerHTML = typeof vueAccesDemo === 'function' ? vueAccesDemo() : '';
   else if (state.activeTab === 'factures') main.innerHTML = vueFactures();
   else if (state.activeTab === 'finance') main.innerHTML = typeof vueFinance === 'function' ? vueFinance() : '';
   else if (state.activeTab === 'stock') main.innerHTML = vueStock();
@@ -408,7 +410,9 @@ function render() {
   main.classList.toggle('rp-vue-stable', state.activeTab === derniereCleVue);
   derniereCleVue = state.activeTab;
 
-  const cleModale = state.modal ? `${state.modal.kind}|${state.modal.ref || ''}|${state.modal.ligne || ''}` : '';
+  const cleModale = state.modal
+    ? `${state.modal.kind}|${state.modal.ref || ''}|${state.modal.ligne || state.modal.id || ''}`
+    : '';
   const zoneModale = $('rp-modal-zone');
   zoneModale.classList.toggle('rp-modal-stable', !!cleModale && cleModale === derniereCleModale);
   derniereCleModale = cleModale;
@@ -484,7 +488,7 @@ document.addEventListener('click', async (e) => {
 
   const modifierProduit = e.target.closest('[data-produit-modifier]');
   if (modifierProduit) {
-    state.modal = { kind: 'creer-produit', ligne: parseInt(modifierProduit.dataset.produitModifier, 10) };
+    state.modal = { kind: 'creer-produit', id: parseInt(modifierProduit.dataset.produitModifier, 10) };
     render();
     return;
   }
@@ -521,7 +525,7 @@ document.addEventListener('click', async (e) => {
   if (modifierStructure) {
     state.modal = {
       kind: 'creer-structure',
-      ligne: parseInt(modifierStructure.dataset.structureModifier, 10),
+      id: parseInt(modifierStructure.dataset.structureModifier, 10),
       modalParent: modalParentPour('creer-structure'),
     };
     render();
@@ -597,7 +601,7 @@ document.addEventListener('click', async (e) => {
   if (ouvrirCreationCommandeDepuisDevis) {
     state.modal = {
       kind: 'creer-commande',
-      rattacherDevisLigne: parseInt(ouvrirCreationCommandeDepuisDevis.dataset.genererCommandeDepuisDevis, 10),
+      rattacherDevisId: parseInt(ouvrirCreationCommandeDepuisDevis.dataset.genererCommandeDepuisDevis, 10),
     };
     state.ncLignes = [];
     state.ncCode = '';
@@ -637,7 +641,7 @@ document.addEventListener('click', async (e) => {
   }
   const masquerMateriel = e.target.closest('[data-materiel-masquer]');
   if (masquerMateriel) {
-    const p = state.produits.find((x) => x.ligne === parseInt(masquerMateriel.dataset.materielMasquer, 10));
+    const p = state.produits.find((x) => x.id === parseInt(masquerMateriel.dataset.materielMasquer, 10));
     if (p) p.masqueCategorieMateriel = !p.masqueCategorieMateriel;
     render();
     return;
@@ -729,7 +733,7 @@ document.addEventListener('click', async (e) => {
   if (modifierSeries) {
     const c = state.commandes.find((x) => x.reference === modifierSeries.dataset.modifierSeries);
     if (c) {
-      (state.confirmSubEtapes[c.ligne] ||= {}).series = false;
+      (state.confirmSubEtapes[c.id] ||= {}).series = false;
       render();
     }
     return;
@@ -743,7 +747,7 @@ document.addEventListener('click', async (e) => {
   if (modifierColissimo) {
     const c = state.commandes.find((x) => x.reference === modifierColissimo.dataset.modifierColissimo);
     if (c) {
-      (state.confirmSubEtapes[c.ligne] ||= {}).colissimo = false;
+      (state.confirmSubEtapes[c.id] ||= {}).colissimo = false;
       render();
     }
     return;
@@ -1044,7 +1048,7 @@ document.addEventListener('click', async (e) => {
   }
   const ouvrirRattachement = e.target.closest('[data-rattacher-devis]');
   if (ouvrirRattachement) {
-    state.modal = { kind: 'rattacher-devis', ligneDevis: parseInt(ouvrirRattachement.dataset.rattacherDevis, 10) };
+    state.modal = { kind: 'rattacher-devis', idDevis: parseInt(ouvrirRattachement.dataset.rattacherDevis, 10) };
     render();
     return;
   }
@@ -1082,7 +1086,7 @@ document.addEventListener('click', async (e) => {
     )
       return;
     (async () => {
-      const ligne = parseInt(regenererCode.dataset.regenererCodeStructure, 10);
+      const id = parseInt(regenererCode.dataset.regenererCodeStructure, 10);
       const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       const groupe = () =>
         Array.from({ length: 4 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
@@ -1091,13 +1095,13 @@ document.addEventListener('click', async (e) => {
       try {
         const r = await poster({
           action: 'structure-update',
-          ligne,
+          id,
           champ: 'code',
           valeur: nouveauCode,
           password: motDePasse,
         });
         if (r.ok) {
-          const st = state.structures.find((x) => x.ligne === ligne);
+          const st = state.structures.find((x) => x.id === id);
           if (st) st.code = nouveauCode;
           etat('Code régénéré', 'succes');
           render();

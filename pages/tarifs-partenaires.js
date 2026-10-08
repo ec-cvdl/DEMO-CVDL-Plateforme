@@ -76,10 +76,7 @@ async function chargerTarifsPartenaires() {
     }
     $('liste-tarifs-partenaires').innerHTML = r.produits
       .map((p) => {
-        const codes = (p.structureDediee || '')
-          .split(',')
-          .map((c) => c.trim())
-          .filter(Boolean);
+        const codes = p.structuresDediees || [];
         const noms = codes.map((c) => (partenairesCourants.find((s) => s.code === c) || {}).nom || c);
         return `
       <div class="carte-partenaire carte-tarif" style="align-items:flex-start;flex-direction:column;gap:10px">
@@ -89,20 +86,20 @@ async function chargerTarifsPartenaires() {
             <div class="nom">${echapper(p.nom)}</div>
             <div class="sous">${noms.map((n) => echapper(n)).join(', ')}</div>
           </div>
-          <button type="button" class="btn-modifier-partenaire btn-supprimer-tarif" data-supprimer-tarif="${p.ligne}" style="flex:none">Supprimer</button>
+          <button type="button" class="btn-modifier-partenaire btn-supprimer-tarif" data-supprimer-tarif="${p.id}" style="flex:none">Supprimer</button>
         </div>
         <label class="case-toggle tarif-remplace tarif-remplace-carte">
-          <span class="rp-interrupteur"><input type="checkbox" data-remplace-tarif="${p.ligne}" ${p.remplaceBase ? 'checked' : ''}><span class="rp-interrupteur-piste"></span></span>
+          <span class="rp-interrupteur"><input type="checkbox" data-remplace-tarif="${p.id}" ${p.remplaceBase ? 'checked' : ''}><span class="rp-interrupteur-piste"></span></span>
           <span><b>${p.produitBase ? `Remplace « ${echapper(p.produitBase)} » dans le formulaire` : 'Remplacer le produit de base dans le formulaire'}</b>
             <small>${p.remplaceBase ? 'Le produit d’origine n’apparaît plus pour ces structures : seul ce tarif est proposé, à sa place.' : 'Désactivé : ce tarif s’affiche à côté du produit d’origine.'}</small></span>
         </label>
         <div style="display:flex;gap:8px;align-items:center;width:100%;flex-wrap:wrap">
-          <label class="sr-only" for="tarif-nom-${p.ligne}">Nom du tarif</label>
-          <input type="text" class="input" id="tarif-nom-${p.ligne}" data-nom-tarif="${p.ligne}" data-nom-initial="${echapper(p.nom)}" value="${echapper(p.nom)}" style="flex:1;min-width:180px" autocomplete="off">
-          <label class="sr-only" for="tarif-prix-${p.ligne}">Prix</label>
-          <input type="number" class="input" id="tarif-prix-${p.ligne}" data-prix-tarif="${p.ligne}" data-prix-initial="${p.prixStandard}" value="${p.prixStandard}" step="0.01" min="0" style="max-width:120px">
+          <label class="sr-only" for="tarif-nom-${p.id}">Nom du tarif</label>
+          <input type="text" class="input" id="tarif-nom-${p.id}" data-nom-tarif="${p.id}" data-nom-initial="${echapper(p.nom)}" value="${echapper(p.nom)}" style="flex:1;min-width:180px" autocomplete="off">
+          <label class="sr-only" for="tarif-prix-${p.id}">Prix</label>
+          <input type="number" class="input" id="tarif-prix-${p.id}" data-prix-tarif="${p.id}" data-prix-initial="${p.prixStandard}" value="${p.prixStandard}" step="0.01" min="0" style="max-width:120px">
           <span style="font-size:12.5px">€</span>
-          <button type="button" class="btn btn-secondary" data-enregistrer-prix-tarif="${p.ligne}" style="margin-left:auto">Enregistrer</button>
+          <button type="button" class="btn btn-secondary" data-enregistrer-prix-tarif="${p.id}" style="margin-left:auto">Enregistrer</button>
         </div>
       </div>`;
       })
@@ -113,7 +110,7 @@ async function chargerTarifsPartenaires() {
         const r = await poster({
           action: 'produit-partenaire-supprimer',
           codeCreateur: codeValide,
-          ligne: b.dataset.supprimerTarif,
+          id: b.dataset.supprimerTarif,
         });
         if (r.ok) await chargerTarifsPartenaires();
         else alerteCvdl(r.erreur || 'Suppression impossible.');
@@ -121,7 +118,7 @@ async function chargerTarifsPartenaires() {
     );
     document.querySelectorAll('[data-remplace-tarif]').forEach((c) =>
       c.addEventListener('change', async () => {
-        const p = tarifsCourants.find((x) => String(x.ligne) === c.dataset.remplaceTarif) || {};
+        const p = tarifsCourants.find((x) => String(x.id) === c.dataset.remplaceTarif) || {};
         let produitBase = p.produitBase || '';
         // tarif créé sans produit de base : on le retrouve par son nom si possible
         if (c.checked && !produitBase) {
@@ -138,7 +135,7 @@ async function chargerTarifsPartenaires() {
         const r = await poster({
           action: 'produit-partenaire-update',
           codeCreateur: codeValide,
-          ligne: c.dataset.remplaceTarif,
+          id: c.dataset.remplaceTarif,
           champ: 'remplaceBase',
           valeur: c.checked,
           produitBase: produitBase.trim(),
@@ -154,9 +151,9 @@ async function chargerTarifsPartenaires() {
     );
     document.querySelectorAll('[data-enregistrer-prix-tarif]').forEach((b) =>
       b.addEventListener('click', async () => {
-        const ligne = b.dataset.enregistrerPrixTarif;
-        const input = document.querySelector(`[data-prix-tarif="${ligne}"]`);
-        const champNom = document.querySelector(`[data-nom-tarif="${ligne}"]`);
+        const id = b.dataset.enregistrerPrixTarif;
+        const input = document.querySelector(`[data-prix-tarif="${id}"]`);
+        const champNom = document.querySelector(`[data-nom-tarif="${id}"]`);
         const nom = champNom.value.trim();
         if (!nom) {
           alerteCvdl('Le nom du tarif est obligatoire.');
@@ -168,7 +165,7 @@ async function chargerTarifsPartenaires() {
           const rn = await poster({
             action: 'produit-partenaire-update',
             codeCreateur: codeValide,
-            ligne,
+            id,
             champ: 'nom',
             valeur: nom,
           });
@@ -182,7 +179,7 @@ async function chargerTarifsPartenaires() {
           const r = await poster({
             action: 'produit-partenaire-update',
             codeCreateur: codeValide,
-            ligne,
+            id,
             champ: 'prix',
             valeur: input.value,
           });

@@ -527,13 +527,13 @@ async function enregistrerCommande() {
       if (rc.ok) state.commandes = rc.commandes;
       // Créée depuis un devis libre (bouton "Générer la commande liée") : rattache
       // automatiquement le nouveau devis à cette commande fraîchement créée.
-      if (m.rattacherDevisLigne) {
+      if (m.rattacherDevisId) {
         const nouvelleCommande = state.commandes.find((c) => c.reference === r.reference);
         if (nouvelleCommande) {
           await poster({
             action: 'devis-rattacher-commande',
-            ligneDevis: m.rattacherDevisLigne,
-            ligneCommande: nouvelleCommande.ligne,
+            idDevis: m.rattacherDevisId,
+            idCommande: nouvelleCommande.id,
           });
           const rd = await jsonp({ action: 'devis', password: motDePasse, limite: 0 });
           if (rd.ok) state.devis = rd.devis;

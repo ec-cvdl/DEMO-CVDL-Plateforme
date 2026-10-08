@@ -94,15 +94,10 @@ const LIBELLES_TYPE = {
   bo: 'Vente solidaire',
   projets: 'Projets',
 };
-function cleTypeStructure(s) {
-  if (s.type && LIBELLES_TYPE[s.type]) return s.type;
-  return s.esn ? 'esn' : s.interne ? 'interne' : s.bo ? 'bo' : s.projets ? 'projets' : 'rn';
-}
 function typeStructure(s) {
-  return LIBELLES_TYPE[cleTypeStructure(s)];
+  return LIBELLES_TYPE[s.type] || 'Standard';
 }
-/* Type unique (colonne « Type ») : une structure sans type enregistré et avec zéro ou plusieurs
-   anciennes cases cochées doit être tranchée à la main (le changer modifierait son tarif). */
+/* Structure sans type : à trancher à la main (le type décide du tarif et de la facturation). */
 const TYPES_STRUCTURE = [
   {
     cle: 'rn',
@@ -127,7 +122,7 @@ const TYPES_STRUCTURE = [
   { cle: 'esn', libelle: 'ESN', aide: 'Sans paiement ni facture, quantités ESN.' },
 ];
 function typeAChoisir(s) {
-  return !!s && !s.typeDefini && (s.casesCochees || []).length !== 1;
+  return !!s && !s.type;
 }
 
 /* ============================================================

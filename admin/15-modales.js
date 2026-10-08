@@ -14,7 +14,6 @@ function vueModal() {
   if (m.kind === 'creer-facture') return vueCreerFacture();
   if (m.kind === 'reglages-sav') return vueReglagesStatutsSav();
   if (m.kind === 'info-types-structure') return vueInfoTypesStructure();
-  if (m.kind === 'migration-types') return vueMigrationTypes();
   if (m.kind === 'structure-360') return vueStructure360();
   if (m.kind === 'coefficients-impact') return vueCoefficientsImpact();
   if (m.kind === 'tectech-resultats') {
@@ -89,11 +88,11 @@ function vueModal() {
           `
               : `<button type="button" class="btn btn-primary btn-block" style="margin-top:var(--space-3)" data-doc-generer ${dg.chargement ? 'disabled' : ''}>${dg.chargement ? 'Génération…' : 'Générer le document'}</button>`
           }
-          ${estDevis && !doc.referenceCommande && doc.statut !== 'Annulé' ? `<div style="margin-top:var(--space-3)"><button type="button" class="btn btn-secondary btn-block" data-generer-commande-depuis-devis="${doc.ligne}">${icon('plus', 14)}Générer la commande liée</button></div>` : ''}
+          ${estDevis && !doc.referenceCommande && !/^Annul/.test(doc.statut) ? `<div style="margin-top:var(--space-3)"><button type="button" class="btn btn-secondary btn-block" data-generer-commande-depuis-devis="${doc.id}">${icon('plus', 14)}Générer la commande liée</button></div>` : ''}
           ${
-            doc.statut === 'Annulé'
+            /^Annul/.test(doc.statut)
               ? `<div style="margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--color-divider);font-size:12.5px;opacity:0.7;display:flex;align-items:center;gap:6px">${iconeAnnuler(15)} Annulé — motif : ${echapper(doc.motifAnnulation || '—')}</div>`
-              : `<div style="margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--color-divider)"><button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-annuler-${estDevis ? 'devis' : 'facture'}="${doc.ligne}" data-ref-${estDevis ? 'devis' : 'facture'}="${echapper(estDevis ? doc.referenceDevis : doc.referenceFacture)}">${iconeAnnuler(18)}Annuler ${estDevis ? 'ce devis' : 'cette facture'}</button></div>`
+              : `<div style="margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--color-divider)"><button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-annuler-${estDevis ? 'devis' : 'facture'}="${doc.id}" data-ref-${estDevis ? 'devis' : 'facture'}="${echapper(estDevis ? doc.referenceDevis : doc.referenceFacture)}">${iconeAnnuler(18)}Annuler ${estDevis ? 'ce devis' : 'cette facture'}</button></div>`
           }
         </div>
       </div>`;
@@ -223,7 +222,7 @@ function blocAppareilsCommande(c, titre = true) {
       .map((l) => {
         const p = state.produits.find((x) => x.nom === l.produit);
         return `<div class="fc2-app"><span class="rpd-ill">${l.produit ? illustrationProduitAdmin(l.produit, p ? p.icone : '', 28) : ''}</span>
-        <span class="fc2-app-t"><b title="${echapper(l.produit || '')}">${echapper(l.produit || 'Appareil')}</b>${l.nom ? `<small>${icon('personne', 12)}${echapper(c.identiteMasquee ? nomPersonneAdmin('commande', c.ligne, l.nom) : l.nom)}</small>` : ''}</span>
+        <span class="fc2-app-t"><b title="${echapper(l.produit || '')}">${echapper(l.produit || 'Appareil')}</b>${l.nom ? `<small>${icon('personne', 12)}${echapper(c.identiteMasquee ? nomPersonneAdmin('commande', c.id, l.nom) : l.nom)}</small>` : ''}</span>
         <span class="fc2-app-v">${l.valeur ? (l.dematerialise ? pilulesCodes(l.valeur) : pilulesNumerosSerie(l.valeur)) : `<em>${l.dematerialise ? 'Code' : 'N° de série'} à saisir</em>`}</span></div>`;
       })
       .join('')}</div>

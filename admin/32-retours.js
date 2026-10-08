@@ -234,7 +234,7 @@ function vueRetours() {
           <div class="rta-a-meta"><b>${echapper(RTA_PARCOURS[a.parcours] || a.parcours || 'Général')}</b><span>${echapper(date(a.date))}</span>${a.code ? `<span>${echapper(nomStructure(a.code) || a.code)}</span>` : '<span>Anonyme</span>'}${a.reference ? `<span class="rta-ref">${echapper(a.reference)}</span>` : ''}</div>
           <p>${echapper(a.commentaire || '—')}</p>
         </div>
-        <button type="button" class="btn btn-secondary rta-traiter" data-rta-traiter="${a.ligne}" data-rta-etat="${a.traite ? '1' : ''}">${a.traite ? 'Remettre à lire' : `${icon('check', 14)}Traité`}</button>
+        <button type="button" class="btn btn-secondary rta-traiter" data-rta-traiter="${a.id}" data-rta-etat="${a.traite ? '1' : ''}">${a.traite ? 'Remettre à lire' : `${icon('check', 14)}Traité`}</button>
       </article>`,
               )
               .join('')}</div>`
@@ -311,12 +311,12 @@ document.addEventListener('click', async (e) => {
   if (t) {
     const traite = !t.dataset.rtaEtat;
     const r = await posterEtat(
-      { action: 'retour-traiter', ligne: +t.dataset.rtaTraiter, traite },
+      { action: 'retour-traiter', id: +t.dataset.rtaTraiter, traite },
       'Enregistrement…',
       traite ? 'Avis marqué traité' : 'Avis remis à lire',
     );
     if (r && r.ok) {
-      const a = rta.donnees.avisListe.find((x) => x.ligne === +t.dataset.rtaTraiter);
+      const a = rta.donnees.avisListe.find((x) => x.id === +t.dataset.rtaTraiter);
       if (a) {
         a.traite = traite;
         rta.donnees.nonTraites += traite ? -1 : 1;

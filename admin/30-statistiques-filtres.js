@@ -10,7 +10,7 @@ function commandeDansFiltresStats(c) {
     const r = (state.rattachements || []).find((x) => x.reference === c.reference);
     const aff = (c.distribution && c.distribution.affectation) || (r && r.affectation) || {};
     const ids = Object.values(aff);
-    if (f.programme === '__hors' ? ids.length : !ids.includes(f.programme)) return false;
+    if (f.programme === '__hors' ? ids.length : !ids.map(String).includes(f.programme)) return false;
   }
   return true;
 }
@@ -23,7 +23,7 @@ function barreFiltresStats() {
   const sel = (id, lib, opts, val) =>
     `<label class="st-f"><span>${lib}</span><select class="input" data-stats-filtre="${id}">${opts.map(([v, l]) => `<option value="${echapper(v)}" ${val === v ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>`;
   return `<div class="st-filtres">
-    ${sel('programme', 'Programme', [['', 'Tous'], ...state.distributions.map((p) => [p.id, p.nom]), ['__hors', 'Hors programme']], f.programme)}
+    ${sel('programme', 'Programme', [['', 'Tous'], ...state.distributions.map((p) => [String(p.id), p.nom]), ['__hors', 'Hors programme']], f.programme)}
     ${sel('region', 'Région', [['', 'Toutes'], ...regions.map((r) => [r, r])], f.region)}
     ${sel('departement', 'Département', [['', 'Tous'], ...deps.map((d) => [d, d])], f.departement)}
     ${sel('type', 'Type de structure', [['', 'Tous'], ...TYPES_PERIMETRE.map(([k, l]) => [k, l])], f.type)}
@@ -84,7 +84,9 @@ function courbeProgramme(p) {
 function sectionProgrammesStats() {
   if (!state.distributions.length) return '';
   const f = state.statsFiltres;
-  const progs = state.distributions.filter((p) => p.statut !== 'archive' && (!f.programme || f.programme === p.id));
+  const progs = state.distributions.filter(
+    (p) => p.statut !== 'archive' && (!f.programme || f.programme === String(p.id)),
+  );
   if (!progs.length) return '';
   const un = progs.length === 1 ? progs[0] : null;
   const tot = progs.reduce(

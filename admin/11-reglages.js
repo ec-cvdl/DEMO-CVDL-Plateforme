@@ -43,8 +43,17 @@ function vueReglages() {
       ic: 'building',
       teinte: 'vert',
       titre: 'Périmètre du lancement',
-      desc: 'Les types de structures proposés à la création, et l’ouverture des structures partenaires. Un type masqué n’est plus proposé ; les structures existantes continuent de fonctionner.',
+      desc: 'Les types de structures proposés à la création, l’ouverture des structures partenaires et de l’espace bénéficiaires. Un type masqué n’est plus proposé ; les structures existantes continuent de fonctionner.',
       corps: vuePerimetre(r),
+    })}
+
+    ${sectionReglages({
+      ic: 'lien_externe',
+      teinte: 'vert',
+      titre: 'Adresse publique du site',
+      desc: 'L’adresse mise dans les QR codes des passeports, les liens des e-mails et les liens à copier. Gardez-la stable : un QR code imprimé la garde pour toujours, même si le site change d’adresse ensuite.',
+      corps: `<div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" id="rg-url-site" type="url" placeholder="https://cvdl.exemple.fr" value="${echapper(r.urlSite || '')}" style="flex:1;min-width:0"><button type="button" class="btn btn-primary" id="rg-url-site-enregistrer">Enregistrer</button></div>
+        <p class="rta-aide">Vide : l’adresse du site autorisée au déploiement (<code>ORIGINE_AUTORISEE</code>). Un changement est signalé par e-mail à l’adresse des alertes.</p>`,
     })}
 
     ${sectionReglages({
@@ -129,18 +138,18 @@ function vueReglages() {
       <div id="rg-partages-retour"></div>`,
     })}
 
-    ${sectionReglages({
-      ic: 'alert',
-      teinte: 'rouge',
-      cls: 'rg-danger',
-      titre: 'Mode démo — réinitialisation complète',
-      desc: 'Efface toutes les Structures, Commandes, Devis, Factures, SAV et la flotte interne (jamais le catalogue Produits ni ces réglages), puis les repeuple avec un jeu de démonstration réaliste (~15 structures, ~70 commandes, SAV, devis/factures).',
-      corps: `
-      <p class="rg-aide">Réutilisable à volonté (avant chaque démo par exemple), mais <b>irréversible</b> à chaque lancement. Prend normalement moins d'une minute ; si ça échoue en cours de route, relancer est sans risque : tout est effacé avant d'être régénéré.</p>
-      <div class="rg-grille">${champ('Tape RÉINITIALISER pour confirmer', `<input class="input" id="rg-demo-confirmation" placeholder="RÉINITIALISER" autocomplete="off">`)}</div>
-      <div class="rg-actions"><button type="button" class="btn btn-primary rg-bouton-danger" id="rg-demo-lancer" disabled>${icon('refresh', 15)}Réinitialiser en mode démo</button></div>
+    ${
+      /-demo$/.test(API)
+        ? sectionReglages({
+            ic: 'refresh',
+            teinte: 'rouge',
+            titre: 'Données de démonstration',
+            desc: 'Remet les données fictives de la démo à neuf (elles le sont aussi d’elles-mêmes après 15 minutes sans activité).',
+            corps: `<div class="rg-actions"><button type="button" class="btn btn-primary" id="rg-demo-lancer">${icon('refresh', 15)}Remettre la démo à neuf</button></div>
       <div id="rg-demo-retour"></div>`,
-    })}`;
+          })
+        : ''
+    }`;
 }
 /** Section de l'écran Réglages : même en-tête que « Plan de secours » (pastille d'icône
  *  teintée + titre + phrase d'explication), puis le contenu. */
@@ -163,7 +172,16 @@ function vuePerimetre(r) {
           `<label class="rg-tuile"><input type="checkbox" class="rg-type-actif" value="${t.cle}" ${actifs.includes(t.cle) ? 'checked' : ''}><span class="rg-tuile-txt"><b>${echapper(t.libelle)}</b><small>${echapper(t.aide)}</small></span></label>`,
       ).join('')}</div>
       <label class="rg-tuile"><input type="checkbox" id="rg-partenaires-actifs" ${r.partenairesActifs ? 'checked' : ''}><span class="rg-tuile-txt"><b>Structures partenaires</b><small>Une Interne crée des Ventes solidaires rattachées, les valide et les sert depuis sa flotte. Fermé : elles fonctionnent comme des Ventes solidaires autonomes.</small></span></label>
+      <label class="rg-tuile"><input type="checkbox" id="rg-beneficiaires-actifs" ${r.beneficiairesActifs ? 'checked' : ''}><span class="rg-tuile-txt"><b>Espace bénéficiaires</b><small>Les personnes accompagnées déclarent et suivent elles-mêmes une panne. Fermé : ces pages renvoient vers le portail structure.</small></span></label>
       <div class="rg-actions"><button type="button" class="btn btn-primary" id="rg-perimetre-enregistrer">Enregistrer le périmètre</button></div>`;
+}
+async function enregistrerAdresseSite() {
+  const urlSite = $('rg-url-site').value.trim();
+  const r = await poster({ action: 'reglages-set', urlSite });
+  if (r.ok) {
+    state.reglages.urlSite = urlSite;
+    etat('Adresse enregistrée', 'succes');
+  } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
 }
 async function enregistrerPerimetre() {
   const typesActifs = [...document.querySelectorAll('.rg-type-actif:checked')].map((c) => c.value).join(',');
@@ -172,9 +190,10 @@ async function enregistrerPerimetre() {
     return;
   }
   const partenairesActifs = $('rg-partenaires-actifs').checked;
-  const r = await poster({ action: 'reglages-set', typesActifs, partenairesActifs });
+  const beneficiairesActifs = $('rg-beneficiaires-actifs').checked;
+  const r = await poster({ action: 'reglages-set', typesActifs, partenairesActifs, beneficiairesActifs });
   if (r.ok) {
-    Object.assign(state.reglages, { typesActifs, partenairesActifs });
+    Object.assign(state.reglages, { typesActifs, partenairesActifs, beneficiairesActifs });
     etat('Périmètre enregistré', 'succes');
   } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
 }
@@ -223,63 +242,15 @@ async function retirerPartagesPublics() {
   }
   if (bouton) bouton.disabled = false;
 }
-/**
- * Mode démo : bouton actif seulement quand le mot de confirmation exact est tapé (action
- * destructrice).
- */
+/** Démo : régénère les données fictives. */
 async function lancerReinitialisationDemo() {
-  if ($('rg-demo-confirmation').value.trim() !== 'RÉINITIALISER') return;
-  if (
-    !(await confirmerCvdl(
-      "Dernière confirmation : ceci efface définitivement toutes les Structures, Commandes, Devis, Factures, SAV et la flotte interne actuelles, pour les remplacer par des données de démonstration. Le catalogue Produits n'est pas touché. Continuer ?",
-    ))
-  )
-    return;
   const bouton = $('rg-demo-lancer');
   bouton.disabled = true;
-  bouton.textContent = 'Génération en cours…';
-  $('rg-demo-retour').innerHTML = `
-    <div style="margin-top:8px">
-      <div style="height:8px;border-radius:999px;background:var(--color-neutral-200);overflow:hidden">
-        <div id="rg-demo-barre" style="height:100%;width:0%;background:var(--color-accent);transition:width .4s ease"></div>
-      </div>
-      <div id="rg-demo-etape" style="font-size:12.5px;opacity:0.65;margin-top:6px">Démarrage…</div>
-    </div>`;
-
-  // Sondage régulier de la progression pendant que la génération tourne côté serveur (peut
-  // prendre plusieurs minutes, débit d'écriture volontairement limité — voir modeDemo.js).
-  const sondage = setInterval(async () => {
-    try {
-      const p = await poster({ action: 'mode-demo-progression', password: motDePasse });
-      if (p.ok && p.progression) {
-        const barre = $('rg-demo-barre'),
-          etape = $('rg-demo-etape');
-        if (barre) barre.style.width = `${p.progression.pourcentage}%`;
-        if (etape)
-          etape.textContent = p.progression.erreur ? `Erreur : ${p.progression.erreur}` : p.progression.etape || '';
-      }
-    } catch (e) {
-      /* un sondage manqué n'est pas grave, le suivant réessaiera */
-    }
-  }, 2500);
-
-  try {
-    const r = await poster({ action: 'reset-donnees-test', password: motDePasse, confirmation: 'RÉINITIALISER' });
-    clearInterval(sondage);
-    if (r.ok) {
-      const res = r.resume || {};
-      $('rg-demo-retour').innerHTML =
-        `<div class="msg msg-succes">Terminé : ${res.structures || 0} structures, ${res.commandes || 0} commandes, ${res.devis || 0} devis, ${res.factures || 0} factures, ${res.sav || 0} tickets SAV, ${res.flotteInterneAjoutes || 0} appareils en flotte interne. Recharge la page pour tout revoir à jour.</div>`;
-    } else {
-      $('rg-demo-retour').innerHTML =
-        `<div class="msg msg-erreur">${echapper(r.erreur || 'Échec de la génération.')}</div>`;
-    }
-  } catch (e) {
-    clearInterval(sondage);
-    $('rg-demo-retour').innerHTML = '<div class="msg msg-erreur">Connexion impossible — réessaie.</div>';
-  }
-  bouton.disabled = $('rg-demo-confirmation').value.trim() !== 'RÉINITIALISER';
-  bouton.textContent = 'Réinitialiser en mode démo';
+  const r = await poster({ action: 'reset-donnees-test' }).catch(() => ({ ok: false }));
+  bouton.disabled = false;
+  $('rg-demo-retour').innerHTML = r.ok
+    ? '<div class="msg msg-succes">Démo remise à neuf. Rechargez la page pour tout revoir à jour.</div>'
+    : `<div class="msg msg-erreur">${echapper(r.erreur || 'Échec de la remise à neuf.')}</div>`;
 }
 async function enregistrerModelesSheets() {
   const bouton = $('rg-modeles-sheets-enregistrer');
@@ -344,4 +315,5 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#rg-retirer-partages')) retirerPartagesPublics();
   if (e.target.closest('#rg-qte-enregistrer')) enregistrerQuantitesMax();
   if (e.target.closest('#rg-perimetre-enregistrer')) enregistrerPerimetre();
+  if (e.target.closest('#rg-url-site-enregistrer')) enregistrerAdresseSite();
 });

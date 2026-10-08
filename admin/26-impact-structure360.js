@@ -116,9 +116,9 @@ function couleurStatutSavGlobale(statut) {
   return premier && premier.statut === def.statut ? '#FECC38' : '#00ACB0';
 }
 function vueStructure360() {
-  const s = state.structures.find((x) => x.ligne === state.modal.ligne);
+  const s = state.structures.find((x) => x.id === state.modal.id);
   if (!s) return '';
-  const commandes = state.commandes.filter((c) => c.code === s.code).sort((a, b) => b.ligne - a.ligne);
+  const commandes = state.commandes.filter((c) => c.code === s.code).sort((a, b) => b.id - a.id);
   const sav = (state.sav || []).filter((t) => t.code === s.code || (!t.code && t.structureNom === s.nom));
   const refsDevis = new Set(commandes.map((c) => c.referenceDevis).filter(Boolean));
   const refsFact = new Set(commandes.map((c) => c.referenceFacture).filter(Boolean));
@@ -154,8 +154,8 @@ function vueStructure360() {
             ${s.siret || s.region ? `<div class="s3-contact">${[s.siret ? 'SIRET ' + s.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4') : '', s.region ? 'Région : ' + s.region : ''].filter(Boolean).map(echapper).join(' · ')}</div>` : ''}
           </div>
           <div class="s3-actions">
-            <button type="button" class="btn btn-secondary" data-structure-modifier="${s.ligne}">${icon('gear', 14)}Modifier</button>
-            <button type="button" class="btn btn-secondary" data-rapport-structure="${s.ligne}">${icon('stats', 14)}Rapport d’impact</button>
+            <button type="button" class="btn btn-secondary" data-structure-modifier="${s.id}">${icon('gear', 14)}Modifier</button>
+            <button type="button" class="btn btn-secondary" data-rapport-structure="${s.id}">${icon('stats', 14)}Rapport d’impact</button>
             ${s.lienConvention ? `<a class="btn btn-secondary" href="${echapper(urlSure(s.lienConvention))}" target="_blank" rel="noopener">${icon('lien_externe', 14)}Convention</a>` : ''}
             <button type="button" class="btn btn-ghost btn-icon" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button>
           </div>
@@ -355,7 +355,7 @@ function politiqueAffichee(s) {
 document.addEventListener('click', (e) => {
   const r = e.target.closest('[data-rapport-structure]');
   if (r) {
-    const s = state.structures.find((x) => x.ligne === parseInt(r.dataset.rapportStructure, 10));
+    const s = state.structures.find((x) => x.id === parseInt(r.dataset.rapportStructure, 10));
     if (s) window.open(`rapport-impact.html?code=${encodeURIComponent(s.code)}`, '_blank', 'noopener');
     return;
   }
@@ -384,7 +384,7 @@ document.addEventListener('click', (e) => {
   if (s3 && !e.target.closest('[data-reveal-code], [data-structure-modifier]')) {
     state.modal = {
       kind: 'structure-360',
-      ligne: parseInt(s3.dataset.structureVue, 10),
+      id: parseInt(s3.dataset.structureVue, 10),
       modalParent: modalParentPour('structure-360'),
     };
     render();

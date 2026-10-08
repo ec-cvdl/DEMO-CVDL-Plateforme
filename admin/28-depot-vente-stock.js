@@ -469,16 +469,16 @@ function blocColissimoSav(s) {
     ${
       s.bonColissimo
         ? `<div class="rpd-colis-fichier"><a href="${echapper(urlSure(s.bonColissimo))}" target="_blank" rel="noopener">${icon('file', 15)}Bon Colissimo (PDF)</a>
-          <label class="et-lien">Remplacer<input type="file" accept="application/pdf,.pdf" data-sav-bon-colissimo="${s.ligne}" hidden></label>
-          <button type="button" class="et-lien" data-sav-bon-retirer="${s.ligne}">Retirer</button></div>`
-        : `<label class="rpd-colis-depot"><input type="file" accept="application/pdf,.pdf" data-sav-bon-colissimo="${s.ligne}" hidden>${icon('plus', 16)}<span><b>Déposer le bon Colissimo</b><small>PDF, 10 Mo maximum</small></span></label>`
+          <label class="et-lien">Remplacer<input type="file" accept="application/pdf,.pdf" data-sav-bon-colissimo="${s.id}" hidden></label>
+          <button type="button" class="et-lien" data-sav-bon-retirer="${s.id}">Retirer</button></div>`
+        : `<label class="rpd-colis-depot"><input type="file" accept="application/pdf,.pdf" data-sav-bon-colissimo="${s.id}" hidden>${icon('plus', 16)}<span><b>Déposer le bon Colissimo</b><small>PDF, 10 Mo maximum</small></span></label>`
     }
     <label class="rpd-colis-lien"><span>Lien de suivi du colis <em>(facultatif)</em></span>
-      <input class="input" type="url" data-sav-colissimo-lien="${s.ligne}" value="${echapper(String(s.colissimo || '').split('\\n')[0] || '')}" placeholder="https://www.laposte.fr/outils/suivre-vos-envois?code=…"></label>
+      <input class="input" type="url" data-sav-colissimo-lien="${s.id}" value="${echapper(String(s.colissimo || '').split('\\n')[0] || '')}" placeholder="https://www.laposte.fr/outils/suivre-vos-envois?code=…"></label>
   </div>`;
 }
-async function deposerBonColissimoSav(ligne, fichier) {
-  const s = state.sav.find((x) => x.ligne === ligne);
+async function deposerBonColissimoSav(id, fichier) {
+  const s = state.sav.find((x) => x.id === id);
   if (!s) return;
   const base64 = fichier
     ? await new Promise((ok, ko) => {
@@ -491,7 +491,7 @@ async function deposerBonColissimoSav(ligne, fichier) {
   const r = await posterEtat(
     {
       action: 'sav-bon-colissimo',
-      ligne,
+      id,
       fichier: fichier ? { nom: fichier.name, type: fichier.type || 'application/pdf', base64 } : null,
     },
     fichier ? 'Dépôt du bon Colissimo…' : 'Retrait…',
@@ -499,7 +499,7 @@ async function deposerBonColissimoSav(ligne, fichier) {
   );
   if (r && r.ok) {
     s.bonColissimo = r.url || '';
-    if (typeof filSavAdminInvalider === 'function') filSavAdminInvalider(ligne);
+    if (typeof filSavAdminInvalider === 'function') filSavAdminInvalider(id);
     render();
   }
 }
@@ -511,7 +511,7 @@ document.addEventListener('change', (e) => {
   }
   const l = e.target.closest && e.target.closest('[data-sav-colissimo-lien]');
   if (l) {
-    const s = state.sav.find((x) => x.ligne === parseInt(l.dataset.savColissimoLien, 10));
+    const s = state.sav.find((x) => x.id === parseInt(l.dataset.savColissimoLien, 10));
     if (!s) return;
     const v = l.value.trim();
     if (v && !/^https?:\/\//i.test(v)) {
@@ -519,7 +519,7 @@ document.addEventListener('change', (e) => {
       return;
     }
     posterEtat(
-      { action: 'sav-update', ligne: s.ligne, champ: 'colissimo', valeur: v },
+      { action: 'sav-update', id: s.id, champ: 'colissimo', valeur: v },
       'Enregistrement…',
       'Lien de suivi enregistré',
     ).then((r) => {

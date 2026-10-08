@@ -35,11 +35,6 @@ document.addEventListener('compositionend', (e) => {
   }
 });
 document.addEventListener('input', (e) => {
-  if (e.target.id === 'rg-demo-confirmation') {
-    const bouton = $('rg-demo-lancer');
-    if (bouton) bouton.disabled = e.target.value.trim() !== 'RÉINITIALISER';
-    return;
-  }
   if (
     (e.target.id === 'cs-responsable-prenom' || e.target.id === 'cs-responsable-facturation-prenom') &&
     !e.isComposing
@@ -385,13 +380,13 @@ async function marquerCommandeLivree(ref) {
   const dateFr = `${d}/${mo}/${y}`;
   etat('Enregistrement…', 'chargement');
   try {
-    const rDate = await poster({ action: 'update', ligne: c.ligne, champ: 'dateLivraison', valeur: dateFr });
+    const rDate = await poster({ action: 'update', id: c.id, champ: 'dateLivraison', valeur: dateFr });
     if (!rDate.ok) {
       etat(rDate.erreur || 'Enregistrement impossible', 'erreur');
       return;
     }
     c.dateLivraison = dateFr;
-    const rStatut = await poster({ action: 'update', ligne: c.ligne, champ: 'statutCommande', valeur: 'Livrée' });
+    const rStatut = await poster({ action: 'update', id: c.id, champ: 'statutCommande', valeur: 'Livrée' });
     if (rStatut.ok) {
       c.statutCommande = 'Livrée';
       etat('Commande livrée', 'succes');
@@ -409,7 +404,7 @@ async function changerStatutCommande(ref, nouveauStatut) {
   render();
   try {
     const r = await posterEtat(
-      { action: 'update', ligne: c.ligne, champ: 'statutCommande', valeur: nouveauStatut },
+      { action: 'update', id: c.id, champ: 'statutCommande', valeur: nouveauStatut },
       'Changement de statut…',
       'Statut mis à jour',
     );
@@ -433,7 +428,7 @@ async function changerStatutSav(ref, nouveauStatut) {
   render();
   try {
     const r = await posterEtat(
-      { action: 'sav-update', ligne: s.ligne, champ: 'statut', valeur: nouveauStatut },
+      { action: 'sav-update', id: s.id, champ: 'statut', valeur: nouveauStatut },
       'Changement de statut…',
       'Statut mis à jour',
     );
@@ -455,8 +450,8 @@ async function clotureSavAvecMotif(ref, statut, raison) {
   etat('Clôture du dossier…', 'chargement');
   try {
     const [rs, rn] = await Promise.all([
-      poster({ action: 'sav-update', ligne: s.ligne, champ: 'statut', valeur: statut }),
-      poster({ action: 'sav-update', ligne: s.ligne, champ: 'notes', valeur: raison }),
+      poster({ action: 'sav-update', id: s.id, champ: 'statut', valeur: statut }),
+      poster({ action: 'sav-update', id: s.id, champ: 'notes', valeur: raison }),
     ]);
     if (rs.ok && rn.ok) {
       s.statut = statut;
@@ -492,7 +487,7 @@ async function annulerSav(ref) {
     }
     await rechargerStatutsSav();
     const cree = state.statutsSav.find((x) => x.statut === 'Annulé');
-    if (cree) await poster({ action: 'sav-statut-modifier', ligne: cree.ligne, champ: 'terminal', valeur: true });
+    if (cree) await poster({ action: 'sav-statut-modifier', id: cree.id, champ: 'terminal', valeur: true });
     await rechargerStatutsSav();
     statutAnnule = state.statutsSav.find((x) => x.statut === 'Annulé');
   }
@@ -507,8 +502,7 @@ async function annulerSav(ref) {
  *  facture elle-même — jointure par référence, comme partout ailleurs dans l'appli. */
 const STATUTS_COMPTABLES = ['Non rapproché', 'Rapproché', 'Clôturé'];
 function vueRattacherDevis() {
-  const ligneDevis = state.modal.ligneDevis;
-  const d = state.devis.find((x) => x.ligne === ligneDevis);
+  const d = state.devis.find((x) => x.id === state.modal.idDevis);
   if (!d) return '';
   const eligibles = state.commandes.filter((c) => !c.referenceDevis && !structureExclueDevisFacture(c));
   return dialogShell(
@@ -518,7 +512,7 @@ function vueRattacherDevis() {
       eligibles.length
         ? champ(
             'Commande *',
-            `<select class="input" id="rd-ligne">${eligibles.map((c) => `<option value="${c.ligne}">${echapper(c.reference)} — ${echapper(c.nom)}</option>`).join('')}</select>`,
+            `<select class="input" id="rd-commande">${eligibles.map((c) => `<option value="${c.id}">${echapper(c.reference)} — ${echapper(c.nom)}</option>`).join('')}</select>`,
           )
         : '<p style="opacity:0.6;font-size:13px;margin-top:var(--space-2)">Aucune commande sans devis à rattacher.</p>'
     }
@@ -527,18 +521,18 @@ function vueRattacherDevis() {
   );
 }
 async function enregistrerRattachementDevis() {
-  const select = $('rd-ligne');
+  const select = $('rd-commande');
   if (!select) {
     state.modal = null;
     render();
     return;
   }
-  const ligneCommande = parseInt(select.value, 10);
-  const ligneDevis = state.modal.ligneDevis;
+  const idCommande = parseInt(select.value, 10);
+  const idDevis = state.modal.idDevis;
   $('rd-enregistrer').disabled = true;
   try {
     const r = await posterEtat(
-      { action: 'devis-rattacher-commande', ligneDevis, ligneCommande },
+      { action: 'devis-rattacher-commande', idDevis, idCommande },
       'Rattachement…',
       'Devis rattaché',
     );
@@ -590,12 +584,11 @@ async function enregistrerRapprochement() {
   $('rp-enregistrer-rappro').disabled = true;
   try {
     const appels = [
-      poster({ action: 'update', ligne: c.ligne, champ: 'statutComptable', valeur: statut }),
-      poster({ action: 'update', ligne: c.ligne, champ: 'numeroDepot', valeur: note }),
+      poster({ action: 'update', id: c.id, champ: 'statutComptable', valeur: statut }),
+      poster({ action: 'update', id: c.id, champ: 'numeroDepot', valeur: note }),
     ];
-    if (marquerPaye) appels.push(poster({ action: 'update', ligne: c.ligne, champ: 'statutPaiement', valeur: 'Payé' }));
-    if (marquerPaye && f)
-      appels.push(poster({ action: 'facture-update', ligne: f.ligne, champ: 'statut', valeur: 'Payée' }));
+    if (marquerPaye) appels.push(poster({ action: 'update', id: c.id, champ: 'statutPaiement', valeur: 'Payé' }));
+    if (marquerPaye && f) appels.push(poster({ action: 'facture-update', id: f.id, champ: 'statut', valeur: 'Payée' }));
     const reponses = await Promise.all(appels);
     if (!reponses.find((r) => !r.ok)) {
       c.statutComptable = statut;

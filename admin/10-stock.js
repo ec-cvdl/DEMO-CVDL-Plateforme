@@ -28,7 +28,7 @@ function vueStock() {
                 const tagCls = epuise ? 'tag-accent' : faible ? 'tag-warn' : 'tag-accent-2';
                 const tagLabel = epuise ? 'Épuisé' : faible ? 'Stock faible' : 'Disponible';
                 return `
-        <div class="card elev-sm" style="min-width:0;padding:var(--space-6);gap:var(--space-4);cursor:pointer" data-produit-modifier="${p.ligne}">
+        <div class="card elev-sm" style="min-width:0;padding:var(--space-6);gap:var(--space-4);cursor:pointer" data-produit-modifier="${p.id}">
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span style="width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center">${illustrationProduitAdmin(p.nom, p.icone, 50)}</span>
             <span class="tag ${tagCls}">${tagLabel}</span>
@@ -134,12 +134,6 @@ function anneauUnique(lignes, formatValeur, taille) {
 /* ============================================================
    Réglages
    ============================================================ */
-function urlPortailPublic() {
-  // Résolution relative "comme un vrai lien" (même algorithme que suivrait un <a href="portail.html">
-  // cliqué depuis cette page) — fonctionne quel que soit l'hébergement, y compris avec une URL
-  // sans extension, un sous-dossier, ou un slash de fin.
-  return new URL('portail.html', location.href).href;
-}
 async function copierTexte(texte, libelleSucces) {
   try {
     if (navigator.clipboard && window.isSecureContext) {
@@ -170,5 +164,5 @@ async function copierTexte(texte, libelleSucces) {
   }
 }
 async function copierLienPortail() {
-  await copierTexte(urlPortailPublic(), 'Lien copié dans le presse-papier');
+  await copierTexte(await urlPublique('accueil.html'), 'Lien copié dans le presse-papier');
 }

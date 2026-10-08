@@ -95,7 +95,7 @@ function commandesParAction(liste) {
     },
   ];
   const urgentesDabord = (a, b) =>
-    (b.dateLivraisonSouhaitee === 'ASAP') - (a.dateLivraisonSouhaitee === 'ASAP') || b.ligne - a.ligne;
+    (b.dateLivraisonSouhaitee === 'ASAP') - (a.dateLivraisonSouhaitee === 'ASAP') || b.id - a.id;
   const html = GROUPES.map((g) => {
     const membres = liste.filter(g.filtre).sort(urgentesDabord);
     if (!membres.length) return '';
@@ -145,7 +145,7 @@ function tableauCommandes(liste, opts = {}) {
           <span class="rp-ligne-id"><b>${echapper(c.reference)}</b>${indicateursCommande(c)}<small>${(() => {
             const st = state.structures.find((x) => x.code === c.code);
             return st
-              ? `<button type="button" class="lien-structure" data-structure-vue="${st.ligne}" title="Ouvrir la fiche 360° de la structure">${echapper(c.nom)}</button>`
+              ? `<button type="button" class="lien-structure" data-structure-vue="${st.id}" title="Ouvrir la fiche 360° de la structure">${echapper(c.nom)}</button>`
               : echapper(c.nom);
           })()} · ${echapper(c.date)}</small>${c.regles ? `<span class="rp-type-cmd">${echapper(c.regles.libelleType)}${c.regles.circuit === 'interne' ? ' · circuit Interne' : ''}</span>` : ''}</span>
           <span class="rp-ligne-arts">${detailArticlesCommande(c)}</span>
@@ -262,7 +262,7 @@ function vueCommandes() {
 }
 let ligneCommandeEnGlisse = null;
 let ligneSavEnGlisse = null;
-let materielDragLigne = null;
+let materielDragId = null;
 let materielDragCat = null;
 document.addEventListener('dragstart', (e) => {
   const carte = e.target.closest('[data-kanban-carte]');
@@ -333,7 +333,7 @@ document.addEventListener('drop', (e) => {
 document.addEventListener('dragstart', (e) => {
   const carte = e.target.closest('[data-materiel-carte]');
   if (carte) {
-    materielDragLigne = parseInt(carte.dataset.materielCarte, 10);
+    materielDragId = parseInt(carte.dataset.materielCarte, 10);
     materielDragCat = carte.dataset.materielCat;
     carte.style.opacity = '.4';
   }
@@ -347,17 +347,17 @@ document.addEventListener('dragover', (e) => {
 });
 document.addEventListener('drop', (e) => {
   const cible = e.target.closest('[data-materiel-carte]');
-  if (!cible || materielDragLigne == null || cible.dataset.materielCat !== materielDragCat) return;
+  if (!cible || materielDragId == null || cible.dataset.materielCat !== materielDragCat) return;
   e.preventDefault();
   const liste = state.materielGroupes[materielDragCat];
-  const depuis = liste.indexOf(materielDragLigne);
+  const depuis = liste.indexOf(materielDragId);
   const vers = parseInt(cible.dataset.materielIndex, 10);
   if (depuis !== -1 && depuis !== vers) {
     liste.splice(depuis, 1);
-    liste.splice(vers, 0, materielDragLigne);
+    liste.splice(vers, 0, materielDragId);
     render();
   }
-  materielDragLigne = null;
+  materielDragId = null;
   materielDragCat = null;
 });
 
