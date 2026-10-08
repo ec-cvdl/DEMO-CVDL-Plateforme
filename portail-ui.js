@@ -97,6 +97,11 @@ window.urlSure = function (u) {
       '<circle cx="21" cy="21" r="12"/>',
       '<circle cx="19" cy="19" r="12"/><path d="m28 28 12 12"/><path d="M14 19h10"/>',
     ],
+    tableur: [
+      't',
+      '<rect x="10" y="10" width="30" height="28" rx="3"/>',
+      '<rect x="8" y="8" width="30" height="28" rx="3"/><path d="M8 15h30M8 22h30M8 29h30M17 8v28M27.5 8v28"/><rect x="17" y="15" width="10.5" height="7" fill="var(--ill-fond)"/>',
+    ],
     tableau: [
       't',
       '<rect x="10" y="10" width="30" height="28" rx="3"/>',

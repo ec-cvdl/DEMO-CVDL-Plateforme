@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<script src="anti-cadre.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CVDL — Matériel reconditionné pour vos publics</title>
+<meta name="description" content="CVDL, la plateforme d'Emmaüs Connect pour commander et suivre du matériel informatique reconditionné destiné aux personnes que vous accompagnez.">
+<link rel="stylesheet" href="cvdl-ui.css?v=34">
+<style>
+/* Mise en page de la page d'accueil (visuel : cvdl-ui.css, en version plus sobre) */
+[hidden]{ display:none!important; }
+.lien-evitement{ position:absolute; left:-9999px; top:0; z-index:200; padding:12px 20px; }
+.lien-evitement:focus{ left:0; }
+.ac-entete-actions{ margin-left:auto; display:flex; gap:8px; align-items:center; }
+.ac-page{ max-width:1040px; margin:0 auto; padding:0 clamp(16px,3vw,40px) 64px; display:grid; gap:72px; }
+.ac-hero{ display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); gap:40px; align-items:center; padding-top:56px; }
+.ac-hero h1{ font-size:clamp(30px,4.2vw,44px); line-height:1.08; letter-spacing:-.015em; margin:6px 0 16px; text-wrap:balance; }
+.ac-hero p{ font-size:17px; max-width:54ch; margin:0; }
+.ac-cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:28px; }
+.ac-test{ display:inline-flex; gap:8px; align-items:center; margin-top:22px; font-size:13.5px; color:color-mix(in srgb, var(--navy) 70%, transparent); }
+.ac-test::before{ content:''; width:8px; height:8px; border-radius:50%; background:var(--jaune); box-shadow:0 0 0 3px color-mix(in srgb, var(--jaune) 35%, transparent); }
+.ac-visuel{ display:grid; place-items:center; }
+.ac-visuel .ill{ width:min(300px,100%); height:auto; aspect-ratio:1; }
+.ac-section{ display:grid; gap:24px; }
+.ac-section > header{ display:grid; gap:6px; max-width:62ch; }
+.ac-section h2{ font-size:clamp(22px,2.6vw,28px); margin:0; text-wrap:balance; }
+.ac-section > header p{ margin:0; }
+.ac-etapes{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; counter-reset:etape; }
+.ac-etapes li{ counter-increment:etape; display:grid; gap:6px; align-content:start; padding-top:14px; border-top:var(--trait); }
+.ac-etapes li{ grid-template-columns:auto 1fr; column-gap:10px; }
+.ac-etapes li > b, .ac-etapes li > span:not(.ill){ grid-column:1 / -1; }
+.ac-etapes li::before{ content:counter(etape); font:700 13px var(--police-titre); color:var(--acc); grid-column:2; grid-row:1; align-self:center; }
+.ac-etapes li > .ill{ grid-column:1; grid-row:1; }
+.ac-etapes b{ font-family:var(--police-titre); font-size:16px; }
+.ac-etapes span{ font-size:14px; color:color-mix(in srgb, var(--navy) 78%, transparent); }
+/* Aplat des illustrations : couleurs alternées (le trait reste bleu nuit) */
+.ac-c-mag .ill .ill-fond{ fill:color-mix(in srgb, var(--mag) 35%, #fff); }
+.ac-c-tur .ill .ill-fond{ fill:color-mix(in srgb, var(--tur) 45%, #fff); }
+.ac-c-bleu .ill .ill-fond{ fill:color-mix(in srgb, color-mix(in srgb, var(--tur) 45%, var(--navy)) 40%, #fff); }
+.ac-c-jaune .ill .ill-fond{ fill:color-mix(in srgb, var(--jaune) 70%, #fff); }
+.ac-etapes .ill{ width:34px; height:34px; }
+.ac-bandeau{ position:relative; overflow:hidden; background:var(--navy); color:#fff; border-radius:var(--r-xl); box-shadow:8px 8px 0 var(--aplat); padding:clamp(28px,5vw,56px); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:36px 48px; align-items:start; }
+.ac-bandeau > *{ position:relative; }
+.ac-bandeau-tete{ display:grid; gap:12px; justify-items:start; }
+.ac-bandeau-sur{ font:700 12px var(--police); letter-spacing:.12em; text-transform:uppercase; color:var(--jaune); }
+.ac-bandeau h2{ color:#fff; font-size:clamp(26px,3.2vw,36px); line-height:1.1; margin:0; text-wrap:balance; }
+.ac-bandeau-tete p{ margin:0; color:color-mix(in srgb, #fff 82%, transparent); max-width:40ch; }
+.ac-btn-clair{ background:#fff; color:var(--navy); border-color:#fff; margin-top:8px; }
+.ac-btn-clair:hover{ background:var(--jaune); border-color:var(--jaune); }
+.ac-modalites{ margin:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 28px; }
+.ac-modalites div{ border-top:1.5px solid color-mix(in srgb, #fff 28%, transparent); padding-top:12px; }
+.ac-modalites dt{ font:700 15.5px var(--police-titre); display:flex; gap:9px; align-items:center; }
+.ac-modalites dt::before{ content:''; width:9px; height:9px; flex:none; background:var(--c, var(--tur)); }
+.ac-modalites div:nth-child(4n+2) dt::before{ --c:var(--mag); }
+.ac-modalites div:nth-child(4n+3) dt::before{ --c:var(--jaune); }
+.ac-modalites div:nth-child(4n) dt::before{ --c:#9fc7ff; }
+.ac-modalites dd{ margin:6px 0 0; font-size:14px; color:color-mix(in srgb, #fff 78%, transparent); }
+.ac-forme{ position:absolute !important; border:2px solid; border-radius:50%; opacity:.22; pointer-events:none; }
+.ac-forme.f1{ width:260px; height:260px; right:-90px; top:-110px; border-color:var(--tur); }
+.ac-forme.f2{ width:120px; height:120px; left:-40px; bottom:-50px; border-color:var(--mag); }
+.ac-forme.f3{ width:40px; height:40px; left:34%; top:28px; border-color:var(--jaune); border-radius:4px; transform:rotate(18deg); }
+.ac-outils{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px 28px; }
+.ac-outil{ display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start; }
+.ac-outil .ill{ width:44px; height:44px; }
+.ac-outil b{ display:block; font-family:var(--police-titre); }
+.ac-outil span{ font-size:14px; color:color-mix(in srgb, var(--navy) 78%, transparent); }
+.ac-faq{ display:grid; gap:10px; max-width:760px; }
+.ac-faq details{ border-bottom:var(--pointille); padding:12px 0; }
+.ac-faq summary{ cursor:pointer; font-weight:600; font-family:var(--police-titre); font-size:16px; }
+.ac-faq p{ margin:8px 0 0; max-width:66ch; }
+.ac-fin{ border:var(--trait); border-radius:var(--r-l); box-shadow:6px 6px 0 var(--aplat); padding:32px; display:flex; flex-wrap:wrap; gap:20px 32px; align-items:center; justify-content:space-between; }
+.ac-fin h2{ margin:0 0 6px; font-size:24px; }
+.ac-fin p{ margin:0; }
+.ac-adresse{ font-size:13.5px; margin-top:8px !important; color:color-mix(in srgb, var(--navy) 70%, transparent); }
+.ac-essai{ border:var(--trait); border-radius:var(--r-l); box-shadow:6px 6px 0 var(--aplat); padding:0; width:min(440px, calc(100vw - 32px)); color:var(--navy); }
+.ac-essai::backdrop{ background:color-mix(in srgb, var(--navy) 45%, transparent); }
+.ac-essai-form{ display:grid; gap:10px; padding:28px; }
+.ac-essai h2{ margin:4px 0 0; font-size:22px; }
+.ac-essai p{ margin:0; }
+.ac-essai-lab{ font-weight:600; margin-top:6px; }
+.ac-essai .input{ font:600 18px var(--mono); letter-spacing:.12em; text-transform:uppercase; }
+.ac-essai-erreur{ color:var(--rouge); font-size:14px; }
+.ac-essai-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+.ac-essai-aide{ font-size:13.5px; color:color-mix(in srgb, var(--navy) 70%, transparent); }
+.ac-pied{ font-size:13px; color:color-mix(in srgb, var(--navy) 65%, transparent); display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:space-between; border-top:var(--pointille); padding-top:18px; }
+.ac-pied a{ color:inherit; }
+@media (max-width: 860px){
+  .ac-hero{ grid-template-columns:1fr; padding-top:32px; }
+  .ac-visuel{ display:none; }
+  .ac-etapes{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .ac-outils{ grid-template-columns:1fr; }
+  .ac-bandeau{ grid-template-columns:1fr; }
+}
+@media (max-width: 520px){
+  .ac-etapes{ grid-template-columns:1fr; }
+  .ac-entete-actions .btn-ghost{ display:none; }
+  .ac-page{ gap:56px; }
+  .ac-modalites{ grid-template-columns:1fr; }
+}
+</style>
+<script src="portail-ui.js?v=32" defer></script>
+<script src="cvdl-ui.js?v=13" defer></script>
+<script src="api.js?v=2" defer></script>
+<script src="pages/accueil.js?v=2" defer></script>
+<link rel="stylesheet" href="retours.css?v=2">
+<script src="retours.js?v=2" defer></script>
+</head>
+<body data-famille="accueil">
+<a href="#contenu-principal" class="lien-evitement">Aller au contenu</a>
+
+<header class="cvdl-entete">
+  <a class="cvdl-marque" href="accueil.html" aria-label="Accueil CVDL"><img src="logo.png" alt="Emmaüs Connect" class="logo-portail"></a>
+  <div class="ac-entete-actions">
+    <a class="btn btn-ghost lien-contact" href="mailto:contact@emmaus-connect.org">Nous contacter</a>
+    <a class="btn btn-primary" href="portail-structure.html">Se connecter</a>
+  </div>
+</header>
+
+<main class="ac-page" id="contenu-principal">
+  <section class="ac-hero">
+    <div>
+      <div class="cvdl-surtitre">Emmaüs Connect · CVDL</div>
+      <h1>Du matériel reconditionné pour les personnes que vous accompagnez</h1>
+      <p>Commandez des ordinateurs, tablettes et smartphones reconditionnés par Emmaüs Connect, puis suivez chaque appareil jusqu'à la personne qui le reçoit.</p>
+      <div class="ac-cta">
+        <a class="btn btn-primary" href="portail-structure.html">Se connecter à mon espace</a>
+        <button type="button" class="btn btn-secondary" data-essayer>Essayer la plateforme</button>
+      </div>
+      <div class="ac-test">Phase de test, réservée à quelques structures en Centre-Val de Loire</div>
+    </div>
+    <div class="ac-visuel ac-c-bleu" aria-hidden="true"><span data-ill="flotte" class="ill xl"></span></div>
+  </section>
+
+  <section class="ac-section" aria-labelledby="titre-etapes">
+    <header>
+      <div class="cvdl-surtitre">Comment ça marche</div>
+      <h2 id="titre-etapes">De la commande à la remise, au même endroit</h2>
+    </header>
+    <ol class="ac-etapes">
+      <li class="ac-c-mag"><span data-ill="cle" class="ill s" aria-hidden="true"></span><b>Vous commandez</b><span>Avec votre code structure : le matériel disponible, les quantités, et selon votre convention les personnes concernées.</span></li>
+      <li class="ac-c-bleu"><span data-ill="stock" class="ill s" aria-hidden="true"></span><b>Nous préparons</b><span>L'équipe valide, prépare chaque appareil et l'enregistre par son numéro de série.</span></li>
+      <li class="ac-c-tur"><span data-ill="distribution" class="ill s" aria-hidden="true"></span><b>Vous recevez</b><span>Livraison ou retrait, avec un suivi de la commande à chaque étape.</span></li>
+      <li class="ac-c-jaune"><span data-ill="personne" class="ill s" aria-hidden="true"></span><b>Vous suivez</b><span>Chaque appareil arrive dans votre flotte : remise à une personne, attestation, dépannage.</span></li>
+    </ol>
+  </section>
+
+  <section class="ac-bandeau" aria-labelledby="titre-modalites">
+    <span class="ac-forme f1" aria-hidden="true"></span><span class="ac-forme f2" aria-hidden="true"></span><span class="ac-forme f3" aria-hidden="true"></span>
+    <div class="ac-bandeau-tete">
+      <div class="ac-bandeau-sur">Des modalités souples</div>
+      <h2 id="titre-modalites">Adapté à votre façon de travailler</h2>
+      <p>Chaque structure est accompagnée différemment. Votre espace est réglé avec vous à l'ouverture : vous ne voyez que ce qui vous concerne.</p>
+      <a class="btn ac-btn-clair lien-contact" href="mailto:contact@emmaus-connect.org">En parler avec nous</a>
+    </div>
+    <dl class="ac-modalites">
+      <div><dt>Livraison ou retrait</dt><dd>Colissimo avec suivi, livraison par l'équipe Emmaüs Connect, ou retrait sur place.</dd></div>
+      <div><dt>Paiement selon votre convention</dt><dd>Virement sur devis et facture, paiement en ligne, chèque, espèces ou comptoir solidaire, avec si besoin un règlement par personne. Aucun paiement quand le matériel est mis à disposition.</dd></div>
+      <div><dt>À l'échelle de votre structure</dt><dd>Une association qui achète pour son public, qui oriente vers un achat solidaire, ou un territoire avec son équipe : le parcours suit votre organisation.</dd></div>
+      <div><dt>Au rythme de vos besoins</dt><dd>Commande urgente signalée en priorité, quantités adaptées, matériel réservé à votre structure si besoin.</dd></div>
+      <div><dt>Les bons documents</dt><dd>Devis, factures, bons de livraison et attestations de remise, générés pour vous.</dd></div>
+      <div><dt>Dépôt-vente possible</dt><dd>Rien à régler à la commande : vous déclarez les ventes au fil de l'eau.</dd></div>
+    </dl>
+  </section>
+
+  <section class="ac-section" aria-labelledby="titre-outils">
+    <header>
+      <div class="cvdl-surtitre">Dans votre espace</div>
+      <h2 id="titre-outils">Ce que vous pouvez faire</h2>
+    </header>
+    <div class="ac-outils">
+      <div class="ac-outil ac-c-mag"><span data-ill="commander" class="ill m" aria-hidden="true"></span><div><b>Commander</b><span>Le matériel disponible, en quelques étapes guidées.</span></div></div>
+      <div class="ac-outil ac-c-tur"><span data-ill="commandes" class="ill m" aria-hidden="true"></span><div><b>Suivre vos commandes</b><span>Où en est chaque commande, et ses documents.</span></div></div>
+      <div class="ac-outil ac-c-bleu"><span data-ill="tableur" class="ill m" aria-hidden="true"></span><div><b>Gérer votre flotte</b><span>Chaque appareil reçu, son statut, sa remise.</span></div></div>
+      <div class="ac-outil ac-c-jaune"><span data-ill="attestations" class="ill m" aria-hidden="true"></span><div><b>Éditer les attestations</b><span>Le document remis à la personne, prêt à imprimer.</span></div></div>
+      <div class="ac-outil ac-c-mag"><span data-ill="panne" class="ill m" aria-hidden="true"></span><div><b>Dépanner</b><span>Un diagnostic guidé, puis une demande de réparation si besoin.</span></div></div>
+      <div class="ac-outil ac-c-tur"><span data-ill="impact" class="ill m" aria-hidden="true"></span><div><b>Mesurer votre impact</b><span>Appareils remis, personnes équipées, sur la période choisie.</span></div></div>
+    </div>
+  </section>
+
+  <section class="ac-section" aria-labelledby="titre-faq">
+    <header>
+      <div class="cvdl-surtitre">Questions fréquentes</div>
+      <h2 id="titre-faq">Avant de commencer</h2>
+    </header>
+    <div class="ac-faq">
+      <details><summary>Comment obtenir un accès ?</summary><p>L'accès est ouvert aux structures partenaires d'Emmaüs Connect. Écrivez-nous : nous créons votre espace et vous transmettons votre code structure.</p></details>
+      <details><summary>J'ai perdu mon code structure</summary><p>Contactez-nous depuis l'adresse e-mail connue de votre structure, nous vous le renvoyons.</p></details>
+      <details><summary>Combien coûte le matériel ?</summary><p>Cela dépend de votre convention : tarif Relais Numérique, prix solidaire, ou matériel mis à disposition pour les territoires Emmaüs Connect. Les prix s'affichent dans votre espace.</p></details>
+      <details><summary>Que deviennent les données des personnes ?</summary><p>Seules les informations utiles à la remise de l'appareil sont demandées. Elles servent uniquement au suivi de l'appareil et ne sont visibles que par votre structure et l'équipe Emmaüs Connect.</p></details>
+      <details><summary>Pourquoi « phase de test » ?</summary><p>La plateforme est ouverte à un petit nombre de structures en Centre-Val de Loire pour l'améliorer avec vous avant un usage plus large. Vos retours comptent : un bouton « Donner mon avis » est présent sur chaque page.</p></details>
+    </div>
+  </section>
+
+  <section class="ac-fin" aria-labelledby="titre-fin">
+    <div>
+      <h2 id="titre-fin">Une question, un projet ?</h2>
+      <p>L'équipe Emmaüs Connect vous répond.</p>
+      <p class="ac-adresse">Par e-mail : <span class="adresse-contact">contact@emmaus-connect.org</span></p>
+    </div>
+    <div class="ac-cta" style="margin-top:0">
+      <button type="button" class="btn btn-secondary" data-essayer>Essayer la plateforme</button>
+      <a class="btn btn-primary" href="portail-structure.html">Se connecter</a>
+    </div>
+  </section>
+
+  <footer class="ac-pied">
+    <span>CVDL · une plateforme Emmaüs Connect</span>
+    <a href="projet.html">Avancement du projet</a>
+  </footer>
+</main>
+
+<dialog class="ac-essai" id="essai" aria-labelledby="titre-essai">
+  <form id="form-essai" class="ac-essai-form">
+    <span data-ill="cle" class="ill xl" aria-hidden="true"></span>
+    <h2 id="titre-essai">Essayer la plateforme</h2>
+    <p>Saisissez le code d'essai reçu par e-mail : vous découvrirez CVDL tel que votre structure le verra, avec des données fictives.</p>
+    <label for="code-essai" class="ac-essai-lab">Code d'essai</label>
+    <input class="input" id="code-essai" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDE-FGH23" maxlength="20" required>
+    <p class="ac-essai-erreur" id="erreur-essai" role="alert" hidden></p>
+    <div class="ac-essai-actions">
+      <button type="button" class="btn btn-ghost" id="annuler-essai">Annuler</button>
+      <button type="submit" class="btn btn-primary" id="valider-essai">Ouvrir la démo</button>
+    </div>
+    <p class="ac-essai-aide">Pas de code ? <a class="lien-contact" href="mailto:contact@emmaus-connect.org">Écrivez-nous</a>, nous vous en envoyons un.</p>
+  </form>
+</dialog>
+</body>
+</html>

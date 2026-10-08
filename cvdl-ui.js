@@ -139,7 +139,9 @@
         ? 'projet.html'
         : page === 'portail'
           ? 'portail.html'
-          : 'portail-structure.html';
+          : page === 'accueil'
+            ? 'accueil.html'
+            : 'portail-structure.html';
     marque.setAttribute('aria-label', 'Retour à l’accueil');
     const logo = document.querySelector('.logo-portail');
     if (logo) marque.appendChild(logo);

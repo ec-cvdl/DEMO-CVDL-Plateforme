@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="api.js?v=1"></script>
+<script src="api.js?v=2"></script>
 <script src="commun.js?v=1"></script>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
@@ -9,7 +9,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ma flotte — CVDL</title>
 <link rel="stylesheet" href="cvdl-ui.css?v=34">
-<script src="qrcode.min.js"></script>
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -76,7 +75,6 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
 .modale-qr h3{ margin:0 0 4px; }
 .modale-qr p{ margin:0 0 var(--space-4); opacity:0.6; }
 .modale-qr label{ display:block; }
-#qr-code-conteneur{ display:flex; justify-content:center; margin-bottom:var(--space-4); }
 .modale-qr .mono{ word-break:break-all; opacity:0.55; margin-bottom:var(--space-4); display:block; }
 .modale-qr-entete{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
 .modale-qr-entete h3{ margin:0; }
@@ -257,23 +255,12 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 .fi3-v .fl-projet{ margin-top:0; max-width:100%; }
 .fl-projet-lu{ display:inline-block; margin-top:6px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; background:color-mix(in srgb, var(--tur, #00ACB0) 12%, #fff); }
 </style>
-<script src="portail-ui.js?v=31" defer></script>
-<script src="cvdl-ui.js?v=12" defer></script>
+<script src="portail-ui.js?v=32" defer></script>
+<script src="cvdl-ui.js?v=13" defer></script>
 <link rel="stylesheet" href="retours.css?v=2">
 <script src="retours.js?v=2" defer></script>
 </head>
 <body data-famille="materiel">
-<div class="voile-modale-qr" id="modale-qr-passeport">
-  <div class="modale-qr">
-    <span data-ill="passeport" class="pk-modale-ill"></span><h3>Passeport de l'appareil</h3>
-    <p>Scannez pour ouvrir la fiche, ou imprimez ce QR pour le coller sur l'appareil.</p>
-    <div id="qr-code-conteneur"></div>
-    <span class="mono" id="qr-url-affichee"></span>
-    <a class="btn btn-primary" style="width:100%;justify-content:center" id="qr-ouvrir-passeport" href="#" target="_blank" rel="noopener">Ouvrir le passeport ↗</a>
-    <button type="button" class="lien-changer-code" id="qr-fermer">Fermer</button>
-  </div>
-</div>
-
 <div class="voile-modale-qr" id="modale-personne-portail">
   <div class="modale-qr" style="text-align:left;max-width:420px;max-height:85vh;overflow-y:auto">
     <div class="modale-qr-entete">
@@ -362,6 +349,6 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 </main>
 
 <script src="pages/flotte-structure-tete.js?v=1"></script>
-<script src="pages/flotte-structure.js?v=5"></script>
+<script src="pages/flotte-structure.js?v=6"></script>
 </body>
 </html>
