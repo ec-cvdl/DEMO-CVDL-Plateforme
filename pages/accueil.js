@@ -29,16 +29,19 @@ $('form-essai').addEventListener('submit', async (e) => {
   const bouton = $('valider-essai');
   bouton.disabled = true;
   $('erreur-essai').hidden = true;
-  let r;
-  try {
-    r = await fetch(API_PROD, {
+  // Codes d'essai : enregistrés en production ; un code créé depuis l'admin de la démo (pour
+  // tester) n'existe que dans la démo, d'où le second essai.
+  const ouvrir = (api) =>
+    fetch(api, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'acces-demo-ouvrir', code: $('code-essai').value }),
-    }).then((x) => x.json());
-  } catch (err) {
-    r = { ok: false, erreur: 'Connexion impossible, réessayez dans un instant.' };
-  }
+    })
+      .then((x) => x.json())
+      .catch(() => null);
+  let r = await ouvrir(API_PROD);
+  if (!r || !r.ok) r = (await ouvrir(API_PROD + '-demo')) || r;
+  if (!r) r = { ok: false, erreur: 'Connexion impossible, réessayez dans un instant.' };
   bouton.disabled = false;
   if (!r.ok) {
     $('erreur-essai').textContent = r.erreur || 'Code refusé.';

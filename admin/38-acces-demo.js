@@ -26,7 +26,11 @@ async function acdCharger(forcer) {
 
 function vueAccesDemo() {
   const entete = `<h1 style="font-size:32px;margin-bottom:var(--space-2)">Accès démo</h1>
-    <p style="opacity:0.65;margin:0 0 var(--space-5);font-size:15px">Invitez une structure à essayer CVDL : elle reçoit un code par e-mail, le saisit sur la page d’accueil (« Essayer la plateforme ») et découvre la démo sur sa seule vue, avec des données fictives.</p>`;
+    <p style="opacity:0.65;margin:0 0 var(--space-5);font-size:15px">Invitez une structure à essayer CVDL : elle reçoit un code par e-mail, le saisit sur la page d’accueil (« Essayer la plateforme ») et découvre la démo sur sa seule vue, avec des données fictives.</p>${
+      /-demo$/.test(API)
+        ? '<div class="msg msg-info" style="margin-bottom:var(--space-5)">Vous êtes sur la plateforme de démonstration : les codes créés ici servent à tester. Ils fonctionnent sur la page d’accueil (« Essayer la plateforme ») jusqu’à la prochaine remise à zéro de la démo, et aucun e-mail n’est envoyé. Les codes à transmettre aux structures se créent dans l’administration réelle.</div>'
+        : ''
+    }`;
   if (!acd.charge) {
     acdCharger();
     return entete + '<p class="rta-muet">Chargement…</p>';
