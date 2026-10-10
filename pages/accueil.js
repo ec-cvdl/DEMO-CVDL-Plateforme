@@ -15,7 +15,16 @@ fetch(API_PROD + '?action=contact-public')
   .catch(() => {});
 
 const essai = $('essai');
+// La démo s'endort quand personne ne l'utilise : on la réveille dès que la fenêtre s'ouvre, pour
+// qu'elle soit prête (ou presque) au moment d'y entrer.
+let demoReveillee = false;
+function reveillerDemo() {
+  if (demoReveillee) return;
+  demoReveillee = true;
+  fetch(API_PROD + '-demo?action=perimetre').catch(() => {});
+}
 function ouvrirEssai() {
+  reveillerDemo();
   $('erreur-essai').hidden = true;
   essai.showModal();
   $('code-essai').focus();
@@ -28,6 +37,7 @@ $('form-essai').addEventListener('submit', async (e) => {
   e.preventDefault();
   const bouton = $('valider-essai');
   bouton.disabled = true;
+  bouton.textContent = 'Vérification du code…';
   $('erreur-essai').hidden = true;
   // Codes d'essai : enregistrés en production ; un code créé depuis l'admin de la démo (pour
   // tester) n'existe que dans la démo, d'où le second essai.
@@ -42,8 +52,9 @@ $('form-essai').addEventListener('submit', async (e) => {
   let r = await ouvrir(API_PROD);
   if (!r || !r.ok) r = (await ouvrir(API_PROD + '-demo')) || r;
   if (!r) r = { ok: false, erreur: 'Connexion impossible, réessayez dans un instant.' };
-  bouton.disabled = false;
   if (!r.ok) {
+    bouton.disabled = false;
+    bouton.textContent = 'Ouvrir la démo';
     $('erreur-essai').textContent = r.erreur || 'Code refusé.';
     $('erreur-essai').hidden = false;
     return;
@@ -51,6 +62,12 @@ $('form-essai').addEventListener('submit', async (e) => {
   // La démo reste sur cette vue dans cet onglet (voir pages/demo.js).
   try {
     sessionStorage.setItem('cvdl-demo-vue', r.vue);
+    sessionStorage.setItem('cvdl-demo-auto', '1'); // entrée directe dans l'espace (pages/demo.js)
   } catch (err) {}
   location.href = 'demo.html';
+});
+// Retour arrière depuis la démo : la fenêtre d'essai redevient utilisable.
+window.addEventListener('pageshow', () => {
+  $('valider-essai').disabled = false;
+  $('valider-essai').textContent = 'Ouvrir la démo';
 });

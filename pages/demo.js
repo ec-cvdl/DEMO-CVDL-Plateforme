@@ -88,6 +88,14 @@
     if (params.get('cle') || params.get('pour') === 'equipe') sessionStorage.removeItem('cvdl-demo-vue');
     vueVerrouillee = sessionStorage.getItem('cvdl-demo-vue') || '';
   } catch (e) {}
+  // Code d'essai (accueil.html) : entrée directe dans l'espace de la structure (sa présentation
+  // de bienvenue s'ouvre alors), derrière un écran de préparation — la démo peut mettre un
+  // moment à démarrer quand personne ne l'a ouverte depuis un moment.
+  let prep = null;
+  try {
+    if (vueVerrouillee && sessionStorage.getItem('cvdl-demo-auto') === '1') prep = preparation();
+    sessionStorage.removeItem('cvdl-demo-auto');
+  } catch (e) {}
   if (vueVerrouillee) {
     $('btn-quitter').hidden = true;
     $('sep-quitter').hidden = true;
@@ -109,6 +117,42 @@
   try {
     pourStructures = pourStructures || (!params.get('pour') && localStorage.getItem('cvdl-demo-pour') === 'structures');
   } catch (e) {}
+
+  /** Écran « Préparation de votre démo » : étapes, barre et messages selon l'attente. */
+  function preparation() {
+    const ecran = $('demo-prep');
+    ecran.hidden = false;
+    illustrer(ecran);
+    const minuteurs = [];
+    const etape = (n) => {
+      ecran.querySelectorAll('[data-etape]').forEach((li) => {
+        const k = Number(li.dataset.etape);
+        li.className = k < n ? 'fait' : k === n ? 'en-cours' : '';
+      });
+      ecran.querySelector('.demo-prep-barre i').style.width = `${[30, 60, 92][n]}%`;
+    };
+    const note = (t) => ($('demo-prep-note').textContent = t);
+    etape(0);
+    minuteurs.push(setTimeout(() => etape(1), 2500));
+    minuteurs.push(
+      setTimeout(
+        () => note('La démo démarre : la première ouverture de la journée peut prendre jusqu’à une minute.'),
+        6000,
+      ),
+    );
+    minuteurs.push(setTimeout(() => note('Presque prêt, merci de patienter…'), 30000));
+    return {
+      ouvrir() {
+        minuteurs.forEach(clearTimeout);
+        etape(2);
+        note('Votre espace s’ouvre…');
+      },
+      arreter() {
+        minuteurs.forEach(clearTimeout);
+        ecran.hidden = true;
+      },
+    };
+  }
 
   /* ── Les vues proposées ──
      profil : action demo-connexion ; type : structure d'exemple choisie dans la liste du serveur. */
@@ -392,6 +436,10 @@
       });
       location.href = r.page;
     } catch (e) {
+      if (prep) {
+        prep.arreter();
+        ouvrirFiche(true);
+      }
       b.removeAttribute('aria-busy');
       $('msg-fiche').innerHTML = `<div class="msg msg-erreur">${echapper(
         e.message === 'Failed to fetch'
@@ -539,7 +587,12 @@
       $('genere').textContent =
         `${res.structures || 0} structures, ${res.commandes || 0} commandes, ${res.sav || 0} SAV — données du ${new Date(r.genereLe).toLocaleDateString('fr-FR')}`;
       if (choisie) choisir(VUES.indexOf(choisie), false);
+      if (prep && choisie) {
+        prep.ouvrir();
+        entrer();
+      } else if (prep) prep.arreter();
     } catch (e) {
+      if (prep) prep.arreter();
       $('genere').textContent = 'Démo indisponible pour le moment.';
       message('La plateforme de démonstration ne répond pas pour le moment. Réessayez dans un instant.');
     }
