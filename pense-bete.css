@@ -1,0 +1,280 @@
+/* Pense-bête de commande (pense-bete.js) : carte du portail structure (¼ de la ligne « À
+   traiter »), fenêtre rapide + / −, pastille dans la barre du haut du formulaire de commande. */
+
+/* ── Portail : ligne « À traiter » (¾) + pense-bête (¼) ── */
+.pb-rangee {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  margin: 0 0 26px;
+}
+html body[data-famille] .pb-rangee .message-contexte {
+  margin: 0;
+  grid-column: 1;
+}
+.pb-carte {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 12px 10px 16px;
+  background: #fff;
+  border: var(--trait);
+  border-radius: var(--r-l);
+  box-shadow: 5px 5px 0 color-mix(in srgb, var(--tur) 70%, transparent);
+  color: var(--navy);
+}
+.pb-carte-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pb-carte-k {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--tur) 70%, var(--navy));
+}
+.pb-carte b {
+  font-family: var(--police-titre);
+  font-size: 16px;
+  line-height: 1.2;
+}
+.pb-carte.vide b {
+  font-weight: 600;
+  opacity: 0.7;
+}
+.pb-plus {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: var(--trait);
+  background: var(--tur);
+  color: #fff;
+  box-shadow: 2px 2px 0 var(--navy);
+  cursor: pointer;
+  transition:
+    transform 0.12s,
+    box-shadow 0.12s;
+}
+.pb-plus:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--navy);
+}
+.pb-plus:focus-visible {
+  outline: 3px solid var(--mag);
+  outline-offset: 2px;
+}
+
+/* ── Fenêtre rapide ── */
+.pb-modale {
+  width: min(540px, 94vw);
+  text-align: left;
+}
+.pb-sous {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  opacity: 0.7;
+}
+.pb-liste {
+  max-height: min(56vh, 520px);
+  overflow: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.pb-ligne {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 2px;
+  border-bottom: var(--pointille);
+  font-size: 14px;
+  opacity: 0.8;
+}
+.pb-ligne.note {
+  opacity: 1;
+  font-weight: 700;
+}
+.pb-nom small {
+  display: block;
+  font-weight: 500;
+  font-size: 12px;
+  opacity: 0.6;
+}
+.pb-pas {
+  display: inline-flex;
+  align-items: center;
+  border: var(--trait);
+  border-radius: 999px;
+  overflow: hidden;
+  background: #fff;
+}
+.pb-pas button {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: #fff;
+  color: var(--navy);
+  font: 700 18px var(--police);
+  cursor: pointer;
+}
+.pb-pas button.plus {
+  background: var(--tur);
+  color: #fff;
+}
+.pb-pas button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.pb-pas button:focus-visible {
+  outline: 3px solid var(--mag);
+  outline-offset: -3px;
+}
+.pb-pas b {
+  min-width: 36px;
+  text-align: center;
+  font-size: 15px;
+}
+.pb-pied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+}
+.pb-vide {
+  opacity: 0.7;
+}
+
+/* ── Commande : pastille de la barre du haut ── */
+.pb-entete {
+  position: relative;
+}
+.pb-pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: var(--trait);
+  border-radius: 999px;
+  background: var(--jaune);
+  color: var(--navy);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--aplat-fort);
+  cursor: pointer;
+}
+.pb-pastille b {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 12px;
+}
+.pb-pastille[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.pb-panneau {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 60;
+  width: min(380px, 92vw);
+  padding: 16px 18px;
+  background: #fff;
+  border: var(--trait);
+  border-radius: var(--r-l);
+  box-shadow: 6px 6px 0 var(--aplat);
+  color: var(--navy);
+  text-align: left;
+}
+.pb-panneau h3 {
+  margin: 0 0 2px;
+  font-size: 17px;
+}
+.pb-panneau p {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  opacity: 0.65;
+}
+.pb-panneau .btn {
+  margin-top: 12px;
+  justify-content: center;
+}
+.pb-panneau .pb-apres {
+  margin: 10px 0 0;
+}
+.pb-r {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: var(--pointille);
+  font-size: 13.5px;
+}
+.pb-r b {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--jaune) 30%, #fff);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pb-r b.ok {
+  background: color-mix(in srgb, var(--vert) 14%, #fff);
+  color: color-mix(in srgb, var(--vert) 75%, var(--navy));
+}
+.pb-note {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 2px 9px;
+  border: var(--trait);
+  border-radius: 999px;
+  background: var(--jaune);
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+}
+.pb-confirme {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--jaune) 25%, #fff);
+  font-size: 13.5px;
+}
+
+@media (max-width: 760px) {
+  .pb-rangee {
+    grid-template-columns: 1fr;
+  }
+  .pb-carte {
+    grid-column: 1;
+  }
+  .pb-pastille span {
+    display: none;
+  }
+}
+.pb-modale .modale-qr-entete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pb-modale .modale-qr-entete h3 {
+  flex: 1;
+  margin: 0;
+}
+.pb-modale .modale-qr-entete .pk-modale-ill {
+  margin: 0;
+}

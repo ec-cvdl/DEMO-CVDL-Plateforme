@@ -1,0 +1,207 @@
+/* Cloche de notifications du portail structure (notifications-portail.js). */
+.nf-cloche {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1.5px solid var(--navy, #002743);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--navy, #002743);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nf-cloche:focus-visible {
+  outline: 3px solid var(--mag, #e62460);
+  outline-offset: 2px;
+}
+.nf-cloche i {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #c4134f;
+  color: #fff;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+}
+.nf-p {
+  position: fixed;
+  top: 78px;
+  right: max(16px, calc((100vw - 1440px) / 2 + 150px));
+  z-index: 400;
+  width: min(430px, calc(100vw - 32px));
+  max-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1.5px solid var(--navy, #002743);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 6px 6px 0 rgba(0, 39, 67, 0.14);
+  color: var(--navy, #002743);
+  text-align: left;
+  outline: none;
+}
+.nf-h {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 10px;
+}
+.nf-h small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #00807f;
+}
+.nf-h b {
+  font-family: var(--police-titre, inherit);
+  font-size: 19px;
+}
+.nf-n {
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.nf-f {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 18px 10px;
+}
+.nf-f button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #f3f6f8;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.nf-f button[aria-selected='true'] {
+  background: var(--navy, #002743);
+  color: #fff;
+}
+.nf-l {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 12px 12px;
+}
+.nf-g {
+  margin: 10px 6px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.nf-i {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid color-mix(in srgb, #002743 15%, transparent);
+  border-radius: 14px;
+  color: inherit;
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.nf-i:hover,
+.nf-i:focus-visible {
+  border-color: var(--navy, #002743);
+}
+.nf-i.r {
+  border-color: #f3b2c7;
+  background: #fff1f5;
+}
+.nf-i .ill {
+  width: 34px;
+  height: 34px;
+}
+.nf-t b {
+  display: block;
+  font-size: 14px;
+}
+.nf-t span {
+  opacity: 0.72;
+}
+.nf-e {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.nf-e.r {
+  background: #c4134f;
+  color: #fff;
+}
+.nf-e.a {
+  background: #fff1d6;
+  color: #8a5300;
+}
+.nf-e.l {
+  background: #e3f5ea;
+  color: #16703d;
+}
+.nf-e.i {
+  background: #e5f6f6;
+  color: #00807f;
+}
+.nf-vide {
+  margin: 12px 6px;
+  opacity: 0.65;
+}
+.nf-pied {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 18px 14px;
+  border-top: 1px dashed color-mix(in srgb, #002743 25%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.nf-pied a {
+  color: #00807f;
+}
+.nf-pied span {
+  opacity: 0.6;
+  font-weight: 500;
+}
+/* Portail : la ligne « Ma flotte / Calendrier / Notre impact » */
+.ps-rangee .ps-flotte.avec-calendrier {
+  grid-column: span 2;
+}
+@media (max-width: 760px) {
+  .nf-cloche span {
+    display: none;
+  }
+  .nf-p {
+    top: 70px;
+    right: 16px;
+  }
+  .ps-rangee .ps-flotte.avec-calendrier {
+    grid-column: auto;
+  }
+}

@@ -7,6 +7,21 @@ window.urlSure = function (u) {
   if (!/^[a-z][a-z0-9+.-]*:/i.test(v) && !/^\/\//.test(v)) return v; // relatif (même site)
   return '#';
 };
+/** Ouvre un document généré dans un nouvel onglet (ou dans `fenetre`, ouverte au clic avant
+ *  l'appel réseau pour ne pas être bloquée). Un lien data: ouvert directement est bloqué par
+ *  les navigateurs : il est converti en Blob. */
+window.ouvrirDocumentGenere = function (url, fenetre) {
+  const m = String(url || '').match(/^data:([^;]+);[^,]*base64,(.+)$/s);
+  let cible = window.urlSure(url);
+  if (m) {
+    const octets = atob(m[2]);
+    const tampon = new Uint8Array(octets.length);
+    for (let i = 0; i < octets.length; i++) tampon[i] = octets.charCodeAt(i);
+    cible = URL.createObjectURL(new Blob([tampon], { type: m[1] }));
+  }
+  if (fenetre && !fenetre.closed) fenetre.location.href = cible;
+  else window.open(cible, '_blank', m ? '' : 'noopener');
+};
 /* portail-ui.js — illustrations communes de l'espace public.
    Tout élément <span data-ill="nom" class="ill …"></span> reçoit son dessin (trait fin bleu nuit +
    aplat de couleur décalé). Styles dans portail.css. Aucune dépendance. */
@@ -16,6 +31,12 @@ window.urlSure = function (u) {
       't',
       '<rect x="8" y="12" width="26" height="18" rx="3"/><rect x="30" y="18" width="12" height="20" rx="3"/>',
       '<rect x="6" y="10" width="26" height="18" rx="3"/><path d="M3 32h32"/><rect x="31" y="16" width="12" height="22" rx="2.5" fill="var(--ill-fond)"/><path d="M35.5 34h3"/>',
+    ],
+    // Gestion de flotte : un tableur (violet, pour trancher avec le turquoise et le magenta).
+    gestionFlotte: [
+      'v',
+      '<rect x="9" y="10" width="32" height="30" rx="3"/>',
+      '<rect x="7" y="8" width="32" height="30" rx="3"/><path d="M7 16h32M7 23.5h32M7 31h32M16.5 8v30"/><path d="m9.5 20 1.8 1.8 3-3.3M9.5 27.5l1.8 1.8 3-3.3" stroke-width="1.7"/><path d="M20.5 19.8h13M20.5 27.3h9M20.5 34.8h11" stroke-width="1.7"/>',
     ],
     partenairesCmd: [
       'm',
@@ -46,6 +67,12 @@ window.urlSure = function (u) {
       't',
       '<rect x="7" y="9" width="16" height="22" rx="3"/><rect x="27" y="17" width="14" height="22" rx="3"/>',
       '<rect x="5" y="7" width="16" height="22" rx="3"/><path d="M11 25h4"/><rect x="25" y="15" width="14" height="22" rx="3"/><path d="M30 33h4M5 38h13M25 42h14M8 34h7"/>',
+    ],
+    // Pense-bête : bloc-notes à spirale et crayon qui écrit.
+    penseBete: [
+      't',
+      '<rect x="10" y="11" width="24" height="30" rx="3"/>',
+      '<rect x="7" y="8" width="25" height="33" rx="3"/><path d="M12 5v6M18 5v6M24 5v6M12 18h13M12 24h10M12 30h6"/><path d="M12 36c2-2.5 3.5 1.5 5.5-.5s3-2 4.5 0"/><path d="m27 35 12.5-12.5 4 4L31 39l-5.5 1.5z" fill="var(--ill-fond)"/><path d="m37 25 4 4"/>',
     ],
     commander: [
       'm',
@@ -980,7 +1007,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   css.href = 'explications.css?v=2';
   document.head.appendChild(css);
   const js = document.createElement('script');
-  js.src = 'explications.js?v=6';
+  js.src = 'explications.js?v=7';
   js.defer = true;
   js.onload = () => majBandeau();
   document.head.appendChild(js);

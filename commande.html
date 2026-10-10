@@ -7,6 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Commander du matériel — CVDL</title>
 <link rel="stylesheet" href="cvdl-ui.css?v=35">
+<link rel="stylesheet" href="pense-bete.css?v=1">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -151,7 +152,7 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
 .presc-lien{ display:inline-block; margin-top:8px; padding:0; border:0; background:none; color:var(--color-accent-700, #C4144F); font-weight:700; font-size:13.5px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
 .presc-lien:focus-visible{ outline:2px solid currentColor; outline-offset:2px; border-radius:4px; }
 </style>
-<script src="portail-ui.js?v=33"></script>
+<script src="portail-ui.js?v=36"></script>
 <script src="cvdl-ui.js?v=13"></script>
 <link rel="stylesheet" href="retours.css?v=2">
 <script src="retours.js?v=2" defer></script>
@@ -390,6 +391,7 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
         <h2 style="margin-bottom:8px">Commande envoyée</h2>
         <p style="opacity:0.6;margin:0">Votre demande a bien été transmise. Vous recevrez un mail de confirmation.</p>
         <div class="ref" id="confirmation-ref"></div>
+        <p class="pb-confirme" id="confirmation-pense-bete" hidden>Ce que vous venez de commander est sorti de votre pense-bête.</p>
         <div id="confirmation-2fa" hidden class="card elev-sm" style="padding:var(--space-4);text-align:left">
           <p style="margin:0 0 4px;font-weight:700">Pour le paiement en ligne</p>
           <p style="margin:0">La ou les personnes accompagnées devront avoir avec elles leur <strong>carte bancaire</strong>, mais aussi leur <strong>smartphone avec l'application de leur banque connectée</strong> — la double authentification (2FA) est généralement demandée pour valider le paiement.</p>
@@ -409,6 +411,7 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
 <script src="deja-identifie.js?v=1"></script>
 <script src="api.js?v=2"></script>
 <script src="commun.js?v=1"></script>
-<script src="pages/commande.js?v=4"></script>
+<script src="pense-bete.js?v=1"></script>
+<script src="pages/commande.js?v=5"></script>
 </body>
 </html>

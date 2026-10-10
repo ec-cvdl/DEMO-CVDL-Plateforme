@@ -1434,3 +1434,306 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
     padding-bottom: 20px;
   }
 }
+
+/* ── Commandes (support-commandes.js) ── */
+.lc-bascule {
+  display: none;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 4px;
+  background: #fff;
+  border: 1.5px solid var(--sp-line);
+  border-radius: 12px;
+}
+.lc-bascule button {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  flex: 1;
+  text-align: center;
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+.lc-bascule button[aria-selected='true'] {
+  background: var(--sp-navy);
+  color: #fff;
+}
+.lc-bascule b {
+  margin-left: 4px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--sp-acc);
+  color: #fff;
+  font-size: 12px;
+}
+.lc-prog {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--sp-jaune-bg);
+  color: var(--sp-jaune);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lc-prog.ok {
+  background: #e3f5ea;
+  color: #16703d;
+}
+.lc-ouvert {
+  gap: 14px;
+}
+.lc-tete .sp-st {
+  align-self: center;
+}
+.lc-ill {
+  background: var(--sp-tur-bg);
+}
+.lc-ill .ill {
+  width: 44px;
+  height: 44px;
+}
+.lc-carte {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1.5px solid var(--sp-line);
+  border-radius: 18px;
+}
+.lc-carte.actif {
+  border-color: var(--sp-navy);
+  box-shadow: 4px 4px 0 var(--sp-aplat);
+}
+.lc-carte.attente {
+  opacity: 0.6;
+}
+.lc-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 16px;
+}
+.lc-h small {
+  flex: 1 1 200px;
+  color: var(--sp-mute);
+  font-size: 12.5px;
+}
+.lc-n {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--sp-navy);
+  border-radius: 50%;
+  font: 700 13px var(--police, Inter, sans-serif);
+  font-style: normal;
+}
+.lc-n.actif {
+  background: var(--sp-acc);
+  border-color: var(--sp-acc);
+  color: #fff;
+}
+.lc-n.fait {
+  background: #1f9d55;
+  border-color: #1f9d55;
+  color: #fff;
+}
+.lc-q {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--sp-line);
+}
+.lc-p {
+  font-weight: 600;
+}
+.lc-cmd {
+  color: var(--sp-mute);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.lc-pas {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--sp-navy);
+  border-radius: 999px;
+  overflow: hidden;
+  background: #fff;
+}
+.lc-pas button {
+  all: unset;
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  font: 700 18px var(--police, Inter, sans-serif);
+}
+.lc-pas button.plus {
+  background: var(--sp-tur);
+  color: #fff;
+}
+.lc-pas button:focus-visible,
+.lc-pas input:focus-visible {
+  outline: 2px solid var(--sp-tur);
+  outline-offset: -2px;
+}
+.lc-pas input {
+  width: 52px;
+  border: 0;
+  text-align: center;
+  font: 700 15px var(--police, Inter, sans-serif);
+  color: var(--sp-txt);
+  background: transparent;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.lc-pas input::-webkit-inner-spin-button {
+  display: none;
+}
+.lc-pas.change input {
+  color: var(--sp-acc);
+}
+.lc-message {
+  margin-top: 4px;
+}
+.lc-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 4px;
+}
+.lc-aide,
+.lc-acc {
+  margin: 0;
+  color: var(--sp-mute);
+  font-size: 12.5px;
+}
+.lc-note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--sp-jaune-bg);
+  font-size: 13px;
+}
+.lc-csv {
+  margin-left: auto;
+}
+.lc-groupe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--sp-line);
+}
+.lc-gt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lc-sns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.lc-sn input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+}
+.lc-sn.ok input {
+  border-color: #1f9d55;
+  background: #f1faf4;
+}
+.lc-sn-lu {
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #ede8fc;
+  color: #553a9e;
+  font: 600 12.5px var(--mono, ui-monospace, monospace);
+}
+.lc-pre {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.lc-pre li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sp-mute);
+}
+.lc-pre li i {
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--sp-faint);
+  border-radius: 50%;
+}
+.lc-pre li.ok {
+  color: #16703d;
+}
+.lc-pre small {
+  color: var(--sp-faint);
+}
+.lc-retour:empty {
+  display: none;
+}
+.lc-retour {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lc-ok,
+.lc-err,
+.lc-warn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.lc-ok {
+  background: #e3f5ea;
+  color: #16703d;
+}
+.lc-err {
+  background: color-mix(in srgb, var(--sp-urg) 10%, #fff);
+  color: var(--sp-urg);
+}
+.lc-warn {
+  background: var(--sp-jaune-bg);
+  color: var(--sp-jaune);
+}
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 1060px) {
+  .lc-bascule {
+    display: flex;
+  }
+}
+@media (max-width: 600px) {
+  .lc-q {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+  .lc-cmd {
+    grid-column: 2;
+  }
+  .lc-pas {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}

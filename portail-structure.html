@@ -7,6 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CVDL — Espace structure</title>
 <link rel="stylesheet" href="cvdl-ui.css?v=35">
+<link rel="stylesheet" href="pense-bete.css?v=1">
+<link rel="stylesheet" href="notifications-portail.css?v=1">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -159,7 +161,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 .ps-choix-carte[style*="--tur"] .ill .ill-fond{ fill:color-mix(in srgb, var(--tur) 45%, #fff); }
 .ps-choix-carte[style*="--mag"] .ill .ill-fond{ fill:color-mix(in srgb, var(--mag) 35%, #fff); }
 </style>
-<script src="portail-ui.js?v=33" defer></script>
+<script src="portail-ui.js?v=36" defer></script>
 <script src="cvdl-ui.js?v=13" defer></script>
 <link rel="stylesheet" href="retours.css?v=2">
 <script src="retours.js?v=2" defer></script>
@@ -205,10 +207,16 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <p>Que souhaitez-vous faire aujourd’hui ?</p>
       </div>
     </div>
+    <div class="pb-rangee">
     <a class="message-contexte" id="message-contexte-portail" href="#" hidden>
       <span data-ill="cloche" class="ill message-contexte-ill"></span>
       <span class="message-contexte-txt"><span class="message-contexte-k">À traiter</span><span id="texte-message-contexte"></span></span><svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </a>
+    <div class="pb-carte" id="pb-carte" data-role="responsable" hidden>
+      <span class="pb-carte-txt"><span class="pb-carte-k">Pense-bête</span><b id="pb-carte-texte"></b></span>
+      <button type="button" class="pb-plus" id="pb-ouvrir" aria-haspopup="dialog" aria-controls="modale-pense-bete" aria-label="Noter des besoins dans le pense-bête"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+    </div>
 
     <div class="ps-choix" data-role="responsable">
       <a class="ps-choix-carte" href="commande.html" style="--ps-c:var(--tur)">
@@ -239,9 +247,14 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
     </section>
 
     <div class="ps-rangee">
-      <a class="ps-impact ps-flotte" href="flotte-structure.html">
-        <span data-ill="flotte" class="ill"></span>
+      <a class="ps-impact ps-flotte avec-calendrier" href="flotte-structure.html">
+        <span data-ill="gestionFlotte" class="ill"></span>
         <span class="ps-impact-txt"><b>Ma flotte</b><span>Le matériel déjà livré à votre structure : qui l’a, son état, son passeport.</span></span>
+        <span class="ps-impact-go">Ouvrir →</span>
+      </a>
+      <a class="ps-impact ps-impact-court" href="calendrier.html" data-role="responsable">
+        <span data-ill="calendrier" class="ill"></span>
+        <span class="ps-impact-txt"><b>Calendrier</b><span>Livraisons et paiements</span></span>
         <span class="ps-impact-go">Ouvrir →</span>
       </a>
       <a class="ps-impact ps-impact-court" href="rapport-impact.html" title="Appareils remis, personnes équipées… un rapport prêt à imprimer pour vos bilans et vos financeurs.">
@@ -337,11 +350,28 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
           </div>
         </div>
   </div>
+<div class="voile-modale-qr" id="modale-pense-bete">
+  <div class="modale-qr pb-modale">
+    <div class="modale-qr-entete">
+      <span data-ill="penseBete" class="pk-modale-ill"></span><h3>Pense-bête</h3>
+      <button type="button" class="modale-fermer-rond-qr" id="pb-fermer" aria-label="Fermer">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p class="pb-sous">Vos besoins avant de commander, partagés avec toute votre structure. Chaque clic est enregistré.</p>
+    <div class="pb-liste" id="pb-liste"></div>
+    <div id="pb-retour" aria-live="polite"></div>
+    <div class="pb-pied"><b id="pb-total"></b><button type="button" class="btn btn-secondary" id="pb-vider">Tout effacer</button></div>
+  </div>
+</div>
+
 </main>
 
 <script src="deja-identifie.js?v=1"></script>
 <script src="api.js?v=2"></script>
 <script src="commun.js?v=1"></script>
-<script src="pages/portail-structure.js?v=6"></script>
+<script src="pense-bete.js?v=1"></script>
+<script src="notifications-portail.js?v=1"></script>
+<script src="pages/portail-structure.js?v=8"></script>
 </body>
 </html>

@@ -1,0 +1,364 @@
+/* Onglet « Démarche » de projet.html (projet-demarche.js) : chronologie dans le style de
+   « Comprendre CVDL » (pointillés, ronds, encadré « Retenu »), éditeur à droite. */
+.dm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: 28px;
+  align-items: start;
+  margin-top: 8px;
+  color: var(--navy, #002743);
+}
+.dm-k {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mag, #e62460);
+}
+.dm-entete h2 {
+  margin: 6px 0;
+  font-family: var(--police-titre, inherit);
+  font-size: clamp(24px, 3vw, 30px);
+}
+.dm-entete p {
+  margin: 0 0 14px;
+  opacity: 0.72;
+}
+.dm-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.dm-f {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dm-f button {
+  padding: 5px 12px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dm-f button[aria-pressed='true'] {
+  background: var(--navy, #002743);
+  color: #fff;
+}
+.dm-f i {
+  font-style: normal;
+  opacity: 0.7;
+}
+.dm-chercher .input {
+  width: 180px;
+  padding: 6px 12px;
+}
+.dm-tl {
+  position: relative;
+  padding-left: 40px;
+}
+.dm-tl::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  bottom: 12px;
+  border-left: 1.5px dashed rgba(0, 39, 67, 0.25);
+}
+.dm-ev {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: 8px 22px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--navy, #002743);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 5px 5px 0 rgba(0, 39, 67, 0.12);
+}
+.dm-pt {
+  position: absolute;
+  left: -41px;
+  top: 16px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--navy, #002743);
+  border-radius: 50%;
+  font-family: var(--police-titre, inherit);
+  font-size: 13px;
+  font-weight: 700;
+}
+.dm-pt.rendez-vous {
+  background: #c7ecec;
+}
+.dm-pt.decision {
+  background: var(--mag, #e62460);
+  border-color: var(--mag, #e62460);
+  color: #fff;
+}
+.dm-pt.etape {
+  background: #fecc38;
+}
+.dm-ev-c {
+  min-width: 0;
+}
+.dm-q {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mag, #e62460);
+}
+.dm-t {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3f6f8;
+  color: var(--navy, #002743);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.dm-act {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dm-act button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--navy, #002743);
+  font: inherit;
+  font-size: 12.5px;
+  opacity: 0.6;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.dm-act button:hover,
+.dm-act button:focus-visible {
+  opacity: 1;
+}
+.dm-ev h3 {
+  margin: 4px 0 6px;
+  font-family: var(--police-titre, inherit);
+  font-size: 18px;
+}
+.dm-recit {
+  font-size: 14.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.dm-recit > :first-child {
+  margin-top: 0;
+}
+.dm-recit p {
+  margin: 0 0 8px;
+}
+.dm-recit h2 {
+  margin: 12px 0 6px;
+  font-size: 16px;
+}
+.dm-recit h3 {
+  margin: 10px 0 4px;
+  font-size: 15px;
+}
+.dm-recit blockquote,
+.dm-recit-ed blockquote {
+  margin: 8px 0;
+  padding: 4px 0 4px 12px;
+  border-left: 3px solid var(--mag, #e62460);
+  font-style: italic;
+}
+.dm-recit img,
+.dm-recit-ed img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 8px 0;
+  border: 1.5px solid rgba(0, 39, 67, 0.18);
+  border-radius: 12px;
+}
+.dm-recit a {
+  color: #b3134a;
+}
+.dm-retenu {
+  align-self: start;
+  padding: 2px 0 2px 12px;
+  border-left: 3px solid var(--tur, #00acb0);
+  font-size: 14.5px;
+  color: #4a6175;
+  white-space: normal;
+}
+.dm-retenu b {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--navy, #002743);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dm-vide {
+  opacity: 0.7;
+}
+/* Éditeur */
+.dm-ed {
+  position: sticky;
+  top: 20px;
+  padding: 18px;
+  border: 1.5px solid var(--navy, #002743);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 6px 6px 0 rgba(0, 39, 67, 0.14);
+}
+.dm-ed h3 {
+  margin: 0 0 8px;
+  font-family: var(--police-titre, inherit);
+  font-size: 18px;
+}
+.dm-ed .input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.dm-l {
+  display: block;
+  margin: 12px 0 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dm-l small {
+  display: block;
+  font-weight: 400;
+  opacity: 0.65;
+}
+.dm-seg {
+  display: flex;
+  gap: 6px;
+}
+.dm-seg button {
+  flex: 1;
+  padding: 7px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: #f3f6f8;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dm-seg button[aria-checked='true'] {
+  background: var(--tur, #00acb0);
+  color: #fff;
+}
+.dm-barre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 6px;
+  border: 1.5px solid rgba(0, 39, 67, 0.25);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: #f8fafb;
+}
+.dm-barre button {
+  min-width: 28px;
+  height: 30px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dm-barre button:hover,
+.dm-barre button:focus-visible {
+  background: #e5eaee;
+}
+.dm-barre i {
+  width: 1px;
+  margin: 4px 3px;
+  background: rgba(0, 39, 67, 0.2);
+}
+.dm-recit-ed {
+  min-height: 160px;
+  max-height: 46vh;
+  overflow: auto;
+  padding: 12px;
+  border: 1.5px solid rgba(0, 39, 67, 0.25);
+  border-radius: 0 0 12px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+}
+.dm-recit-ed:focus {
+  border-color: var(--tur, #00acb0);
+}
+.dm-recit-ed:empty::before {
+  content: attr(data-vide);
+  opacity: 0.5;
+}
+.dm-recit-ed p {
+  margin: 0 0 6px;
+}
+.dm-boutons {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.dm-boutons #dm-enregistrer {
+  flex: 1;
+  justify-content: center;
+}
+.dm-suppr {
+  color: #b3134a;
+}
+.pj-pil-prive svg {
+  vertical-align: -1px;
+  margin-left: 2px;
+}
+@media (max-width: 980px) {
+  .dm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dm-ed {
+    position: static;
+    order: -1;
+  }
+  .dm-ev {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media print {
+  body.dm-impression .cvdl-entete,
+  body.dm-impression .pj-tete,
+  body.dm-impression .pj-kpis,
+  body.dm-impression .pj-barre,
+  body.dm-impression .dm-ed,
+  body.dm-impression .dm-outils,
+  body.dm-impression .dm-act {
+    display: none !important;
+  }
+  body.dm-impression .dm {
+    grid-template-columns: 1fr;
+  }
+  body.dm-impression .dm-ev {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+}

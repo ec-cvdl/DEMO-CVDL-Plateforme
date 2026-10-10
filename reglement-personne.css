@@ -1,0 +1,179 @@
+/* Bloc « Règlement » de la fiche personne (reglement-personne.js). */
+.rg {
+  padding: 14px 16px;
+  border: 1.5px solid var(--navy, #002743);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--navy, #002743);
+}
+.rg-titre {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+.rg-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f3f6f8;
+}
+.rg-seg button {
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rg-seg button[aria-checked='true'] {
+  background: var(--navy, #002743);
+  color: #fff;
+}
+.rg-gen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 4px 0 10px;
+}
+.rg-gen label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.rg-gen .input {
+  width: 130px;
+  padding: 7px 10px;
+}
+.rg-gen select.input {
+  width: 190px;
+}
+.rg-euros {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.rg-euros .input {
+  width: 96px;
+}
+.rg-t {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.rg-t th {
+  padding: 4px 6px;
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.rg-t td {
+  padding: 6px;
+  border-top: 1px dashed color-mix(in srgb, #002743 20%, transparent);
+  vertical-align: middle;
+}
+.rg-t .input {
+  width: 120px;
+  padding: 6px 9px;
+}
+.rg-num {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+}
+.rg-act {
+  text-align: right;
+  white-space: nowrap;
+}
+.rg-act-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rg-case {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.rg-x {
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid color-mix(in srgb, #002743 30%, transparent);
+  border-radius: 50%;
+  background: #fff;
+  color: inherit;
+  cursor: pointer;
+}
+.rg-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.rg-pill.ok {
+  background: #e3f5ea;
+  color: #16703d;
+}
+.rg-pill.ret {
+  background: #fde4ec;
+  color: #b3134a;
+}
+.rg-pill.av {
+  background: #fff1d6;
+  color: #8a5300;
+}
+.rg-note {
+  margin: 8px 0 0 !important;
+  font-size: 12.5px;
+  opacity: 0.75 !important;
+}
+.rg-lien {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: #b3134a;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .rg-t thead {
+    display: none;
+  }
+  .rg-t tr {
+    display: grid;
+    grid-template-columns: 32px 1fr 1fr;
+    gap: 6px;
+    padding: 6px 0;
+    border-top: 1px dashed color-mix(in srgb, #002743 20%, transparent);
+  }
+  .rg-t td {
+    border: 0;
+    padding: 0;
+  }
+  .rg-t td:nth-child(4),
+  .rg-t td:nth-child(5) {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+}

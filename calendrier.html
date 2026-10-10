@@ -7,13 +7,13 @@
 <script src="anti-cadre.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tarifs partenaires — CVDL</title>
+<title>Calendrier — CVDL</title>
 <link rel="stylesheet" href="cvdl-ui.css?v=35">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
 .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; }
-main{ max-width:1040px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
+main{ max-width:1180px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
 .spinner-inline{ display:inline-block; width:14px; height:14px; animation:tourner .7s linear infinite; margin-right:8px; vertical-align:-2px; }
 @keyframes tourner{ to{ transform:rotate(360deg); } }
 html.deja-identifie #etape-code{ display:none!important; }
@@ -32,24 +32,17 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
 @media (max-width: 640px){
 main{ padding:var(--space-6) var(--space-4); }
 }
-#liste-tarifs-partenaires{ display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; }
-.carte-partenaire{ padding:16px !important; margin:0 !important; }
-.btn-modifier-partenaire{ padding:6px 12px !important; }
 </style>
 <script src="portail-ui.js?v=36" defer></script>
 <script src="cvdl-ui.js?v=13" defer></script>
 <link rel="stylesheet" href="retours.css?v=2">
 <script src="retours.js?v=2" defer></script>
-<style>
-.tarif-remplace{ display:flex; gap:12px; align-items:flex-start; padding:12px 14px; margin-top:6px; }
-.tarif-remplace > span:last-child{ display:flex; flex-direction:column; gap:3px; }
-.tarif-remplace b{ font-size:13.5px; } .tarif-remplace small{ font-size:12.5px; opacity:.7; line-height:1.4; }
-.tarif-remplace-carte{ width:100%; box-sizing:border-box; margin:0; }
-</style>
+<link rel="stylesheet" href="notifications-portail.css?v=1">
+<link rel="stylesheet" href="calendrier.css?v=1">
 </head>
 <body data-famille="commandes">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
-<button type="button" class="btn-deconnexion-fixe" id="btn-deconnexion-tarifs" hidden>
+<button type="button" class="btn-deconnexion-fixe" id="btn-deconnexion-cal" hidden>
   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   Déconnexion
 </button>
@@ -64,8 +57,8 @@ main{ padding:var(--space-6) var(--space-4); }
   <div id="etape-code" style="max-width:460px;margin:0 auto">
     <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
       <span data-ill="cle" class="pk-titre-ill"></span>
-      <h1 style="margin:0">Tarifs <em>partenaires</em></h1>
-      <p style="opacity:0.6;margin:0">Identifiez-vous avec votre code structure. Réservé aux structures Interne.</p>
+      <h1 style="margin:0">Calendrier</h1>
+      <p style="opacity:0.6;margin:0">Identifiez-vous avec votre code structure.</p>
       <div class="field">
         <label for="id-code" class="sr-only">Code structure</label>
         <input type="text" class="input" id="id-code" autocomplete="off" spellcheck="false" placeholder="Votre code structure">
@@ -75,54 +68,40 @@ main{ padding:var(--space-6) var(--space-4); }
     </div>
   </div>
 
-  <div id="etape-tarifs" hidden>
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-4)">
+  <div id="etape-cal" hidden>
+    <div class="cx-t">
+      <span data-ill="calendrier" class="pk-titre-ill xl"></span>
       <div>
-        <span data-ill="tarifs" class="pk-titre-ill xl"></span>
-        <h1 style="margin-bottom:var(--space-2)">Tarifs <em>partenaires</em></h1>
-        <p style="opacity:0.6;margin:0">Créez, pour un ou plusieurs de vos partenaires, une variante d'un produit du catalogue avec un prix différent — utile par exemple pour adapter le tarif à leur type de public.</p>
+        <div class="cvdl-surtitre">Ma structure</div>
+        <h1>Calendrier</h1>
+        <p>Livraisons de vos commandes et échéances de paiement des personnes.</p>
       </div>
-    <nav class="cp-onglets" aria-label="Espace partenaire">
-      <a href="commandes-partenaires.html">Commandes</a>
-      <a href="structures-partenaires.html">Structures</a>
-      <a href="tarifs-partenaires.html" aria-current="page" class="actif">Tarifs</a>
-      <a href="statistiques-partenaires.html">Statistiques</a>
-    </nav>
-
-      <button type="button" class="btn btn-primary" id="btn-ouvrir-nouveau-tarif">+ Nouveau tarif personnalisé</button>
     </div>
-    <div id="liste-tarifs-partenaires"><div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div></div>
+    <div id="cx-erreur"></div>
+    <div class="cx-g">
+      <section class="cx-c" aria-labelledby="cx-mois">
+        <div class="cx-nav">
+          <span class="cx-m"><button type="button" id="cx-prec" aria-label="Mois précédent">‹</button><b id="cx-mois" aria-live="polite"></b><button type="button" id="cx-suiv" aria-label="Mois suivant">›</button></span>
+          <span class="cx-fl" role="group" aria-label="Afficher">
+            <button type="button" aria-pressed="true" data-cx-type="livraison"><span class="d v"></span>Livraisons <i id="cx-n-livraison"></i></button>
+            <button type="button" aria-pressed="true" data-cx-type="paiement"><span class="d r"></span>Paiements <i id="cx-n-paiement"></i></button>
+          </span>
+        </div>
+        <div class="cx-s" id="cx-grille" role="grid"></div>
+        <div class="cx-leg">
+          <span><span class="d v"></span>Livrée</span><span><span class="d y"></span>Livraison prévue</span><span><span class="d o"></span>Date souhaitée</span><span><span class="d r"></span>Paiement en retard</span><span><span class="d b"></span>Échéance à venir</span><span><span class="d g"></span>Payée</span>
+        </div>
+      </section>
+      <div class="cx-r">
+        <section class="cx-c" aria-labelledby="cx-jour-titre"><h2 id="cx-jour-titre">Aujourd’hui</h2><div id="cx-jour"></div></section>
+        <section class="cx-c" aria-labelledby="cx-avenir-titre"><h2 id="cx-avenir-titre">30 prochains jours</h2><div id="cx-avenir"></div></section>
+      </div>
+    </div>
   </div>
-
 </main>
 
-<div class="voile-modale-qr" id="modale-nouveau-tarif">
-  <div class="modale-qr" style="text-align:left">
-    <span data-ill="tarifs" class="pk-modale-ill"></span><h2 style="text-align:center">Nouveau tarif personnalisé</h2>
-    <div class="field"><label for="nt-base">Produit de base</label>
-      <select class="input" id="nt-base"><option value="">Chargement…</option></select>
-    </div>
-    <div class="field"><label for="nt-nom">Nom du nouveau produit</label>
-      <input type="text" class="input" id="nt-nom" autocomplete="off" placeholder="Ex : Ordinateur portable — Tarif Familles">
-    </div>
-    <div class="field"><label for="nt-prix">Prix (€)</label>
-      <input type="number" class="input" id="nt-prix" step="0.01" min="0" placeholder="Ex : 40">
-    </div>
-    <div class="field"><label>Pour quelle(s) structure(s) partenaire(s) ?</label>
-      <div id="nt-partenaires" style="display:flex;flex-direction:column;gap:6px"></div>
-    </div>
-    <label class="case-toggle tarif-remplace">
-      <span class="rp-interrupteur"><input type="checkbox" id="nt-remplace"><span class="rp-interrupteur-piste"></span></span>
-      <span><b>Remplacer le produit de base dans le formulaire</b>
-        <small id="nt-remplace-aide">Ces structures ne verront plus que ce tarif, à la place du produit d’origine — au lieu des deux côte à côte.</small></span>
-    </label>
-    <div id="retour-nouveau-tarif"></div>
-    <button type="button" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px" id="nt-fermer">Annuler</button>
-    <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px" id="btn-valider-nouveau-tarif">Créer ce tarif</button>
-  </div>
-</div>
-
 <script src="deja-identifie.js?v=1"></script>
-<script src="pages/tarifs-partenaires.js?v=3"></script>
+<script src="notifications-portail.js?v=1"></script>
+<script src="pages/calendrier.js?v=1"></script>
 </body>
 </html>

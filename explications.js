@@ -113,7 +113,7 @@
     [
       'equipe',
       'Équipe',
-      'Qui peut se connecter à l’administration, et avec quel rôle (admin, comptabilité, support SAV).',
+      'Qui peut se connecter à l’administration, et avec quel rôle (admin, comptabilité, logistique).',
     ],
     ['reglages', 'Réglages', 'Les paramètres de la plateforme : modèles de documents, e-mails, règles de commande…'],
   ];
@@ -312,7 +312,7 @@
         [
           '#eqa-form',
           'Ajouter une personne',
-          'Saisissez son adresse et choisissez son rôle : Admin, Comptabilité ou Support SAV.',
+          'Saisissez son adresse et choisissez son rôle : Admin, Comptabilité ou Logistique.',
         ],
       ],
       tutos: [],
@@ -329,6 +329,11 @@
       texte: 'Votre espace : commander du matériel, suivre vos commandes, signaler une panne et suivre vos appareils.',
       aides: [
         ['a.ps-choix-carte[href="commande.html"]', 'Commander', 'Choisir du matériel et l’envoyer en quelques étapes.'],
+        [
+          '#pb-carte',
+          'Pense-bête',
+          'Notez vos besoins au fil de l’eau avec le « + » : ils vous attendent le jour de la commande.',
+        ],
         [
           'a.ps-choix-carte[href="suivi.html"]',
           'Suivre mes commandes',
@@ -444,13 +449,15 @@
       tutos: [],
     },
     'support.html': {
-      titre: 'Support SAV',
+      titre: 'Logistique',
       texte:
-        'L’outil de l’équipe réparation. À gauche, les files de tickets. Au centre, le ticket choisi : statut, messages, envoi du colis.',
+        'L’espace de la logistique. À gauche, les commandes à valider et à préparer, puis les files de tickets SAV. Au centre, la commande ou le ticket choisi.',
       aides: [
+        ['[data-file="cmd:recue"]', 'Commandes à valider', 'Vérifier les quantités de chaque nouvelle commande.'],
+        ['[data-file="cmd:validee"]', 'À préparer', 'Saisir les numéros de série (douchette ou CSV tec.tech).'],
         ['[data-file="a-traiter"]', 'À traiter', 'Les tickets qui attendent une action de votre part.'],
         ['.sp-tk', 'Un ticket', 'Cliquez pour l’ouvrir au centre.'],
-        ['#sp-recherche', 'Rechercher', 'Une référence SAV-…, un numéro de série ou un nom de structure.'],
+        ['#sp-recherche', 'Rechercher', 'Une référence CVDL-… ou SAV-…, un numéro de série ou un nom de structure.'],
       ],
       tutos: ['support'],
     },

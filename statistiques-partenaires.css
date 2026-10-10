@@ -1,0 +1,129 @@
+/* Statistiques des partenaires d'une Interne (pages/statistiques-partenaires.js). */
+.sp-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.sp-kpis .sf-k {
+  background: #fff;
+  border: 1.5px solid color-mix(in srgb, #002743 18%, transparent);
+}
+.sp-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sp-l {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.6fr) 80px minmax(130px, 1.3fr) 60px 90px minmax(100px, 1fr) minmax(100px, 1fr)
+    150px;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 14px 12px;
+  border: 1.5px solid color-mix(in srgb, #002743 16%, transparent);
+  border-radius: 14px;
+  background: #fff;
+  color: #002743;
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+button.sp-l:hover,
+button.sp-l:focus-visible {
+  border-color: #002743;
+  box-shadow: 3px 3px 0 color-mix(in srgb, #00acb0 60%, transparent);
+}
+.sp-l.sp-entete {
+  border: 0;
+  background: none;
+  padding-block: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  cursor: default;
+}
+.sp-remis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sp-remis .sf-t {
+  flex: 1;
+  height: 9px;
+}
+.sp-remis small {
+  opacity: 0.55;
+}
+.sp-mois {
+  font-weight: 700;
+  color: #16703d;
+}
+.sp-mini {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 24px;
+}
+.sp-mini i {
+  width: 7px;
+  border-radius: 2px;
+  background: #7c5ce0;
+}
+.sp-alerte,
+.sp-ras {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sp-alerte {
+  background: #f2eefd;
+  color: #553a9e;
+}
+.sp-ras {
+  background: #e3f5ea;
+  color: #16703d;
+}
+.sp-note {
+  margin-top: 12px;
+  font-size: 13px;
+  opacity: 0.65;
+}
+.sp-modale {
+  width: min(1180px, 96vw);
+  max-width: none !important;
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+}
+.sp-modale-tete {
+  padding-right: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.sp-modale-tete h3 {
+  flex: 1;
+  margin: 0;
+}
+.sp-modale-tete .pk-modale-ill {
+  margin: 0;
+}
+@media (max-width: 900px) {
+  .sp-l {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sp-l.sp-entete {
+    display: none;
+  }
+  .sp-l > b {
+    grid-column: 1 / -1;
+  }
+}

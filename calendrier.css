@@ -1,0 +1,299 @@
+/* Calendrier du portail structure (pages/calendrier.js), dans l'esprit du calendrier admin. */
+.cx-t {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 0 22px;
+}
+.cx-t h1 {
+  margin: 2px 0;
+}
+.cx-t p {
+  margin: 0;
+  opacity: 0.7;
+}
+.cx-g {
+  display: grid;
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.cx-r {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cx-c {
+  padding: 20px;
+  border: 1.5px solid color-mix(in srgb, #002743 18%, transparent);
+  border-radius: 22px;
+  background: #fff;
+  color: var(--navy, #002743);
+}
+.cx-c h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.cx-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cx-m {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #f3f6f8;
+  font-size: 16px;
+}
+.cx-m b {
+  min-width: 130px;
+  text-align: center;
+}
+.cx-m button {
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid currentColor;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cx-fl {
+  display: flex;
+  gap: 8px;
+}
+.cx-fl button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cx-fl button[aria-pressed='false'] {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.cx-fl i {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #f3f6f8;
+  font-style: normal;
+  font-size: 11.5px;
+}
+.d {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.d.v {
+  background: #16a34a;
+}
+.d.y {
+  border-radius: 2px;
+  background: #e0a800;
+}
+.d.o {
+  width: 7px;
+  height: 7px;
+  border: 2px solid #e0a800;
+  border-radius: 2px;
+  background: #fff;
+}
+.d.r {
+  background: #c4134f;
+}
+.d.b {
+  border-radius: 1px;
+  background: #7c5ce0;
+  transform: rotate(45deg);
+}
+.d.g {
+  background: #a3b3c0;
+}
+.cx-s {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+.cx-s .h {
+  padding: 6px 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.cx-s .j {
+  min-width: 0;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 6px 7px;
+  border: 1.5px solid color-mix(in srgb, #002743 14%, transparent);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+}
+.cx-s .j b {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+.cx-s .j.vide {
+  border: 0;
+  background: none;
+  cursor: default;
+}
+.cx-s .j.we {
+  background: #fafbfc;
+}
+.cx-s .j.choisi {
+  border-color: var(--navy, #002743);
+  box-shadow: 3px 3px 0 color-mix(in srgb, #00acb0 55%, transparent);
+}
+.cx-s .j.auj {
+  background: var(--navy, #002743);
+  color: #fff;
+}
+.cx-ev {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cx-plus {
+  opacity: 0.65;
+}
+.cx-leg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 14px;
+  font-size: 12.5px;
+}
+.cx-leg > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cx-sd {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.cx-it {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid color-mix(in srgb, #002743 14%, transparent);
+  border-radius: 14px;
+  color: inherit;
+  font-size: 13px;
+  text-decoration: none;
+}
+.cx-it:hover,
+.cx-it:focus-visible {
+  border-color: var(--navy, #002743);
+}
+.cx-it .ill {
+  width: 34px;
+  height: 34px;
+}
+.cx-it-t b {
+  display: block;
+  font-size: 13.5px;
+}
+.cx-it-t span {
+  opacity: 0.7;
+}
+.cx-e {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.cx-e.v {
+  background: #e3f5ea;
+  color: #16703d;
+}
+.cx-e.y,
+.cx-e.b {
+  background: #fff1d6;
+  color: #8a5300;
+}
+.cx-e.b {
+  background: #f2eefd;
+  color: #553a9e;
+}
+.cx-e.o {
+  border: 1.5px dashed #e0a800;
+  background: #fff;
+  color: #8a5300;
+}
+.cx-e.r {
+  background: #c4134f;
+  color: #fff;
+}
+.cx-e.g {
+  background: #eef2f5;
+}
+.cx-vide {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  opacity: 0.7;
+}
+@media (max-width: 900px) {
+  .cx-g {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cx-s {
+    gap: 4px;
+  }
+  .cx-s .j {
+    min-height: 58px;
+    padding: 4px;
+  }
+  .cx-ev {
+    font-size: 0;
+    gap: 0;
+  }
+  .cx-ev .d {
+    margin: 1px;
+  }
+}

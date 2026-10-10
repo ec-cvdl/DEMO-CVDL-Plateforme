@@ -5,7 +5,7 @@ const js = require('@eslint/js');
 const globals = require('globals');
 
 module.exports = [
-  { ignores: ['node_modules/**', 'qrcode.min.js', 'eslint.config.js'] },
+  { ignores: ['node_modules/**', 'qrcode.min.js', 'html-to-image.min.js', 'eslint.config.js'] },
   js.configs.recommended,
   {
     files: ['**/*.js'],

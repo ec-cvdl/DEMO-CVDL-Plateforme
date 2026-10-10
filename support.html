@@ -8,12 +8,16 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <script src="anti-cadre.js?v=1"></script>
 <script src="api.js?v=2"></script>
-<title>Support SAV — CVDL</title>
+<title>Logistique — CVDL</title>
 <link rel="stylesheet" href="cvdl-ui.css?v=35">
 <link rel="stylesheet" href="sav-fil.css?v=1">
-<link rel="stylesheet" href="support.css?v=3">
-<script src="portail-ui.js?v=33" defer></script>
-<script src="support.js?v=5" defer></script>
+<link rel="stylesheet" href="support.css?v=4">
+<link rel="stylesheet" href="import-appareils.css?v=1">
+<script src="portail-ui.js?v=36" defer></script>
+<script src="tectech-csv.js?v=1" defer></script>
+<script src="support-commandes.js?v=1" defer></script>
+<script src="import-appareils.js?v=1" defer></script>
+<script src="support.js?v=7" defer></script>
 </head>
 <body data-famille="sav" data-vue="chargement">
 <main>
@@ -21,9 +25,9 @@
   <section id="vue-connexion" class="sp-vue" aria-labelledby="sp-titre-cx">
     <div class="sp-login">
       <img src="logo.png" alt="Emmaüs Connect" class="sp-login-logo">
-      <span class="sp-k">Espace support SAV</span>
+      <span class="sp-k">Espace logistique</span>
       <h1 id="sp-titre-cx">Connexion</h1>
-      <p>Accès réservé à l’équipe SAV : tickets, échanges et bons Colissimo.</p>
+      <p>Accès réservé à la logistique : commandes à valider et à préparer, tickets SAV, échanges et bons Colissimo.</p>
       <div id="sp-google" class="sp-google"></div>
       <div id="sp-login-msg" class="sp-err" role="alert"></div>
       <p class="sp-note">Connectez-vous avec votre compte Google <b data-sp-domaine>@emmaus-connect.org</b>. Vos réponses, notes et consultations d’identité sont signées à votre nom.</p>
@@ -37,13 +41,13 @@
   <section id="vue-boite" class="sp-vue">
     <header class="sp-barre">
       <img src="logo.png" alt="" class="sp-barre-logo">
-      <span class="sp-titre">Support SAV</span>
+      <span class="sp-titre">Logistique</span>
       <label class="sp-sr" for="sp-recherche">Rechercher</label>
-      <input class="input sp-recherche" id="sp-recherche" type="search" placeholder="Rechercher : SAV-…, n° de série, structure, symptôme">
+      <input class="input sp-recherche" id="sp-recherche" type="search" placeholder="Rechercher : CVDL-…, SAV-…, n° de série, structure">
       <button type="button" class="sp-moi" id="sp-moi" aria-haspopup="true"></button>
     </header>
     <div class="sp-cols">
-      <nav class="sp-nav" id="sp-nav" aria-label="Files de tickets"></nav>
+      <nav class="sp-nav" id="sp-nav" aria-label="Files de commandes et de tickets"></nav>
       <div class="sp-liste" id="sp-liste" aria-live="polite"></div>
       <div class="sp-detail" id="sp-detail"></div>
     </div>
