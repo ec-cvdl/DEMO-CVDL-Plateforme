@@ -329,6 +329,27 @@ document.addEventListener('click', (e) => {
     $('modale-liens').classList.remove('visible');
 });
 
+/* Devis et facture : générés à la demande (même document que celui envoyé par Emmaüs Connect).
+   L'onglet est ouvert dès le clic pour ne pas être bloqué, puis reçoit le document. */
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-document]');
+  if (!b || b.disabled) return;
+  const [reference, type] = b.dataset.document.split('|');
+  const fenetre = window.open('', '_blank');
+  if (fenetre) fenetre.document.title = 'Préparation du document…';
+  b.disabled = true;
+  const r = await poster({
+    action: 'commande-document',
+    code: $('code-structure').value.trim(),
+    reference,
+    type,
+  }).catch(() => ({ ok: false, erreur: 'Connexion impossible — réessayez.' }));
+  b.disabled = false;
+  if (r.ok) return window.ouvrirDocumentGenere(r.url, fenetre);
+  if (fenetre) fenetre.close();
+  alerteCvdl(r.erreur || 'Document indisponible pour le moment.');
+});
+
 function rendreCommandesSuivi(commandes) {
   if (!commandes.length) {
     $('liste-commandes-suivi').innerHTML =
@@ -430,6 +451,12 @@ function rendreCommandesSuivi(commandes) {
           : liensColissimo.length
             ? `<a class="cs-doc" href="${echapper(urlSure(liensColissimo[0]))}" target="_blank" rel="noopener"><span data-ill="stock" class="ill"></span>Suivi Colissimo</a>`
             : '',
+        c.devisDisponible
+          ? `<button type="button" class="cs-doc" data-document="${echapper(c.reference + '|devis')}"><span data-ill="facture" class="ill"></span>Devis</button>`
+          : '',
+        c.factureDisponible
+          ? `<button type="button" class="cs-doc" data-document="${echapper(c.reference + '|facture')}"><span data-ill="facture" class="ill"></span>Facture</button>`
+          : '',
         estLivree
           ? `<a class="cs-doc" href="rapport-impact.html?ref=${encodeURIComponent(c.reference)}"><span data-ill="stats" class="ill"></span>Rapport d’impact</a>`
           : '',

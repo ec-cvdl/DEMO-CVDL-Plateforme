@@ -1,6 +1,6 @@
 /* ════════════════════════════════════════════════════════════════════════════════════
    equipe-admin.js — onglet « Équipe » de l'admin : comptes Google Workspace de l'équipe.
-   · Rôle « Support SAV » : accès à l'outil support.html uniquement (vérifié par le serveur) ;
+   · Rôle « Logistique » : accès à l'espace support.html (SAV et commandes) uniquement (vérifié par le serveur) ;
    · Rôle « Admin » : tout.
    · Désactiver un compte coupe l'accès immédiatement (le compte est revérifié à chaque requête).
    Routes : src/routes/comptes.js. S'appuie sur les fonctions globales de l'admin (admin/*.js).
@@ -21,7 +21,7 @@ async function eqaCharger(forcer) {
 
 function vueEquipe() {
   const entete = `<h1 style="font-size:32px;margin-bottom:var(--space-2)">Équipe</h1>
-    <p style="opacity:0.65;margin:0 0 var(--space-5);font-size:15px">Qui peut se connecter avec son compte Google, et à quoi. L’outil Support SAV est à l’adresse <a href="support.html" target="_blank" rel="noopener">support.html</a>.</p>`;
+    <p style="opacity:0.65;margin:0 0 var(--space-5);font-size:15px">Qui peut se connecter avec son compte Google, et à quoi. L’espace Logistique (SAV et commandes) est à l’adresse <a href="support.html" target="_blank" rel="noopener">support.html</a>.</p>`;
   if (!eqa.charge) {
     eqaCharger();
     return entete + '<p class="rta-muet">Chargement…</p>';

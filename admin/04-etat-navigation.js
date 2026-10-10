@@ -102,7 +102,7 @@ async function preparerGoogleAdmin(automatique) {
           .catch(() => ({ ok: false, erreur: 'Connexion au serveur impossible.' }));
         if (r.ok && r.compte && ['admin', 'compta'].includes(r.compte.role)) return connecter(r.jeton);
         const msg = r.ok
-          ? 'Ce compte a le rôle « Support SAV » : utilisez l’outil Support SAV (support.html).'
+          ? 'Ce compte a le rôle « Logistique » : utilisez l’espace Logistique (support.html).'
           : r.erreur || 'Connexion refusée.';
         $('retour-connexion').innerHTML = '<div class="msg msg-erreur">' + echapper(msg) + '</div>';
       },
@@ -134,7 +134,7 @@ async function connecter(valeurForcee) {
     const estCompte = mdp.startsWith('j2.');
     let r = await jsonp(estCompte ? { action: 'auth-moi', password: mdp } : { action: 'login', password: mdp });
     if (estCompte && r && r.ok && (!r.compte || !['admin', 'compta'].includes(r.compte.role)))
-      r = { ok: false, erreur: 'Ce compte a le rôle « Support SAV » : utilisez l’outil Support SAV (support.html).' };
+      r = { ok: false, erreur: 'Ce compte a le rôle « Logistique » : utilisez l’espace Logistique (support.html).' };
     if (!r || !r.ok) {
       // Reconnexion silencieuse ratée (mot de passe changé entre-temps, session expirée...) :
       // le formulaire doit réapparaître avec l'erreur — sinon la page reste bloquée sur le
@@ -714,14 +714,9 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
-  const demandeValidation = e.target.closest('[data-demander-validation]');
-  if (demandeValidation) {
-    demanderValidationCommande(demandeValidation.dataset.demanderValidation);
-    return;
-  }
-  const renvoiValidation = e.target.closest('[data-renvoyer-validation]');
-  if (renvoiValidation) {
-    demanderValidationCommande(renvoiValidation.dataset.renvoyerValidation);
+  const valideLogistique = e.target.closest('[data-valider-logistique]');
+  if (valideLogistique) {
+    validerCommandeLogistique(valideLogistique.dataset.validerLogistique);
     return;
   }
   const enregSeries = e.target.closest('[data-confirmer-series]');

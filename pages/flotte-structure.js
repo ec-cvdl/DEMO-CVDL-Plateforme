@@ -190,12 +190,22 @@ async function chargerAppareils() {
     equipeSalesforceFlotte = r.equipeSalesforce || [];
     await chargerProjetsFlotte();
     rendreAppareils(appareilsCourants);
+    ouvrirPersonneDemandee();
   } catch (e) {
     $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Chargement impossible — réessaie.</p>';
   }
 }
 
 let appareilsCourants = [];
+/** Lien d'une notification ou du calendrier (flotte-structure.html?personne=<id>) : la fiche
+ *  personne s'ouvre une fois, au premier chargement. */
+let personneDemandee = parseInt(new URLSearchParams(location.search).get('personne'), 10) || 0;
+function ouvrirPersonneDemandee() {
+  if (!personneDemandee) return;
+  const id = personneDemandee;
+  personneDemandee = 0;
+  if (appareilsCourants.some((a) => a.id === id)) ouvrirModalePersonnePortail(id);
+}
 /** Retours : un appareil remis (ou vendu) est une tâche menée au bout ; avis à la première. */
 function noterRemise(statut) {
   if ((statut === 'Remis' || statut === 'Vendu') && window.CvdlRetours)
@@ -259,10 +269,11 @@ document.addEventListener('change', async (e) => {
 });
 
 let personnePortailIdCourant = null;
-let listesPersoFlottePortail = { lieux: [], vendeurs: [], orientations: [] };
+let listesPersoFlottePortail = { lieux: [], vendeurs: [], orientations: [], paiements: [] };
+// Modes de paiement communs à toutes les structures (envoyés par le serveur avec les listes).
+let typesPaiementCommuns = ['Chèque x1', 'Chèque x2', 'CB', 'Monétaire', 'Mixte'];
 // Noms de l'équipe (réglages Salesforce) : menu « Vente suivie par » des Internes.
 let equipeSalesforceFlotte = [];
-const TYPES_PAIEMENT_PORTAIL = ['', 'Chèque x1', 'Chèque x2', 'CB', 'Monétaire', 'Mixte'];
 
 /* Informations de vente pour la saisie Salesforce (Internes) : valeur du formulaire (texte)
    ↔ valeur de l'appareil (booléen, ou null pour Linux « d'après le produit »). */
@@ -323,6 +334,9 @@ function encartSalesforcePersonne(a) {
   </div>`;
 }
 
+/** Bloc « Règlement » (reglement-personne.js) : appareil vendu ou remis, hors vue matériel. */
+const reglementVisible = (a) => !VUE_MATERIEL && !a.masque && (['Remis', 'Vendu'].includes(a.statut) || !!a.dateVente);
+
 function ouvrirModalePersonnePortail(id) {
   const a = appareilsCourants.find((x) => x.id === id);
   if (!a) return;
@@ -354,9 +368,7 @@ function ouvrirModalePersonnePortail(id) {
         <h4 class="pp-titre" id="pp-titre-vente">Vente</h4>
         <div class="field"><label>Date de vente<input type="text" class="input" data-pp-champ="dateVente" value="${echapper(a.dateVente)}" placeholder="jj/mm/aaaa" title="Obligatoire pour passer en « Remis »"></label></div>
         <div class="field"><label>Type de paiement
-          <select class="input" data-pp-champ="typePaiement">
-            ${TYPES_PAIEMENT_PORTAIL.map((t) => `<option value="${t}" ${a.typePaiement === t ? 'selected' : ''}>${t || '—'}</option>`).join('')}
-          </select>
+          ${selectListePerso('typePaiement', a.typePaiement, 'class="input" data-pp-champ="typePaiement"')}
         </label></div>
         <div class="field pp-large"><label>Vendeur
           ${selectListePerso('vendeur', a.vendeur, 'class="input" data-pp-champ="vendeur"')}
@@ -366,9 +378,24 @@ function ouvrirModalePersonnePortail(id) {
         <p class="pp-note pp-large">Date de vente obligatoire pour passer en « Remis ».</p>
       </div>
       <div class="field pp-pleine"><label>Commentaire<input type="text" class="input" data-pp-champ="commentaire" value="${echapper(a.commentaire)}"></label></div>
+      ${reglementVisible(a) ? '<div class="pp-pleine" id="rg-zone"></div>' : ''}
       ${encartSalesforcePersonne(a)}
     </div>
     <div id="retour-personne-portail" style="margin-top:8px"></div>`;
+  if (reglementVisible(a))
+    window.ReglementPersonne.ouvrir($('rg-zone'), {
+      appareil: a,
+      code: codeValide,
+      poster: posterVue,
+      montantPropose: a.prixRevente,
+      // Internes : « Paiement complet » suit l'échéancier (mis à jour par le serveur).
+      surPaiementComplet: (complet) => {
+        a.sfPaiementComplet = complet;
+        const sel = document.querySelector('#personne-portail-contenu [data-pp-champ="sfPaiementComplet"]');
+        if (sel) sel.value = ouiNon(complet);
+      },
+    });
+  $('personne-portail-attestation').hidden = VUE_MATERIEL || !['Remis', 'Vendu'].includes(a.statut);
   $('modale-personne-portail').classList.add('visible');
 }
 
@@ -453,6 +480,7 @@ $('tarifs-revente-fermer')?.addEventListener('click', () => {
 
 function fermerModalePersonnePortail() {
   $('modale-personne-portail').classList.remove('visible');
+  window.ReglementPersonne.fermer();
 }
 $('personne-portail-fermer-x')?.addEventListener('click', fermerModalePersonnePortail);
 
@@ -467,7 +495,8 @@ $('personne-portail-contenu')?.addEventListener('input', (e) => {
 });
 
 // Rien n'est envoyé champ par champ : on remplit tout, puis « Enregistrer » envoie en une fois
-// les seules valeurs modifiées (après vérification). Seul « + Nouveau… » (vendeur, orientation)
+// les seules valeurs modifiées (après vérification). Seul « + Nouveau… » (vendeur, orientation,
+// mode de paiement)
 // agit tout de suite, pour ajouter la valeur à la liste de la structure.
 $('personne-portail-contenu')?.addEventListener('change', async (e) => {
   const el = e.target.closest('[data-pp-champ]');
@@ -519,7 +548,7 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
   }
   const aEnvoyer = Object.keys(valeurs).filter((k) => valeurs[k] !== valeurFormPersonne(a, k));
   const bouton = $('personne-portail-enregistrer');
-  if (!aEnvoyer.length) {
+  if (!aEnvoyer.length && !window.ReglementPersonne.aChange()) {
     fermerModalePersonnePortail();
     return;
   }
@@ -548,6 +577,7 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
       break;
     }
   }
+  if (!erreur) erreur = (await window.ReglementPersonne.enregistrer()).erreur || '';
   bouton.disabled = false;
   bouton.textContent = 'Enregistrer';
   if (erreur) {
@@ -614,20 +644,38 @@ function majLargeurMain() {
   // Même largeur quelle que soit la vue (Liste, Fiches, Comptabilité) : rien ne « saute ».
   document.querySelector('main').classList.toggle('tableur', true);
 }
-/* ── Listes de la structure (lieux de stockage, vendeurs, « orienté par ») : propres à chaque
-   structure, complétées à la volée par « + Nouveau… ». ── */
+/* ── Listes de la structure (lieux de stockage, vendeurs, « orienté par », modes de paiement) :
+   propres à chaque structure, complétées à la volée par « + Nouveau… ». ── */
 const LISTES_PERSO = {
   lieuStockage: { liste: 'lieu', cle: 'lieux', question: 'Nom du nouveau lieu de stockage :' },
   vendeur: { liste: 'vendeur', cle: 'vendeurs', question: 'Nom du nouveau vendeur :' },
   orientePar: { liste: 'orientation', cle: 'orientations', question: 'Orientée par (organisme ou personne) :' },
+  typePaiement: {
+    liste: 'paiement',
+    cle: 'paiements',
+    question: 'Nom du nouveau mode de paiement (propre à votre structure) :',
+    nouveau: '+ Nouveau mode de paiement…',
+    communs: () => typesPaiementCommuns,
+  },
 };
 /** Menu déroulant d'un champ à liste (`attributs` : data-id/data-champ du tableau, ou
  *  data-pp-champ de la fiche personne). */
 function selectListePerso(champ, valeur, attributs) {
-  const liste = listesPersoFlottePortail[LISTES_PERSO[champ].cle] || [];
-  const options = ['', ...liste];
-  if (valeur && !liste.includes(valeur)) options.push(valeur);
-  return `<select ${attributs}>${options.map((o) => `<option value="${echapper(o)}" ${o === (valeur || '') ? 'selected' : ''}>${echapper(o) || '—'}</option>`).join('')}<option value="__nouveau__">+ Nouveau…</option></select>`;
+  const def = LISTES_PERSO[champ];
+  const liste = listesPersoFlottePortail[def.cle] || [];
+  const communs = def.communs ? def.communs() : [];
+  const options = ['', ...communs];
+  const siens = [...liste];
+  if (valeur && !communs.includes(valeur) && !liste.includes(valeur)) siens.push(valeur);
+  const option = (o) =>
+    `<option value="${echapper(o)}" ${o === (valeur || '') ? 'selected' : ''}>${echapper(o) || '—'}</option>`;
+  // Liste avec des valeurs communes (modes de paiement) : celles de la structure à part.
+  const perso = communs.length
+    ? siens.length
+      ? `<optgroup label="Vos modes">${siens.map(option).join('')}</optgroup>`
+      : ''
+    : siens.map(option).join('');
+  return `<select ${attributs}>${options.map(option).join('')}${perso}<option value="__nouveau__">${def.nouveau || '+ Nouveau…'}</option></select>`;
 }
 /** Ajoute une valeur à une liste de la structure. Renvoie { valeur } ou { erreur }. */
 async function ajouterListePerso(champ, valeur) {
@@ -796,7 +844,7 @@ function carteDispositif(a, opts) {
   const lignesInfos = [
     VUE_MATERIEL
       ? ''
-      : `<div class="fi3-l"><span class="fi3-k">Utilisé par</span><span class="fi3-v fi-personne">${personne}</span></div>`,
+      : `<div class="fi3-l"><span class="fi3-k">Utilisé par</span><span class="fi3-v fi-personne">${personne}${boutonAttestation(a)}</span></div>`,
     VUE_MATERIEL
       ? ''
       : `<div class="fi3-l"><span class="fi3-k">Prix</span><span class="fi3-v">${prixFlotteHtml(a)}</span></div>`,
@@ -919,7 +967,7 @@ function construireTableauFlotteInterne(appareils, opts) {
       ${colonneAttribution ? `<td class="tl-col-case"><input type="checkbox" class="tl-case" data-select-attribution="${a.id}" ${idsSelectionnesAttribution.has(a.id) ? 'checked' : ''} aria-label="Sélectionner pour attribution"></td>` : ''}
       ${celluleAppareil(a, true)}
       <td>${pillePasseportFlotte(a.numeroSerie, a.alerte2Mois)}</td>
-      ${VUE_MATERIEL ? '' : `<td>${personne}</td>`}
+      ${VUE_MATERIEL ? '' : `<td><span class="tl-personne-cel">${personne}${boutonAttestation(a)}</span></td>`}
       <td>
         <select class="cd-select-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${classeStatutKitFlotte(a.statut)}" data-id="${a.id}" data-champ="statut">
           ${opts.statuts.map((s) => `<option value="${echapper(s)}" ${a.statut === s ? 'selected' : ''}>${echapper(s)}</option>`).join('')}
@@ -1000,7 +1048,7 @@ function construireTableauComptaFlotte(appareils) {
       <td>${echapper(a.modele) || '—'}</td>
       <td>${echapper(a.personne) || '—'}</td>
       <td style="white-space:nowrap">${a.dateVente ? echapper(a.dateVente) : '—'}</td>
-      <td><select data-id="${a.id}" data-champ="typePaiement">${TYPES_PAIEMENT_PORTAIL.map((t) => `<option value="${t}" ${(a.typePaiement || '') === t ? 'selected' : ''}>${t || '—'}</option>`).join('')}</select></td>
+      <td>${selectListePerso('typePaiement', a.typePaiement, `data-id="${a.id}" data-champ="typePaiement"`)}</td>
       <td>${selectListePerso('vendeur', a.vendeur, `data-id="${a.id}" data-champ="vendeur"`)}</td>
       <td><input type="text" data-id="${a.id}" data-champ="numeroRapprochement" value="${echapper(a.numeroRapprochement)}" placeholder="Zettle / dépôt"></td>
       <td style="text-align:center">
@@ -1018,110 +1066,45 @@ function construireTableauComptaFlotte(appareils) {
    2e teinte figée en dur (magenta de charte) plutôt que var(--color-accent) : cette page
    surcharge --color-accent en turquoise comme le reste de l'espace self-service (même
    couleur que --color-accent-2), ce qui aurait rendu les 2 premières teintes identiques ici. */
-const PALETTE_ANNEAUX_FLOTTE = ['#00ACB0', '#E62460', '#6338F5', '#FECC38', '#1F9D55', '#00777A', '#C2185B', '#8FA3B3'];
-/** Anneau segmenté en SVG (trait bleu nuit + aplat décalé, comme les illustrations) avec
- *  légende à barres — remplace l'ancien camembert en dégradé conique. */
-function anneauUniqueFlotte(lignes, titre, palette) {
-  palette = palette || PALETTE_ANNEAUX_FLOTTE;
-  const total = lignes.reduce((t, l) => t + l.valeur, 0);
-  const r = 44,
-    c = 2 * Math.PI * r;
-  let cumul = 0;
-  const arcs = total
-    ? lignes
-        .map((l, i) => {
-          const long = (l.valeur / total) * c;
-          const arc = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${palette[i % palette.length]}" stroke-width="16" stroke-dasharray="${Math.max(0, long - 1.5)} ${c}" stroke-dashoffset="${-cumul}" transform="rotate(-90 60 60)"/>`;
-          cumul += long;
-          return arc;
-        })
-        .join('')
-    : '';
-  const max = Math.max(1, ...lignes.map((l) => l.valeur));
-  return `
-    <section class="fs-bloc">
-      <h4>${echapper(titre)}</h4>
-      <div class="fs-anneau-ligne">
-        <svg class="fs-anneau" viewBox="0 0 120 120" width="136" height="136" aria-hidden="true">
-          <circle cx="63" cy="63" r="${r + 9}" fill="color-mix(in srgb, #002743 10%, transparent)"/>
-          <circle cx="60" cy="60" r="${r + 9}" fill="#fff" stroke="#002743" stroke-width="1.5"/>
-          <circle cx="60" cy="60" r="${r}" fill="none" stroke="#EEF2F5" stroke-width="16"/>
-          ${arcs}
-          <circle cx="60" cy="60" r="${r - 9}" fill="#fff" stroke="#002743" stroke-width="1.5"/>
-          <text x="60" y="60" text-anchor="middle" font-size="22" font-weight="700" fill="#002743" font-family="Space Grotesk, system-ui">${total}</text>
-          <text x="60" y="75" text-anchor="middle" font-size="9.5" fill="#5A6D7D" font-family="Inter, system-ui">appareils</text>
-        </svg>
-        <div class="fs-legende">
-          ${
-            lignes.length
-              ? lignes
-                  .map(
-                    (l, i) => `
-            <div class="fs-leg">
-              <span class="fs-leg-tete"><i style="background:${palette[i % palette.length]}"></i><span>${echapper(l.label)}</span><b>${l.valeur}</b><small>${total ? Math.round((l.valeur / total) * 100) : 0} %</small></span>
-              <span class="fs-barre"><span style="width:${Math.max(3, Math.round((l.valeur / max) * 100))}%;background:${palette[i % palette.length]}"></span></span>
-            </div>`,
-                  )
-                  .join('')
-              : '<p class="fs-vide">Aucune donnée.</p>'
-          }
-        </div>
-      </div>
-    </section>`;
+/* Statistiques : calculées par le serveur (flotte-statistiques), dessinées par stats-flotte.js. */
+const SF = { onglet: 'ensemble', periode: '12m', stats: null };
+async function chargerStatsFlotte() {
+  $('stats-flotte-portail-contenu').innerHTML = '<p class="sf-vide">Calcul des statistiques…</p>';
+  const r = await jsonpVue({ action: 'flotte-statistiques', code: codeValide, periode: SF.periode }).catch(() => ({
+    ok: false,
+  }));
+  SF.stats = r.ok ? r : null;
+  rendreStatsFlotte();
 }
-
-function afficherStatsFlottePortail(appareils) {
-  const total = appareils.length;
-  const vendus = appareils.filter((a) => a.statut === 'Vendu' || a.statut === 'Remis');
-  const montantTotal = vendus.reduce((t, a) => t + (parseFloat(a.prixAchat) || parseFloat(a.prix) || 0), 0);
-  const enStock = appareils.filter((a) => a.statut === 'En stock').length;
-  const anciens = appareils.filter((a) => a.statut === 'En stock' && (a.alerte2Mois || a.alerteGarantie)).length;
-  const compter = (cle) => {
-    const o = {};
-    appareils.forEach((a) => {
-      const k = cle(a) || 'Non précisé';
-      o[k] = (o[k] || 0) + 1;
-    });
-    return Object.entries(o)
-      .sort((x, y) => y[1] - x[1])
-      .map(([label, valeur]) => ({ label, valeur }));
-  };
-  const parProduit = compter((a) => a.produit || a.categorie);
-  const parStatut = compter((a) => a.statut);
-  const couleursStatut = parStatut.map(
-    (l) =>
-      ({
-        'En stock': '#1F9D55',
-        Remis: '#00ACB0',
-        Vendu: '#00ACB0',
-        SAV: '#E24B4A',
-        'En SAV': '#E24B4A',
-        D3E: '#8FA3B3',
-      })[l.label] || '#6338F5',
-  );
-  const produitsAffiches = parProduit.slice(0, 6);
-  if (parProduit.length > 6)
-    produitsAffiches.push({
-      label: `Autres (${parProduit.length - 6})`,
-      valeur: parProduit.slice(6).reduce((t, l) => t + l.valeur, 0),
-    });
-  const tuile = (ill, n, l, cls) =>
-    `<div class="fs-tuile ${cls || ''}"><span data-ill="${ill}" class="ill"></span><div><b>${n}</b><span>${l}</span></div></div>`;
-  $('stats-flotte-portail-contenu').innerHTML = `
-    <div class="fs-tuiles">
-      ${tuile('flotte', total, 'appareils au total')}
-      ${tuile('stock', enStock, 'en stock')}
-      ${tuile('personne', vendus.length, 'distribués')}
-      ${VUE_MATERIEL ? '' : tuile('facture', `${Math.round(montantTotal).toLocaleString('fr-FR')} €`, 'montant distribué')}
-    </div>
-    ${anciens ? `<div class="fs-alerte">${ICONE_2_MOIS()}${anciens} appareil${anciens > 1 ? 's' : ''} en stock depuis plus de 2 mois.</div>` : ''}
-    <div class="fs-grille">
-      ${anneauUniqueFlotte(parStatut, 'Par statut', couleursStatut)}
-      ${anneauUniqueFlotte(produitsAffiches, 'Par produit')}
-    </div>`;
-  if (window.portailIllustrations) window.portailIllustrations($('stats-flotte-portail-contenu'));
+function rendreStatsFlotte() {
+  $('stats-flotte-portail-contenu').innerHTML = SF.stats
+    ? window.StatsFlotte.html(SF.stats, { onglet: SF.onglet, materiel: VUE_MATERIEL })
+    : '<div class="msg msg-erreur">Statistiques indisponibles pour le moment.</div>';
+}
+function afficherStatsFlottePortail() {
   $('modale-stats-flotte-portail').classList.add('visible');
+  chargerStatsFlotte();
 }
+$('stats-flotte-portail-contenu')?.addEventListener('click', (e) => {
+  const o = e.target.closest('[data-sf-onglet]');
+  if (!o) return;
+  SF.onglet = o.dataset.sfOnglet;
+  rendreStatsFlotte();
+});
+$('stats-flotte-portail-contenu')?.addEventListener('change', (e) => {
+  if (!e.target.matches('[data-sf-periode]')) return;
+  SF.periode = e.target.value;
+  chargerStatsFlotte();
+});
+$('stats-flotte-image')?.addEventListener('click', async function () {
+  this.disabled = true;
+  const ok = await window.StatsFlotte.exporterImage(
+    $('stats-flotte-portail-contenu'),
+    `Statistiques-flotte-${SF.periode}.png`,
+  ).catch(() => false);
+  this.disabled = false;
+  if (!ok) alerteCvdl('Image impossible à créer — réessayez.');
+});
 $('stats-flotte-portail-fermer')?.addEventListener('click', () =>
   $('modale-stats-flotte-portail').classList.remove('visible'),
 );
@@ -1134,7 +1117,7 @@ function rendreFlotteInterneParitePortail(appareils) {
   const entete = `
     <div class="flotte-entete">
       <div>
-        <span data-ill="flotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
+        <span data-ill="gestionFlotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
         <p>${estPartenaireFlotte ? 'Le matériel qui vous a été attribué par votre structure Interne — indiquez qui utilise chaque appareil.' : 'Le matériel déjà livré à votre structure — indiquez qui utilise chaque appareil.'}</p>
       </div>
       <div class="flotte-actions">
@@ -1277,7 +1260,7 @@ function cablerBarreOutilsPortailInterne() {
     masquerTransferes = e.target.checked;
     rendreFlotteInterneParitePortail(appareilsCourants);
   });
-  $('btn-stats-flotte-portail')?.addEventListener('click', () => afficherStatsFlottePortail(appareilsCourants));
+  $('btn-stats-flotte-portail')?.addEventListener('click', () => afficherStatsFlottePortail());
   // Nouvel onglet ouvert par le script (et non un lien) : il reçoit une copie de la session de
   // l'onglet (sessionStorage), donc le même code structure.
   $('btn-saisie-salesforce')?.addEventListener('click', () => window.open('saisie-salesforce.html', '_blank'));
@@ -1454,7 +1437,7 @@ function rendreAppareils(appareils) {
     $('zone-flotte').innerHTML = `
       <div class="flotte-entete">
         <div>
-          <span data-ill="flotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
+          <span data-ill="gestionFlotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
           <p>Le matériel déjà livré à votre structure — indiquez qui utilise chaque appareil.</p>
         </div>
       </div>
@@ -1512,7 +1495,7 @@ function rendreAppareils(appareils) {
   $('zone-flotte').innerHTML = `
     <div class="flotte-entete">
       <div>
-        <span data-ill="flotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
+        <span data-ill="gestionFlotte" class="pk-titre-ill xl"></span><h1>Ma <em>flotte</em></h1>
         <p>Le matériel déjà livré à votre structure — indiquez qui utilise chaque appareil.</p>
       </div>
     </div>
@@ -1543,7 +1526,7 @@ function rendreAppareils(appareils) {
     }),
   );
   majLargeurMain();
-  $('btn-stats-flotte-portail-simple')?.addEventListener('click', () => afficherStatsFlottePortail(appareilsCourants));
+  $('btn-stats-flotte-portail-simple')?.addEventListener('click', () => afficherStatsFlottePortail());
 
   $('recherche-flotte').addEventListener('input', () => {
     rechercheFlotte = $('recherche-flotte').value;
@@ -1683,80 +1666,134 @@ function dateVersISO(dateStr) {
   return `${a}-${m}-${j}`;
 }
 
-let attestationSerieCourante = '';
-document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-attestation-serie]');
+/* ── Attestation de paiement d'un appareil vendu : bouton à côté de la personne (tableau, fiches)
+   et dans sa fiche. Nom et date de naissance viennent de la flotte ; s'il manque la date de
+   naissance, la petite fenêtre la demande. ── */
+let attestationAppareilId = null;
+const aAttestation = (a) => !VUE_MATERIEL && !a.masque && !!a.personne && ['Remis', 'Vendu'].includes(a.statut);
+function boutonAttestation(a) {
+  if (!aAttestation(a)) return '';
+  const fait = !!a.numeroAttestation;
+  return `<button type="button" class="tl-attest${fait ? ' fait' : ''}" data-attestation-id="${a.id}" title="${fait ? 'Retélécharger' : 'Générer'} l’attestation de paiement de ${echapper(a.personne)}">${fait ? '✓' : '⤓'} Attestation</button>`;
+}
+/** Télécharge le document renvoyé par le serveur (PDF en mémoire, ou lien Drive). */
+function ouvrirAttestation(r) {
+  const lien = document.createElement('a');
+  lien.href = urlSure(r.url);
+  lien.download = r.nomFichier || 'Attestation de paiement.pdf';
+  lien.target = '_blank';
+  lien.rel = 'noopener';
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+}
+/** Génère l'attestation de l'appareil `a`. Renvoie la réponse du serveur. */
+async function genererAttestation(a, nomComplet, dateNaissance) {
+  const r = await posterVue({
+    action: 'flotte-generer-attestation',
+    code: codeValide,
+    numeroSerie: a.numeroSerie,
+    nomComplet,
+    dateNaissance,
+  }).catch(() => ({ ok: false, erreur: 'Génération impossible — réessayez.' }));
+  if (r.ok) {
+    if (window.CvdlRetours) CvdlRetours.action('attestation');
+    a.numeroAttestation = r.numeroAttestation || a.numeroAttestation;
+    ouvrirAttestation(r);
+  }
+  return r;
+}
+const lienAttestation = (r) =>
+  `<a href="${echapper(urlSure(r.url))}" target="_blank" rel="noopener" download="${echapper(r.nomFichier || 'Attestation de paiement.pdf')}">${echapper(r.nomFichier || 'l’ouvrir')}</a>`;
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-attestation-id]');
   if (!b) return;
-  attestationSerieCourante = b.dataset.attestationSerie;
-  const nomPersonne = b.dataset.attestationPersonne || '';
-  $('attestation-nom-input').value = nomPersonne;
-  $('attestation-naissance-input').value = '';
-  $('retour-attestation-flotte').innerHTML = '';
-  $('modale-attestation-flotte').classList.add('visible');
-  if (nomPersonne) {
-    posterVue({
-      action: 'flotte-date-naissance',
-      code: codeValide,
-      numeroSerie: attestationSerieCourante,
-      nomComplet: nomPersonne,
-    })
+  const a = appareilsCourants.find((x) => x.id === parseInt(b.dataset.attestationId, 10));
+  if (!a) return;
+  if (!a.dateNaissance) {
+    attestationAppareilId = a.id;
+    $('attestation-nom-input').value = a.personne;
+    $('attestation-naissance-input').value = '';
+    $('retour-attestation-flotte').innerHTML = '';
+    $('modale-attestation-flotte').classList.add('visible');
+    // Date parfois notée dans la commande (formulaire des personnes accompagnées).
+    posterVue({ action: 'flotte-date-naissance', code: codeValide, numeroSerie: a.numeroSerie, nomComplet: a.personne })
       .then((r) => {
-        if (r.ok && r.dateNaissance && !$('attestation-naissance-input').value) {
+        if (r.ok && r.dateNaissance && !$('attestation-naissance-input').value)
           $('attestation-naissance-input').value = dateVersISO(r.dateNaissance);
-        }
       })
       .catch(() => {});
+    return;
   }
+  b.disabled = true;
+  b.textContent = '… Attestation';
+  const r = await genererAttestation(a, a.personne, a.dateNaissance);
+  if (!r.ok) alerteCvdl(r.erreur || 'Génération impossible.');
+  rerendreFlotte();
 });
 $('attestation-fermer').addEventListener('click', () => $('modale-attestation-flotte').classList.remove('visible'));
 $('modale-attestation-flotte').addEventListener('click', (e) => {
   if (e.target.id === 'modale-attestation-flotte') $('modale-attestation-flotte').classList.remove('visible');
 });
-
 $('btn-generer-attestation-flotte').addEventListener('click', async () => {
+  const a = appareilsCourants.find((x) => x.id === attestationAppareilId);
   const nomComplet = $('attestation-nom-input').value.trim();
   const dateNaissanceISO = $('attestation-naissance-input').value;
+  if (!a) return;
   if (!nomComplet) {
     $('retour-attestation-flotte').innerHTML = '<div class="msg msg-erreur">Le nom est obligatoire.</div>';
     return;
   }
-  const dateNaissance = dateNaissanceISO ? dateNaissanceISO.split('-').reverse().join('/') : '';
-
   $('btn-generer-attestation-flotte').disabled = true;
   $('retour-attestation-flotte').innerHTML = '<div class="msg msg-info">Génération en cours…</div>';
-  try {
-    const r = await posterVue({
-      action: 'flotte-generer-attestation',
-      code: codeValide,
-      numeroSerie: attestationSerieCourante,
-      nomComplet,
-      dateNaissance,
-    });
-    if (r.ok) {
-      if (window.CvdlRetours) CvdlRetours.action('attestation');
-      $('retour-attestation-flotte').innerHTML =
-        `<div class="msg msg-succes">Prête — <a href="${echapper(urlSure(r.url))}" target="_blank" rel="noopener" download="${echapper(r.nomFichier || 'Attestation de paiement.pdf')}">l'ouvrir ↗</a></div>`;
-    } else {
-      $('retour-attestation-flotte').innerHTML =
-        `<div class="msg msg-erreur">${echapper(r.erreur || 'Génération impossible.')}</div>`;
-    }
-  } catch (e) {
-    $('retour-attestation-flotte').innerHTML = '<div class="msg msg-erreur">Génération impossible — réessaie.</div>';
-  }
+  const r = await genererAttestation(a, nomComplet, isoVersDateFr(dateNaissanceISO));
+  $('retour-attestation-flotte').innerHTML = r.ok
+    ? `<div class="msg msg-succes">Prête — ${lienAttestation(r)}</div>`
+    : `<div class="msg msg-erreur">${echapper(r.erreur || 'Génération impossible.')}</div>`;
   $('btn-generer-attestation-flotte').disabled = false;
+  if (r.ok) rerendreFlotte();
+});
+// Depuis la fiche personne : avec les valeurs affichées (même pas encore enregistrées).
+$('personne-portail-attestation')?.addEventListener('click', async function () {
+  const a = appareilsCourants.find((x) => x.id === personnePortailIdCourant);
+  if (!a) return;
+  const val = (champ) =>
+    (document.querySelector(`#personne-portail-contenu [data-pp-champ="${champ}"]`) || {}).value || '';
+  const nomComplet = [val('prenom'), val('nom')]
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .join(' ');
+  const retour = $('retour-personne-portail');
+  if (!nomComplet) {
+    retour.innerHTML = '<div class="msg msg-erreur">Indiquez le prénom et le NOM de la personne.</div>';
+    return;
+  }
+  this.disabled = true;
+  retour.innerHTML = '<div class="msg msg-info">Génération de l’attestation…</div>';
+  const r = await genererAttestation(a, nomComplet, val('dateNaissance').trim());
+  this.disabled = false;
+  retour.innerHTML = r.ok
+    ? `<div class="msg msg-succes">Attestation prête — ${lienAttestation(r)}</div>`
+    : `<div class="msg msg-erreur">${echapper(r.erreur || 'Génération impossible.')}</div>`;
+  const champNumero = document.querySelector('#personne-portail-contenu [data-pp-champ="numeroAttestation"]');
+  if (r.ok && champNumero && !champNumero.value) champNumero.value = a.numeroAttestation;
 });
 
 async function chargerFlotte() {
   try {
-    // Listes de la structure (lieux de stockage, vendeurs, « orienté par »), rechargées à chaque
-    // ouverture pour voir ce qu'un collègue vient d'ajouter.
+    // Listes de la structure (lieux de stockage, vendeurs, « orienté par », modes de paiement),
+    // rechargées à chaque ouverture pour voir ce qu'un collègue vient d'ajouter.
     const rListes = await jsonpVue({ action: 'flotte-listes-perso', code: codeValide }).catch(() => null);
-    if (rListes && rListes.ok)
+    if (rListes && rListes.ok) {
       listesPersoFlottePortail = {
         lieux: rListes.lieux || [],
         vendeurs: rListes.vendeurs || [],
         orientations: rListes.orientations || [],
+        paiements: rListes.paiements || [],
       };
+      if (Array.isArray(rListes.typesPaiement)) typesPaiementCommuns = rListes.typesPaiement;
+    }
     await chargerAppareils();
   } catch (e) {
     $('zone-flotte').innerHTML = '<p class="msg msg-erreur">Chargement impossible — réessaie.</p>';

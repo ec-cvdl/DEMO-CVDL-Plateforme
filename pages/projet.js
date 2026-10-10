@@ -375,8 +375,10 @@ function render() {
     .forEach((b) => b.setAttribute('aria-selected', String(b.dataset.vue === P.vue)));
   $('pj-vue-planning').hidden = P.vue !== 'planning';
   $('pj-vue-journal').hidden = P.vue !== 'journal';
+  $('pj-vue-demarche').hidden = P.vue !== 'demarche';
   renderBarreDroite();
   if (P.vue === 'planning') renderPlanning();
+  else if (P.vue === 'demarche') window.DemarcheProjet.rendre($('pj-vue-demarche'), appel);
   else renderJournal();
 }
 
@@ -415,7 +417,8 @@ function renderBarreDroite() {
   }"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${
     P.pleineLargeur ? '<path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/>' : '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>'
   }</svg>${P.pleineLargeur ? 'Largeur limitée' : 'Pleine largeur'}</button>`;
-  if (P.vue === 'planning')
+  if (P.vue === 'demarche') z.innerHTML = largeur;
+  else if (P.vue === 'planning')
     z.innerHTML = `${largeur}<div class="pj-seg" role="group" aria-label="Échelle">${Object.keys(ZOOMS)
       .map(
         (k) =>
@@ -1131,6 +1134,7 @@ function htmlGroupe(g, date) {
 /* ════════════════ Évènements ════════════════ */
 
 function changerVue(vue) {
+  if (vue === 'demarche' && !P.peutModifier) return;
   P.vue = vue;
   history.replaceState(null, '', '#' + vue);
   render();
@@ -1270,6 +1274,18 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (e) {}
       P.jeton = '';
     }
+  }
+  // Démarche : journal privé de l'admin (projet-demarche.js), jamais affiché sans session admin.
+  if (P.peutModifier) {
+    const onglet = document.createElement('button');
+    onglet.type = 'button';
+    onglet.setAttribute('role', 'tab');
+    onglet.className = 'pj-pil pj-pil-prive';
+    onglet.dataset.vue = 'demarche';
+    onglet.innerHTML =
+      'Démarche <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="réservé à l’admin"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+    document.querySelector('.pj-onglets').appendChild(onglet);
+    if (ancre === 'demarche') P.vue = 'demarche';
   }
   P.edition = P.peutModifier && ancre === 'edition';
   if (ancre === 'edition') history.replaceState(null, '', '#' + P.vue);

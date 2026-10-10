@@ -59,7 +59,10 @@ async function verifierCodePortail(code) {
       let finChargement = () => {};
       if (embarquement) embarquement.afficher(new Promise((res) => (finChargement = res)));
       else $('voile-verification-precoce').style.display = 'flex';
-      if (!conseiller) await chargerTableauBordPortail(code);
+      if (!conseiller) {
+        await chargerTableauBordPortail(code);
+        if (await PenseBete.charger(code)) PenseBete.majCarte();
+      }
       $('voile-verification-precoce').style.display = 'none';
       $('etape-portail').hidden = false;
       $('btn-deconnexion-portail').hidden = false;
@@ -101,6 +104,13 @@ async function chargerTableauBordPortail(code) {
       $('message-contexte-portail').classList.toggle('urgent', r.messageContexte.type === 'urgent');
       $('message-contexte-portail').hidden = false;
     }
+    // La bande « À traiter » ouvre la fenêtre des notifications (notifications-portail.js).
+    window.NotificationsPortail?.brancherBande(
+      $('message-contexte-portail'),
+      $('texte-message-contexte'),
+      r.messageContexte,
+    );
+    window.NotificationsPortail?.recharger();
 
     const s = r.stats;
     const statsAffichees = [
@@ -496,6 +506,8 @@ try {
     });
   }
 } catch (e) {}
+
+PenseBete.brancherPortail();
 
 // « Retour » vers le choix structure / personne : seulement si l'espace bénéficiaires est ouvert
 // (fermé, portail.html renvoie ici).

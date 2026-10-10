@@ -57,6 +57,16 @@ function vueReglages() {
     })}
 
     ${sectionReglages({
+      ic: 'truck',
+      teinte: 'vert',
+      titre: 'Logistique',
+      desc: 'Chaque nouvelle commande traitée par l’équipe envoie un e-mail à cette adresse, avec le lien qui ouvre la commande dans l’espace Logistique (vérifier les quantités, saisir les numéros de série).',
+      corps: `<div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" id="rg-email-logistique" type="email" placeholder="logistique@exemple.org" value="${echapper(r.emailLogistique || '')}" style="flex:1;min-width:0"><button type="button" class="btn btn-primary" id="rg-email-logistique-enregistrer">Enregistrer</button></div>
+        <p class="rta-aide">${r.emailLogistique ? 'Notifications actives.' : 'Aucune adresse : la logistique n’est pas prévenue (les commandes restent visibles dans son espace).'} Un changement est signalé par e-mail à l’adresse des alertes.</p>
+        <p class="rta-aide">Accès : <a href="support.html" target="_blank" rel="noopener">support.html</a>, avec un compte Google de l’onglet Équipe (rôle « Logistique ») ou le mot de passe admin.</p>`,
+    })}
+
+    ${sectionReglages({
       ic: 'lien_externe',
       teinte: 'bleu',
       titre: 'Liens utiles',
@@ -181,6 +191,19 @@ async function enregistrerAdresseSite() {
   if (r.ok) {
     state.reglages.urlSite = urlSite;
     etat('Adresse enregistrée', 'succes');
+  } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
+}
+async function enregistrerEmailLogistique() {
+  const emailLogistique = $('rg-email-logistique').value.trim();
+  if (emailLogistique && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLogistique)) {
+    etat('Adresse e-mail invalide', 'erreur');
+    return;
+  }
+  const r = await poster({ action: 'reglages-set', emailLogistique });
+  if (r.ok) {
+    state.reglages.emailLogistique = emailLogistique;
+    etat('Adresse enregistrée', 'succes');
+    render();
   } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
 }
 async function enregistrerPerimetre() {
@@ -316,4 +339,5 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#rg-qte-enregistrer')) enregistrerQuantitesMax();
   if (e.target.closest('#rg-perimetre-enregistrer')) enregistrerPerimetre();
   if (e.target.closest('#rg-url-site-enregistrer')) enregistrerAdresseSite();
+  if (e.target.closest('#rg-email-logistique-enregistrer')) enregistrerEmailLogistique();
 });

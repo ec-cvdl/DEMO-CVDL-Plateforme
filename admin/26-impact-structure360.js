@@ -155,6 +155,7 @@ function vueStructure360() {
           </div>
           <div class="s3-actions">
             <button type="button" class="btn btn-secondary" data-structure-modifier="${s.id}">${icon('gear', 14)}Modifier</button>
+            <button type="button" class="btn btn-secondary" data-import-appareils="${s.id}">${icon('plus', 14)}Appareils déjà sur place</button>
             <button type="button" class="btn btn-secondary" data-rapport-structure="${s.id}">${icon('stats', 14)}Rapport d’impact</button>
             ${s.lienConvention ? `<a class="btn btn-secondary" href="${echapper(urlSure(s.lienConvention))}" target="_blank" rel="noopener">${icon('lien_externe', 14)}Convention</a>` : ''}
             <button type="button" class="btn btn-ghost btn-icon" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button>
@@ -353,6 +354,17 @@ function politiqueAffichee(s) {
   return !(s.bo || s.interne || s.esn);
 }
 document.addEventListener('click', (e) => {
+  const ia = e.target.closest('[data-import-appareils]');
+  if (ia) {
+    const s = state.structures.find((x) => x.id === parseInt(ia.dataset.importAppareils, 10));
+    if (s)
+      window.ImportAppareils.ouvrir({
+        structureId: s.id,
+        nomStructure: s.nom,
+        poster: (action, donnees) => poster(Object.assign({ action }, donnees)),
+      });
+    return;
+  }
   const r = e.target.closest('[data-rapport-structure]');
   if (r) {
     const s = state.structures.find((x) => x.id === parseInt(r.dataset.rapportStructure, 10));

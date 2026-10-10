@@ -114,7 +114,7 @@ document.addEventListener(
   'click',
   (e) => {
     const b = e.target.closest(
-      ':is(.rpd, .fc2) :is([data-changer-statut], [data-valider-preparation], [data-marquer-livree], [data-demander-validation])',
+      ':is(.rpd, .fc2) :is([data-changer-statut], [data-valider-preparation], [data-marquer-livree], [data-valider-logistique])',
     );
     if (!b) return;
     const ref = state.modal && state.modal.ref;

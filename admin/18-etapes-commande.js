@@ -89,24 +89,13 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
               contenu: liensRaccourcis('commande', false) || undefined,
             },
       );
-    t.push(
-      c.validationLogistiqueEnAttente
-        ? {
-            etat: 'cours',
-            titre: 'Validation par la logistique',
-            detail: 'Mail envoyé : la commande passera « Validée » quand la logistique aura cliqué.',
-            action: `<button type="button" class="et-lien" data-renvoyer-validation="${ref}">Renvoyer le mail</button>`,
-          }
-        : {
-            etat: t.some((x) => x.etat === 'cours') ? 'avenir' : 'cours',
-            titre: 'Validation par la logistique',
-            detail: 'Un lien est envoyé par mail à la logistique.',
-          },
-    );
-    bouton = c.validationLogistiqueEnAttente
-      ? ''
-      : `<button type="button" class="btn btn-primary et-principal" data-demander-validation="${ref}">Envoyer à la logistique</button>`;
-    if (c.validationLogistiqueEnAttente) note = 'En attente de la validation logistique.';
+    t.push({
+      etat: t.some((x) => x.etat === 'cours') ? 'avenir' : 'cours',
+      titre: 'Validation par la logistique',
+      detail: 'Prévenue par e-mail à l’arrivée de la commande, elle vérifie les quantités dans son espace.',
+      action: `<a class="et-lien" href="support.html#commande=${encodeURIComponent(c.reference)}" target="_blank" rel="noopener">Ouvrir dans l’espace Logistique ↗</a>`,
+    });
+    bouton = `<button type="button" class="btn btn-primary et-principal" data-valider-logistique="${ref}">Valider (quantités inchangées)</button>`;
   } else if (c.statutCommande === 'Validée') {
     titre = 'Préparer la commande';
     const noteLog = extraireNoteLogistique(c.commentaire);
@@ -452,14 +441,19 @@ function extraireNoteLogistique(commentaire) {
   };
 }
 
-async function demanderValidationCommande(ref) {
+/** Valide la commande à la place de la logistique, sans changer les quantités (pour les
+ *  ajuster : l'espace Logistique). */
+async function validerCommandeLogistique(ref) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;
   try {
-    const r = await posterEtat({ action: 'demander-validation-logistique', id: c.id }, 'Envoi…', 'Demande envoyée');
+    const r = await posterEtat(
+      { action: 'logistique-valider', id: c.id, quantites: (c.lignes || []).map((l) => l.quantite) },
+      'Validation…',
+      'Commande validée',
+    );
     if (r.ok) {
-      c.validationLogistiqueEnAttente = !r.valideDirectement;
-      if (r.valideDirectement) c.statutCommande = 'Validée';
+      c.statutCommande = 'Validée';
       render();
     }
   } catch (e) {}

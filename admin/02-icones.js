@@ -182,22 +182,6 @@ function icon(name, size) {
   }
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${ICONES[name] || ICONES.package}</svg>`;
 }
-/**
- * Ouvre un document généré dans un nouvel onglet. Un lien data: ouvert directement est
- * bloqué par les navigateurs : on le convertit en Blob. Un vrai lien s'ouvre tel quel.
- */
-function ouvrirDocumentGenere(url) {
-  const correspondance = String(url || '').match(/^data:([^;]+);[^,]*base64,(.+)$/s);
-  if (correspondance) {
-    const octets = atob(correspondance[2]);
-    const tampon = new Uint8Array(octets.length);
-    for (let i = 0; i < octets.length; i++) tampon[i] = octets.charCodeAt(i);
-    const blob = new Blob([tampon], { type: correspondance[1] });
-    window.open(URL.createObjectURL(blob), '_blank');
-  } else {
-    window.open(url, '_blank', 'noopener');
-  }
-}
 /** Transforme un bloc de liens (un par ligne) en pilules cliquables, avec l'icône "lien
  *  externe" — même traitement que dans le suivi de commande public, pour rester cohérent.
  *  `libelles` est soit un libellé unique (répété), soit un tableau (un par lien, ex. noms des

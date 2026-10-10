@@ -494,6 +494,7 @@ async function verifierCode() {
       sessionStorage.setItem('cvdl-code-structure', code);
     } catch (e) {}
     construireGrilleProduits();
+    PenseBete.charger(code).then(() => construireGrilleProduits());
     indexEtapeActuelle = etapesActives().indexOf('1');
     afficherEtape();
     $('btn-suivant').disabled = false;
@@ -594,6 +595,7 @@ function formaterPrixProduit(valeur) {
 }
 function construireGrilleProduits() {
   const zone = $('grille-produits');
+  const notes = PenseBete.notes();
   if (!etat.produits.length) {
     zone.innerHTML =
       '<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucun produit disponible pour le moment.</div>';
@@ -614,9 +616,29 @@ function construireGrilleProduits() {
       <div class="nom-produit">${echapper(p.nom)}</div>
       <div class="spec-produit">${dispo ? echapper(spec || 'Disponible') : echapper(p.messageRupture || 'Indisponible')}</div>
       ${prixAffiche ? `<div class="prix-produit">${prixAffiche}</div>` : ''}
+      ${notes[p.nom] ? `<span class="pb-note" title="Noté dans votre pense-bête">noté : ${notes[p.nom]}</span>` : ''}
     </div>`;
     })
     .join('');
+  majPenseBete();
+}
+/* Pense-bête (pense-bete.js) : pastille dans la barre du haut, à toutes les étapes. */
+function majPenseBete() {
+  PenseBete.pastille(etat.selection, reprendrePenseBete);
+}
+/** Met dans la commande tout ce qui a été noté (dans la limite de chaque produit). */
+function reprendrePenseBete(notes) {
+  Object.entries(notes).forEach(([nom, q]) => {
+    const p = etat.produits.find((x) => x.nom === nom);
+    if (!p || p.disponible === false) return;
+    const m = maxPourProduit(nom);
+    etat.selection[nom] = Math.max(etat.selection[nom] || 0, Number.isFinite(m) ? Math.min(q, m) : q);
+  });
+  construireGrilleProduits();
+  construireEtapeQuantites();
+  construireZonePersonnesBo();
+  construireRecap();
+  majBoutonSuivant();
 }
 $('grille-produits').addEventListener('click', (e) => {
   const carte = e.target.closest('[data-produit]');
@@ -691,6 +713,7 @@ function construireEtapeQuantites() {
   $('toggle-urgent').checked = etat.urgent;
   $('bloc-urgent').classList.toggle('urgent-actif', etat.urgent);
   if (typeof majBoutonSuivant === 'function' && etapesActives()[indexEtapeActuelle] === 'quantites') majBoutonSuivant();
+  majPenseBete();
 }
 $('zone-quantites').addEventListener('click', (e) => {
   const inc = e.target.closest('[data-inc]');
@@ -1072,6 +1095,11 @@ async function envoyerCommande() {
       $('pied-etape').hidden = true;
       $('ecran-confirmation').hidden = false;
       $('confirmation-ref').textContent = r.reference || '';
+      // Ce qui vient d'être commandé est sorti du pense-bête (côté serveur).
+      if (Object.keys(etat.selection).some((nom) => PenseBete.notes()[nom])) {
+        $('confirmation-pense-bete').hidden = false;
+        PenseBete.charger(etat.code).then(majPenseBete);
+      }
       // Première commande sur cet appareil : passage par le petit tutoriel du portail, puis la
       // commande ; ensuite, lien direct vers la commande dans le suivi.
       (function () {

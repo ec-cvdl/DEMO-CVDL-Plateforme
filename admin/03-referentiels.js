@@ -86,6 +86,8 @@ const TYPE_COLORS = {
   ESN: { bg: 'var(--color-accent-100)', fg: 'var(--color-accent-700)' },
   'Vente solidaire': { bg: 'var(--color-neutral-200)', fg: 'var(--color-neutral-700)' },
   Projets: { bg: 'var(--color-accent-2-100)', fg: 'var(--color-accent-2-700)' },
+  // Structure sans type (à trancher à la main).
+  Standard: { bg: 'var(--color-neutral-100)', fg: 'var(--color-neutral-600)' },
 };
 const LIBELLES_TYPE = {
   rn: 'Relais Numérique',

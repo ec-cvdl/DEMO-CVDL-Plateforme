@@ -143,29 +143,6 @@ document.addEventListener('change', (e) => {
     return;
   }
 });
-/**
- * Import CSV tec.tech : numéro de série en colonne G (7e), à partir de la 2e ligne.
- * Gère les champs entre guillemets et les séparateurs « , » et « ; ».
- */
-function parserLigneCsv(ligne, separateur) {
-  const champs = [];
-  let champ = '',
-    dansGuillemets = false;
-  for (let i = 0; i < ligne.length; i++) {
-    const car = ligne[i];
-    if (car === '"') {
-      if (dansGuillemets && ligne[i + 1] === '"') {
-        champ += '"';
-        i++;
-      } else dansGuillemets = !dansGuillemets;
-    } else if (car === separateur && !dansGuillemets) {
-      champs.push(champ);
-      champ = '';
-    } else champ += car;
-  }
-  champs.push(champ);
-  return champs.map((c) => c.trim());
-}
 /* Saisie « un appareil = une ligne » : le champ #pn-series (source envoyée au serveur) est
    reconstruit à partir des lignes ; l'import CSV remplit les lignes dans l'ordre. */
 function synchroSeriesDepuisLignes() {
@@ -202,97 +179,19 @@ document.addEventListener('keydown', (e) => {
     if (b) b.focus();
   }
 });
-/* ── Import CSV tec.tech : chaque numéro va sur la ligne du BON produit ──
-   Export réel (26/09/2026) : ID, Type de matériel, …, Numero de serie (G), IMEI 1, IMEI 2, …,
-   Modèle, Marque, …, Catégorie, … — tout est lu par nom d'en-tête.
-   Les fiches produit portent leur « Type tec.tech » (ORDINATEUR_PORTABLE, SMARTPHONE…) et leur
-   « Catégorie tec.tech » (PREMIUM, A…D). Pour chaque numéro du CSV, on connaît son type et sa
-   catégorie : par les colonnes du CSV si elles existent (en-têtes reconnus), sinon en
-   interrogeant tec.tech. Placement : type + catégorie identiques, puis type seul, puis (si
-   rien n'est configuré sur le produit) dans l'ordre. Ce qui ne correspond à rien est signalé. */
-const normTT = (v) =>
-  String(v || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '_')
-    .replace(/^_|_$/g, '');
-function typeTecTech(v) {
-  const n = normTT(v);
-  if (!n) return '';
-  if (/PORTABLE|LAPTOP|NOTEBOOK/.test(n)) return 'ORDINATEUR_PORTABLE';
-  if (/FIXE|DESKTOP|UNITE_CENTRALE|TOUR/.test(n)) return 'ORDINATEUR_FIXE';
-  if (/SMARTPHONE|TELEPHONE|MOBILE/.test(n)) return 'SMARTPHONE';
-  if (/TABLETTE|TABLET/.test(n)) return 'TABLETTE';
-  return n;
-}
-function categorieTecTech(v) {
-  const n = normTT(v);
-  if (!n) return '';
-  if (/PREMIUM/.test(n)) return 'PREMIUM';
-  const m = n.match(/(?:^|_)(?:CAT(?:EGORIE)?|GRADE)?_?([A-D])$/);
-  return m ? m[1] : n;
-}
-function lireCsvTecTech(texte) {
-  const lignes = String(texte || '')
-    .split(/\r?\n/)
-    .filter((l) => l.trim());
-  if (lignes.length < 2) return null;
-  const sep = lignes[0].includes(';') ? ';' : ',';
-  const entetes = parserLigneCsv(lignes[0], sep).map(normTT);
-  const col = (motifs) => entetes.findIndex((h) => motifs.some((m) => m.test(h)));
-  const iSerie = (() => {
-    const k = col([/NUMERO_?DE_?SERIE/, /^N_?SERIE/, /SERIAL/, /^SN$/]);
-    return k >= 0 ? k : 6;
-  })(); // défaut : colonne G
-  const iType = col([/TYPE_?(DE_?)?MATERIEL/, /^TYPE$/]);
-  const iCat = col([/CATEGORIE/, /GRADE/]);
-  const iMarque = col([/MARQUE/, /BRAND/]);
-  const iModele = col([/MODELE/, /MODEL/]);
-  const iImei = col([/^IMEI_?1$/, /^IMEI$/]); // smartphones sans n° de série : l'IMEI 1 en tient lieu
-  return lignes
-    .slice(1)
-    .map((l) => {
-      const c = parserLigneCsv(l, sep);
-      return {
-        numeroSerie: (c[iSerie] || '').trim() || (iImei >= 0 ? (c[iImei] || '').trim() : ''),
-        type: iType >= 0 ? typeTecTech(c[iType]) : '',
-        categorie: iCat >= 0 ? categorieTecTech(c[iCat]) : '',
-        marque: iMarque >= 0 ? c[iMarque] || '' : '',
-        modele: iModele >= 0 ? c[iModele] || '' : '',
-      };
-    })
-    .filter((x) => x.numeroSerie);
-}
-/** Place les appareils du CSV sur les lignes vides, produit par produit. Renvoie le bilan. */
+/* ── Import CSV tec.tech : chaque numéro va sur la ligne du BON produit (tectech-csv.js) ── */
+/** Place les appareils du CSV sur les lignes vides de la préparation. Renvoie le bilan. */
 function placerSeriesParProduit(c, appareils) {
   const champs = [...document.querySelectorAll('[data-serie-index]')];
-  const unites = unitesSeriePersonnes(c);
-  const deja = new Set(champs.map((x) => x.value.trim()).filter(Boolean));
-  const restants = appareils.filter((a) => !deja.has(a.numeroSerie));
-  const places = [],
-    pris = new Set();
-  const produitDe = (i) => state.produits.find((p) => p.nom === (unites[i] || {}).produit) || {};
-  const tenter = (critere) =>
-    champs.forEach((ch, i) => {
-      if (ch.value.trim()) return;
-      const p = produitDe(i);
-      const a = restants.find((x) => !pris.has(x.numeroSerie) && critere(p, x));
-      if (a) {
-        ch.value = a.numeroSerie;
-        pris.add(a.numeroSerie);
-        places.push({ ...a, produit: (unites[i] || {}).produit });
-      }
-    });
-  const tt = (p) => typeTecTech(p.tectechType),
-    ct = (p) => categorieTecTech(p.tectechCategorie);
-  tenter((p, a) => tt(p) && a.type && tt(p) === a.type && ct(p) && a.categorie && ct(p) === a.categorie); // type + catégorie
-  tenter((p, a) => tt(p) && a.type && tt(p) === a.type && (!ct(p) || !a.categorie)); // type seul (catégorie inconnue)
-  tenter((p, a) => !tt(p) && !a.type); // rien de configuré : dans l'ordre
-  tenter((p, a) => !a.type); // type inconnu (tec.tech indisponible) : dans l'ordre
-  const nonPlaces = restants.filter((a) => !pris.has(a.numeroSerie));
+  const bilan = placerSeriesCsv(
+    unitesSeriePersonnes(c),
+    champs.map((x) => x.value),
+    appareils,
+    (nom) => state.produits.find((p) => p.nom === nom),
+  );
+  champs.forEach((ch, i) => (ch.value = bilan.valeurs[i] || ''));
   synchroSeriesDepuisLignes();
-  return { places, nonPlaces, lignesVides: champs.filter((x) => !x.value.trim()).length };
+  return bilan;
 }
 function importerCsvSeries(fichier) {
   if (!fichier) return;
@@ -317,26 +216,8 @@ function importerCsvSeries(fichier) {
       );
       return;
     }
-    // Type / catégorie absents du CSV : demandés à tec.tech (un seul appel groupé).
-    const aCompleter = appareils.filter((a) => !a.type);
-    if (aCompleter.length) {
-      etat('Recherche des appareils chez tec.tech…', 'chargement');
-      try {
-        const r = await poster({ action: 'tectech-classer-series', numeros: aCompleter.map((a) => a.numeroSerie) });
-        if (r && r.ok)
-          r.resultats.forEach((x) => {
-            const a = appareils.find((y) => y.numeroSerie === x.numeroSerie);
-            if (a) {
-              a.type = typeTecTech(x.type);
-              a.categorie = a.categorie || categorieTecTech(x.categorie);
-              a.marque = a.marque || x.marque;
-              a.modele = a.modele || x.modele;
-            }
-          });
-      } catch (e) {
-        /* tec.tech indisponible : placement dans l'ordre pour ce qui n'est pas typé */
-      }
-    }
+    if (appareils.some((a) => !a.type)) etat('Recherche des appareils chez tec.tech…', 'chargement');
+    await completerParTecTech(appareils, (numeros) => poster({ action: 'tectech-classer-series', numeros }));
     const bilan = placerSeriesParProduit(c, appareils);
     const n = bilan.places.length;
     const hors = bilan.nonPlaces.length
@@ -357,10 +238,7 @@ function importerCsvSeries(fichier) {
       z.innerHTML = bilan.nonPlaces.length
         ? `<div class="msg msg-warn">${bilan.nonPlaces.length} numéro${bilan.nonPlaces.length > 1 ? 's' : ''} du CSV ne correspond${bilan.nonPlaces.length > 1 ? 'ent' : ''} à aucune ligne restante : ${bilan.nonPlaces
             .slice(0, 8)
-            .map(
-              (a) =>
-                `${echapper(a.numeroSerie)}${a.type ? ` (${echapper([a.type.replace(/_/g, ' ').toLowerCase(), a.categorie].filter(Boolean).join(' · '))})` : ''}`,
-            )
+            .map((a) => echapper(libelleNonPlace(a)))
             .join(
               ', ',
             )}${bilan.nonPlaces.length > 8 ? '…' : ''}. Vérifiez le Type / la Catégorie tec.tech des fiches produit.</div>`

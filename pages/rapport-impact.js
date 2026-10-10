@@ -41,7 +41,9 @@ function rendre() {
   const unique = !!ref;
   $('ri-portee').textContent = unique
     ? `Rapport d’impact · commande ${ref}`
-    : 'Rapport d’impact · toutes les commandes';
+    : periode
+      ? `Rapport d’impact · année ${periode}`
+      : 'Rapport d’impact · toutes les commandes';
   $('ri-titre').textContent = donnees.nomStructure;
   const aujourdhui = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
   $('ri-sous').textContent = unique
@@ -145,6 +147,9 @@ async function charger() {
     if (!r.ok) throw new Error(r.erreur || 'Erreur');
     donnees = r;
     const annees = [...new Set(r.commandes.map((c) => c.annee).filter(Boolean))].sort().reverse();
+    // Année en cours par défaut (si elle a des commandes livrées), « Tout » sinon.
+    const enCours = String(new Date().getFullYear());
+    if (!ref && annees.includes(enCours)) periode = enCours;
     if (!ref && annees.length > 1) {
       $('ri-periodes').hidden = false;
       $('ri-periodes').innerHTML = [
@@ -168,4 +173,27 @@ document.addEventListener('click', (e) => {
   }
 });
 $('ri-imprimer').addEventListener('click', () => window.print());
+// Image PNG du rapport (réseaux sociaux, présentations) : le rapport tel qu'affiché, en haute
+// définition (html-to-image.min.js).
+$('ri-image').addEventListener('click', async function () {
+  this.disabled = true;
+  const texte = this.textContent;
+  this.textContent = 'Préparation de l’image…';
+  try {
+    const url = await htmlToImage.toPng($('ri-page'), { pixelRatio: 2, backgroundColor: '#ffffff' });
+    const lien = document.createElement('a');
+    const nom = String(donnees.nomStructure || 'structure')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^\w]+/g, '-')
+      .replace(/^-|-$/g, '');
+    lien.href = url;
+    lien.download = `Bilan-impact-${nom}-${ref || periode || 'tout'}.png`;
+    lien.click();
+  } catch (e) {
+    alerteCvdl('L’image n’a pas pu être créée : utilisez « Imprimer / enregistrer en PDF ».');
+  }
+  this.textContent = texte;
+  this.disabled = false;
+});
 charger();

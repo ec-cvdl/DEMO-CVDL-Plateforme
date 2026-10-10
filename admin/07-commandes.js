@@ -315,7 +315,7 @@ document.addEventListener('drop', (e) => {
   const idxCible = ORDER_STATUSES.indexOf(zone.dataset.kanbanColonne);
   if (idxCible === idxActuel) return; // déposée dans sa colonne d'origine, rien à faire
   if (zone.dataset.kanbanColonne === 'Validée') {
-    etat('Le passage à "Validée" se fait uniquement via la validation logistique (ouvre la fiche).', 'erreur');
+    etat('Le passage à « Validée » se fait par la logistique, ou depuis la fiche de la commande.', 'erreur');
     return;
   }
   if (idxCible !== idxActuel + 1) {
