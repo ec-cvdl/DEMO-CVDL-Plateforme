@@ -12,7 +12,7 @@ function moisCourantIso(decalage = 0) {
 async function chargerFacturesMensuelles(mois) {
   factMens = { mois: mois || factMens.mois || moisCourantIso(-1), chargement: true, donnees: null };
   render();
-  const r = await jsonp({ action: 'factures-mensuelles-apercu', password: motDePasse, mois: factMens.mois });
+  const r = await lireApi({ action: 'factures-mensuelles-apercu', mois: factMens.mois });
   factMens.chargement = false;
   factMens.donnees = r;
   if (state.modal && state.modal.kind === 'factures-mensuelles') render();
@@ -96,7 +96,7 @@ document.addEventListener('click', async (e) => {
     const echecs = (r.resultats || []).filter((x) => !x.ok).map((x) => `${x.nom} : ${x.erreur}`);
     afficherErreurModale(echecs.length ? echecs.join(' · ') : r.erreur);
   }
-  const rf = await jsonp({ action: 'factures', password: motDePasse, limite: 0 });
+  const rf = await lireApi({ action: 'factures', limite: 0 });
   if (rf.ok) state.factures = rf.factures;
   chargerFacturesMensuelles(factMens.mois);
 });
@@ -136,25 +136,6 @@ const CATEGORIES_STRUCTURE = [
   'Entreprise privée',
   'Association',
   'Structure sociale',
-];
-/** Régions analytiques (territoires EC) — rattachement d'une structure pour ventiler l'activité.
- *  Liste à ajuster ici si besoin ; une valeur déjà enregistrée hors liste reste affichée. */
-const REGIONS_ANALYTIQUE = [
-  'Auvergne-Rhône-Alpes',
-  'Bourgogne-Franche-Comté',
-  'Bretagne',
-  'Centre-Val de Loire',
-  'Corse',
-  'Grand Est',
-  'Hauts-de-France',
-  'Île-de-France',
-  'Normandie',
-  'Nouvelle-Aquitaine',
-  'Occitanie',
-  'Pays de la Loire',
-  'Provence-Alpes-Côte d’Azur',
-  'Outre-mer',
-  'National',
 ];
 /** Sépare la valeur "Prénom NOM" stockée en base (un seul champ côté back) en deux morceaux
  *  pour préremplir les deux champs du formulaire — repère le NOM via la même convention que

@@ -8,7 +8,7 @@
    ════════════════════════════════════════════════════════════════════════════════════ */
 async function chargerDepotVente() {
   try {
-    const r = await jsonp({ action: 'depot-vente-etat', password: motDePasse });
+    const r = await lireApi({ action: 'depot-vente-etat' });
     if (r && r.ok) {
       state.depotVente = r.structures || [];
       if (!state.modal || state.modal.kind !== 'creer-structure') render();
@@ -94,7 +94,7 @@ function msbActif() {
 }
 async function chargerModeStockBas() {
   try {
-    const r = await jsonp({ action: 'mode-stock-bas', password: motDePasse });
+    const r = await lireApi({ action: 'mode-stock-bas' });
     if (r && r.ok) {
       state.modeStockBas = r.mode;
       if (state.activeTab === 'stock' && !state.modal) render();
@@ -241,7 +241,7 @@ async function ouvrirStockRestreint(code) {
   };
   render();
   try {
-    const r = await jsonp({ action: 'depot-vente-limites', password: motDePasse, code });
+    const r = await lireApi({ action: 'depot-vente-limites', code });
     if (state.modal && state.modal.kind === 'stock-restreint') {
       if (r && r.ok) {
         state.modal.limites = JSON.parse(JSON.stringify(r.limites));
@@ -406,7 +406,7 @@ async function ouvrirFlotteStructure(code, modalParent) {
   state.modal = { kind: 'flotte-structure', ref: code, chargement: true, modalParent: modalParent || null };
   render();
   try {
-    await jsonp({ action: 'flotte-lister-admin', password: motDePasse, code, synchroniser: 'oui' });
+    await lireApi({ action: 'flotte-lister-admin', code, synchroniser: 'oui' });
   } catch (e) {
     /* la page se charge quand même */
   }

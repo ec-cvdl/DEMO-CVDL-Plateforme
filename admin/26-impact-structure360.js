@@ -18,10 +18,7 @@ function coefficientsImpact() {
   }
 }
 function nbPersonnesCommande(c) {
-  return String(c.personnes || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean).length;
+  return (c.personnes || []).length;
 }
 /** Impact d'un ensemble de commandes (seules les commandes livrées comptent). */
 function calculImpact(commandes) {
@@ -148,13 +145,18 @@ function vueStructure360() {
         <header class="s3-tete">
           <span data-ill="structures" class="ill xl"></span>
           <div class="s3-tete-txt">
-            <div class="rp-surtitre">Structure · ${echapper(typeAChoisir(s) ? 'type à définir' : type)}${s.structurePartenaireDe ? ' · partenaire d’une Interne' : ''}</div>
+            <div class="rp-surtitre">Structure · ${echapper(typeAChoisir(s) ? 'type à définir' : type)}${s.structurePartenaireDe ? ' · partenaire d’une Interne' : ''}${s.ponctuelle ? ' · sans portail' : ''}</div>
             <h2 id="s3-titre">${echapper(s.nom)}</h2>
             <div class="s3-contact">${[s.email, s.telephone || s.tel, s.adresse].filter(Boolean).map(echapper).join(' · ')}</div>
             ${s.siret || s.region ? `<div class="s3-contact">${[s.siret ? 'SIRET ' + s.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4') : '', s.region ? 'Région : ' + s.region : ''].filter(Boolean).map(echapper).join(' · ')}</div>` : ''}
           </div>
           <div class="s3-actions">
             <button type="button" class="btn btn-secondary" data-structure-modifier="${s.id}">${icon('gear', 14)}Modifier</button>
+            ${
+              s.ponctuelle
+                ? `<button type="button" class="btn btn-primary" data-structure-transformer="${s.id}">${icon('key', 14)}Transformer en structure avec portail</button>`
+                : `<button type="button" class="btn btn-secondary" data-structure-sans-portail="${s.id}" title="Son code sera refusé au portail ; tout reste suivi dans l’admin">${icon('key', 14)}Retirer le portail</button>`
+            }
             <button type="button" class="btn btn-secondary" data-import-appareils="${s.id}">${icon('plus', 14)}Appareils déjà sur place</button>
             <button type="button" class="btn btn-secondary" data-rapport-structure="${s.id}">${icon('stats', 14)}Rapport d’impact</button>
             ${s.lienConvention ? `<a class="btn btn-secondary" href="${echapper(urlSure(s.lienConvention))}" target="_blank" rel="noopener">${icon('lien_externe', 14)}Convention</a>` : ''}
@@ -186,7 +188,16 @@ function vueStructure360() {
             : ''
         }
         ${type === 'Interne' || s.type === 'interne' ? blocProjetsStructure360(s) : ''}
+        ${blocTransfertsStructure360(s)}
         <div class="s3-grille">
+          ${
+            s.type === 'interne'
+              ? ''
+              : `<section class="s3-bloc s3-large">
+            <div class="s3-bloc-tete"><span data-ill="personne" class="ill s"></span><h3>Personnes qui se connectent</h3></div>
+            <div data-pst-structure="${s.id}"></div>
+          </section>`
+          }
           <section class="s3-bloc s3-large">
             <div class="s3-bloc-tete"><span data-ill="commandes" class="ill s"></span><h3>Commandes</h3><span>${commandes.length}</span></div>
             ${
@@ -272,7 +283,7 @@ function projetsStructureAdmin(code) {
   const c = cacheProjetsStructures[code];
   if (c && (c.donnees || c.enCours)) return c.donnees || null;
   cacheProjetsStructures[code] = { enCours: true };
-  jsonp({ action: 'projets-structure-admin', password: motDePasse, code })
+  lireApi({ action: 'projets-structure-admin', code })
     .then((r) => {
       cacheProjetsStructures[code] = { donnees: r && r.ok ? r : { projets: [], remisSansProjet: 0 } };
       if (state.modal && state.modal.kind === 'structure-360') render();
@@ -326,7 +337,7 @@ function impactServeurStructure(code) {
   if (c && c.donnees) return c.donnees;
   if (!c) {
     cacheImpactStructures[code] = { enCours: true };
-    jsonp({ action: 'rapport-impact-par-code', code })
+    lireApi({ action: 'rapport-impact-par-code', code })
       .then((r) => {
         if (!r || !r.ok) {
           cacheImpactStructures[code] = { donnees: null, echec: true };
@@ -393,7 +404,7 @@ document.addEventListener('click', (e) => {
   }
   const s3 = e.target.closest('[data-structure-vue]');
   if (s3 && s3.classList.contains('lien-structure')) e.stopPropagation();
-  if (s3 && !e.target.closest('[data-reveal-code], [data-structure-modifier]')) {
+  if (s3 && !e.target.closest('[data-reveal-code], [data-copier-code], [data-structure-modifier]')) {
     state.modal = {
       kind: 'structure-360',
       id: parseInt(s3.dataset.structureVue, 10),
@@ -406,8 +417,38 @@ document.addEventListener('click', (e) => {
 /* Échap : ferme la dernière modale ouverte (la précédente reste affichée). */
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !state.modal || document.querySelector('.cvdl-conf-voile')) return;
-  state.modal = state.modal.modalParent || null;
-  state.ncLignes = [];
-  state.ndLignes = [];
+  fermerModale();
+});
+
+/* Structure sans portail (livraison ponctuelle) : la transformer (assistant de modification,
+   contacts et nouveau code exigés), ou retirer le portail d'une structure. */
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-structure-transformer]');
+  if (t) {
+    state.modal = {
+      kind: 'creer-structure',
+      id: Number(t.dataset.structureTransformer),
+      transformer: true,
+      modalParent: modalParentPour('creer-structure'),
+    };
+    render();
+    return;
+  }
+  const b = e.target.closest('[data-structure-sans-portail]');
+  if (!b) return;
+  const ok = await confirmerCvdl(
+    'Retirer le portail de cette structure ?\n\nSon code sera refusé : plus personne ne pourra ouvrir son espace. Commandes, flotte et statistiques restent dans l’admin.',
+  );
+  if (!ok) return;
+  b.disabled = true;
+  const r = await poster({ action: 'structure-espace', id: Number(b.dataset.structureSansPortail), ouvert: false });
+  if (!r || !r.ok) {
+    b.disabled = false;
+    etat((r && r.erreur) || 'Enregistrement impossible.', 'erreur');
+    return;
+  }
+  const rst = await lireApi({ action: 'structures' });
+  if (rst.ok) state.structures = rst.structures.slice().sort((a, x) => x.id - a.id);
+  etat('Portail retiré', 'succes');
   render();
 });

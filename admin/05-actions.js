@@ -50,20 +50,6 @@ document.addEventListener('input', (e) => {
     e.target.setSelectionRange(position, position);
     return;
   }
-  if (e.target.matches && e.target.matches('[data-serie-index]')) {
-    synchroSeriesDepuisLignes();
-    return;
-  }
-  if (e.target.id === 'pn-series') {
-    const attendu = parseInt(e.target.dataset.quantiteAttendue, 10) || 0;
-    const n = e.target.value
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean).length;
-    const compteur = $('pn-series-compteur');
-    if (compteur) compteur.textContent = `${n}/${attendu} saisi${n > 1 ? 's' : ''}`;
-    return;
-  }
   const cle = CHAMPS_RECHERCHE[e.target.id];
   if (!cle) return;
   state[cle] = e.target.value;
@@ -88,10 +74,6 @@ document.addEventListener('change', (e) => {
       el.dataset.champ,
       el.type === 'checkbox' ? el.checked : el.value,
     );
-    return;
-  }
-  if (e.target.id === 'pn-series-csv') {
-    importerCsvSeries(e.target.files[0]);
     return;
   }
   if (e.target.id === 'nc-code') {
@@ -143,109 +125,6 @@ document.addEventListener('change', (e) => {
     return;
   }
 });
-/* Saisie « un appareil = une ligne » : le champ #pn-series (source envoyée au serveur) est
-   reconstruit à partir des lignes ; l'import CSV remplit les lignes dans l'ordre. */
-function synchroSeriesDepuisLignes() {
-  const champs = [...document.querySelectorAll('[data-serie-index]')];
-  const zone = $('pn-series');
-  if (!zone || !champs.length) return;
-  zone.value = champs
-    .map((x) => x.value.trim())
-    .join('\n')
-    .replace(/\n+$/, '');
-  const prets = champs.filter((x) => x.value.trim()).length;
-  champs.forEach((x) => x.closest('.ul-ligne').classList.toggle('ok', !!x.value.trim()));
-  const compteur = $('pn-series-compteur');
-  const total = champs.length;
-  if (compteur) compteur.textContent = `${prets} / ${total} prêt${prets > 1 ? 's' : ''}`;
-  const barre = $('ul-barre');
-  if (barre) barre.style.width = `${total ? Math.round((prets / total) * 100) : 0}%`;
-  // Enregistrement automatique dès que toutes les lignes sont remplies (plus de bouton « Confirmer »).
-  clearTimeout(synchroSeriesDepuisLignes.t);
-  if (total && prets === total && zone.dataset.ref) {
-    const c = state.commandes.find((x) => x.reference === zone.dataset.ref);
-    if (c && zone.value !== String(c.numerosSerie || '').replace(/\n+$/, ''))
-      synchroSeriesDepuisLignes.t = setTimeout(() => confirmerSeriesCommande(zone.dataset.ref), 700);
-  }
-}
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter' || !e.target.matches || !e.target.matches('[data-serie-index]')) return;
-  e.preventDefault();
-  const champs = [...document.querySelectorAll('[data-serie-index]')];
-  const suivant = champs[champs.indexOf(e.target) + 1];
-  if (suivant) suivant.focus();
-  else {
-    const b = document.querySelector('.et-principal');
-    if (b) b.focus();
-  }
-});
-/* ── Import CSV tec.tech : chaque numéro va sur la ligne du BON produit (tectech-csv.js) ── */
-/** Place les appareils du CSV sur les lignes vides de la préparation. Renvoie le bilan. */
-function placerSeriesParProduit(c, appareils) {
-  const champs = [...document.querySelectorAll('[data-serie-index]')];
-  const bilan = placerSeriesCsv(
-    unitesSeriePersonnes(c),
-    champs.map((x) => x.value),
-    appareils,
-    (nom) => state.produits.find((p) => p.nom === nom),
-  );
-  champs.forEach((ch, i) => (ch.value = bilan.valeurs[i] || ''));
-  synchroSeriesDepuisLignes();
-  return bilan;
-}
-function importerCsvSeries(fichier) {
-  if (!fichier) return;
-  const c = state.modal && state.commandes.find((x) => x.reference === state.modal.ref);
-  const lecteur = new FileReader();
-  lecteur.onload = async () => {
-    const appareils = lireCsvTecTech(lecteur.result);
-    if (!appareils) {
-      etat('CSV vide ou sans ligne de données (2ᵉ ligne).', 'erreur');
-      return;
-    }
-    if (!appareils.length) {
-      etat('Aucun numéro de série trouvé dans le CSV.', 'erreur');
-      return;
-    }
-    if (!c || !document.querySelector('[data-serie-index]')) {
-      const zone = $('pn-series');
-      if (zone) zone.value = appareils.map((a) => a.numeroSerie).join('\n');
-      etat(
-        `${appareils.length} numéro${appareils.length > 1 ? 's' : ''} importé${appareils.length > 1 ? 's' : ''}`,
-        'succes',
-      );
-      return;
-    }
-    if (appareils.some((a) => !a.type)) etat('Recherche des appareils chez tec.tech…', 'chargement');
-    await completerParTecTech(appareils, (numeros) => poster({ action: 'tectech-classer-series', numeros }));
-    const bilan = placerSeriesParProduit(c, appareils);
-    const n = bilan.places.length;
-    const hors = bilan.nonPlaces.length
-      ? ` · ${bilan.nonPlaces.length} hors commande (${bilan.nonPlaces
-          .slice(0, 3)
-          .map((a) => a.numeroSerie)
-          .join(', ')}${bilan.nonPlaces.length > 3 ? '…' : ''})`
-      : '';
-    etat(
-      n
-        ? `${n} numéro${n > 1 ? 's' : ''} placé${n > 1 ? 's' : ''} sur le bon produit${hors}`
-        : 'Aucun numéro ne correspond aux produits de la commande',
-      n ? 'succes' : 'erreur',
-      hors ? 12000 : undefined,
-    );
-    const z = $('pn-erreur-series');
-    if (z)
-      z.innerHTML = bilan.nonPlaces.length
-        ? `<div class="msg msg-warn">${bilan.nonPlaces.length} numéro${bilan.nonPlaces.length > 1 ? 's' : ''} du CSV ne correspond${bilan.nonPlaces.length > 1 ? 'ent' : ''} à aucune ligne restante : ${bilan.nonPlaces
-            .slice(0, 8)
-            .map((a) => echapper(libelleNonPlace(a)))
-            .join(
-              ', ',
-            )}${bilan.nonPlaces.length > 8 ? '…' : ''}. Vérifiez le Type / la Catégorie tec.tech des fiches produit.</div>`
-        : '';
-  };
-  lecteur.readAsText(fichier);
-}
 /** Marquer livrée avec une date choisie explicitement — évite que le back complète tout seul
  *  la date du jour (il ne le fait que si le champ est vide, donc l'envoyer nous-mêmes suffit à
  *  éviter cet auto-remplissage). */
@@ -416,8 +295,8 @@ async function enregistrerRattachementDevis() {
     );
     if (r.ok) {
       const [rc, rd] = await Promise.all([
-        jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }),
-        jsonp({ action: 'devis', password: motDePasse, limite: 0 }),
+        lireApi({ action: 'list', limite: -1, filtre: 'tout' }),
+        lireApi({ action: 'devis', limite: 0 }),
       ]);
       if (rc.ok) state.commandes = rc.commandes;
       if (rd.ok) state.devis = rd.devis;

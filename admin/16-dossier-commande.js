@@ -29,7 +29,7 @@ function etatServeurCommande(c) {
   const entree = cacheEtatsCommandes[c.reference];
   if (!entree || (entree.sig !== sig && !entree.enCours)) {
     cacheEtatsCommandes[c.reference] = { sig, enCours: true, etat: entree ? entree.etat : null };
-    jsonp({ action: 'commande-etat', password: motDePasse, id: c.id })
+    lireApi({ action: 'commande-etat', id: c.id })
       .then((r) => {
         cacheEtatsCommandes[c.reference] = { sig, enCours: false, etat: r.ok ? r.etat : null };
         if (state.modal && state.modal.kind === 'commande' && state.modal.ref === c.reference) render();
@@ -87,18 +87,6 @@ document.addEventListener(
   },
   true,
 );
-document.addEventListener('change', (e) => {
-  const col = e.target.closest && e.target.closest('[data-auto-colissimo]');
-  if (col && col.value.trim()) {
-    confirmerColissimoPreparation(col.dataset.autoColissimo);
-    return;
-  }
-  const dc = e.target.closest && e.target.closest('[data-auto-date-cible]');
-  if (dc) {
-    state.etRouvrirDate = null;
-    enregistrerDateCibleCommande(dc.dataset.autoDateCible);
-  }
-});
 
 /** Petite animation quand on essaie d'avancer alors que des tâches du calepin ne sont pas faites. */
 function rappelCalepin() {
@@ -132,7 +120,7 @@ function historiqueCommande(c) {
   const entree = cacheHistoriqueCommandes[ref];
   if (!entree || (!entree.enCours && Date.now() - entree.t > 20000)) {
     cacheHistoriqueCommandes[ref] = { t: Date.now(), enCours: true, evenements: entree ? entree.evenements : null };
-    jsonp({ action: 'commande-historique', password: motDePasse, reference: ref })
+    lireApi({ action: 'commande-historique', reference: ref })
       .then((r) => {
         cacheHistoriqueCommandes[ref] = {
           t: Date.now(),
@@ -216,6 +204,11 @@ function vueDossierCommande(c) {
       s: 'Colissimo',
       lien: l,
     })),
+    c.moyenPaiement === 'Chèque'
+      ? c.numeroCheque
+        ? { cls: 'amb', ic: 'receipt', t: 'Chèque', s: `n° ${c.numeroCheque} · ${c.statutPaiement || 'Non payé'}` }
+        : { cls: 'amb', ic: 'receipt', t: 'Chèque', s: 'numéro non indiqué', vide: 1 }
+      : null,
     (c.lienPaiement || '').trim()
       ? { cls: 'mag', ic: 'receipt', t: 'Lien de paiement', s: c.paiementSepare ? 'un par personne' : 'envoyé' }
       : null,
@@ -274,22 +267,29 @@ function vueDossierCommande(c) {
   } else {
     panneau = carteEtapeCommande(c, statuts, manquants, serveur);
   }
+  // Commande d'une Interne : consigne « même modèle » et raison · structure concernée.
+  const destinationInterne = resumeDestinationCommande(c);
+  const consigneInterne =
+    c.homogene || destinationInterne || c.raisonDetail
+      ? `<div class="rpd-interne${c.homogene ? ' homogene' : ''}">${c.homogene ? `<b>Même modèle pour tous les ordinateurs${c.homogenePrecision ? ` : ${echapper(c.homogenePrecision)}` : ''}</b>` : ''}${destinationInterne || c.raisonDetail ? `<span>${echapper([destinationInterne, c.raisonDetail].filter(Boolean).join(' — '))}</span>` : ''}</div>`
+      : '';
   const enBref = `<div class="fc2-bref">
     <div class="fc2-k">En bref</div>
     <div class="fc2-bref-l"><span>Articles</span><b>${nbArticles} article${nbArticles > 1 ? 's' : ''}</b></div>
     ${(() => {
-      const n = String(c.numerosSerie || '')
-        .split('\n')
-        .filter((x) => x.trim()).length;
+      const n = (c.numerosSerie || []).length;
       const att = c.quantiteAvecNumeroSerie != null ? c.quantiteAvecNumeroSerie : n;
       return n || att
         ? `<div class="fc2-bref-l"><span>${c.dematerialisee ? 'Codes' : 'N° de série'}</span><b>${n} / ${Math.max(att, n)}${n ? ` · <button type="button" class="lien-structure" data-onglet-commande="commande">voir</button>` : ''}</b></div>`
         : '';
     })()}
-    ${c.moyenPaiement && !exempte ? `<div class="fc2-bref-l"><span>Paiement</span><b>${echapper(c.moyenPaiement)}${c.statutPaiement ? ` · <em class="${c.statutPaiement === 'Payé' ? 'ok' : 'ko'}">${echapper(c.statutPaiement)}</em>` : ''}</b></div>` : ''}
+    ${c.moyenPaiement && (!exempte || c.moyenPaiement === 'Chèque') ? `<div class="fc2-bref-l"><span>Paiement</span><b>${echapper(c.moyenPaiement)}${c.moyenPaiement === 'Chèque' && c.numeroCheque ? ` n° ${echapper(c.numeroCheque)}` : ''}${c.statutPaiement ? ` · <em class="${c.statutPaiement === 'Payé' ? 'ok' : 'ko'}">${echapper(c.statutPaiement)}</em>` : ''}</b></div>` : ''}
     ${montant != null && !exempte ? `<div class="fc2-bref-l"><span>Total</span><b>${formaterMontant(montant)}</b></div>` : ''}
     <div class="fc2-bref-l"><span>Livraison</span><b>${echapper(c.modeLivraison || 'à définir')}${urgente ? ' · <em class="ko">urgente</em>' : c.dateLivraisonSouhaitee ? ` · souhaitée ${echapper(c.dateLivraisonSouhaitee)}` : ''}</b></div>
     ${c.responsableCommande || c.telephone ? `<div class="fc2-bref-l"><span>Prescripteur · contact</span><b>${echapper([c.responsableCommande, c.telephone].filter(Boolean).join(' · '))}</b></div>` : ''}
+    ${c.passeePar ? `<div class="fc2-bref-l"><span>Passée par</span><b>${echapper(c.passeePar)}</b></div>` : ''}
+    ${destinationInterne ? `<div class="fc2-bref-l"><span>Raison</span><b>${echapper(destinationInterne)}</b></div>` : ''}
+    ${c.homogene ? '<div class="fc2-bref-l"><span>Modèle</span><b>Identique</b></div>' : ''}
   </div>`;
   const ongletCommande = `<div class="fc2-grille2">
       <section class="fc2-bloc"><div class="fc2-k">Articles</div>
@@ -357,7 +357,7 @@ function vueDossierCommande(c) {
                 ? `<button type="button" class="lien-structure" data-structure-vue="${st.id}" title="Ouvrir la fiche 360° de la structure">${echapper(c.nom)}</button>`
                 : echapper(c.nom);
             })()}</div>
-            <div class="fc2-puces">${infoType ? `<span class="tag">${echapper(infoType)}</span>` : ''}${badgeUrgentCommande(c)}${c.transfereAdmin ? '<span class="tag">Transférée</span>' : ''}</div>
+            <div class="fc2-puces">${infoType ? `<span class="tag">${echapper(infoType)}</span>` : ''}${badgeUrgentCommande(c)}${badgeHomogeneCommande(c)}${c.transfereAdmin ? '<span class="tag">Transférée</span>' : ''}</div>
           </div>
           ${frise}
           <button type="button" class="rpd-fermer" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button>
@@ -368,7 +368,7 @@ function vueDossierCommande(c) {
         <div class="fc2-corps">
           ${
             onglet === 'faire'
-              ? `<div class="fc2-faire">${panneau}<aside class="fc2-cote">${enBref}</aside></div>`
+              ? `${consigneInterne}<div class="fc2-faire">${panneau}<aside class="fc2-cote">${enBref}</aside></div>`
               : onglet === 'commande'
                 ? ongletCommande
                 : onglet === 'documents'

@@ -16,13 +16,9 @@ function urlSure(u) {
 function enteteAdmin(mdp) {
   return mdp ? { 'X-CVDL-Admin': encodeURIComponent(mdp) } : {};
 }
-function jsonp(params) {
-  const p = { ...params };
-  const mdp = p.password;
-  delete p.password;
-  return fetch(API + '?' + new URLSearchParams(p), { headers: enteteAdmin(mdp) })
-    .then((r) => r.json())
-    .then(verifierSession);
+/** Lecture (GET) d'une route ; identifiant équipe de la session, ou `mdp` (écran de connexion). */
+function lireApi(params, mdp = motDePasse) {
+  return appelApi(params, { entetes: enteteAdmin(mdp) }).then(verifierSession);
 }
 /** Session admin expirée (jeton de plus de 12 h, ou mot de passe changé) : retour à l'écran de connexion. */
 function verifierSession(r) {
@@ -37,17 +33,9 @@ function verifierSession(r) {
   }
   return r;
 }
+/** Écriture (POST JSON) sur une route, avec l'identifiant équipe de la session. */
 function poster(data) {
-  const d = { ...data };
-  const mdp = d.password || motDePasse;
-  delete d.password;
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8', ...enteteAdmin(mdp) },
-    body: JSON.stringify(d),
-  })
-    .then((r) => r.json())
-    .then(verifierSession);
+  return appelApi(data, { methode: 'POST', entetes: enteteAdmin(motDePasse) }).then(verifierSession);
 }
 /** Emballe poster() avec la pastille d'état : spinner pendant l'appel, succès/erreur ensuite.
  *  Utilisé pour toute action d'écriture déclenchée par une saisie utilisateur. */
@@ -63,15 +51,7 @@ async function posterEtat(donnees, libelleEnCours, libelleSucces) {
     return { ok: false };
   }
 }
-function $(id) {
-  return document.getElementById(id);
-}
-function echapper(v) {
-  return String(v ?? '').replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-  );
-}
+// `$` et `echapper` : base.js (commun à toutes les pages).
 
 /** Pastille d'état en bas à droite (chargement / succès / erreur) — 'chargement' reste
  *  affichée tant qu'elle n'est pas remplacée, les deux autres se referment seules. */

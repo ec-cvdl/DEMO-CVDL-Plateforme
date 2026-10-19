@@ -12,7 +12,7 @@ async function verifierCode() {
   $('btn-verifier-code').innerHTML = '<span class="spinner-inline"></span>Vérification…';
   $('retour-id-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code });
+    const r = await lireApi({ action: 'check', code });
     if (r.ok) {
       codeValide = code;
       try {
@@ -39,7 +39,7 @@ async function chargerAppareilsAttestation() {
   $('retour-liste-appareils').innerHTML =
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   try {
-    const r = await jsonp({ action: 'flotte-lister', code: codeValide });
+    const r = await lireApi({ action: 'flotte-lister', code: codeValide });
     if (!r.ok) {
       $('retour-liste-appareils').innerHTML =
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`;
@@ -118,6 +118,11 @@ $('btn-generer-attestation').addEventListener('click', async () => {
     return;
   }
   const dateNaissance = dateNaissanceISO ? dateNaissanceISO.split('-').reverse().join('/') : '';
+  const erreurNaissance = window.erreurNaissanceCvdl ? window.erreurNaissanceCvdl(dateNaissance) : '';
+  if (erreurNaissance) {
+    $('retour-attestation').innerHTML = `<div class="msg msg-erreur">${echapper(erreurNaissance)}</div>`;
+    return;
+  }
 
   $('btn-generer-attestation').disabled = true;
   $('retour-attestation').innerHTML = '<div class="msg msg-info">Génération en cours…</div>';

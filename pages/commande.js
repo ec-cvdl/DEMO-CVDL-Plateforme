@@ -41,11 +41,27 @@ const etat = {
   produits: [],
   selection: {},
   urgent: false,
+  // Interne : commande homogène, raison, structure concernée (regles/destinationCommande côté API).
+  raisonsCommande: null,
+  partenairesDestination: [],
+  homogene: false,
+  homogenePrecision: '',
+  raison: '',
+  raisonDetail: '',
+  destinationChoix: '',
+  destinationLibre: '',
   demandeDevis: false,
   moyenPaiement: '',
+  numeroCheque: '',
   paiementSepare: '',
   commentaire: '',
 };
+
+/** Paiement à choisir et pas encore complet (moyen manquant, ou chèque sans son numéro). */
+function paiementIncomplet() {
+  if ($('zone-paiement').hidden) return false;
+  return !etat.moyenPaiement || (etat.moyenPaiement === 'Chèque' && !etat.numeroCheque.trim());
+}
 
 /** Règles du formulaire : lues dans la politique de commande calculée par le serveur
  *  (regles/politique.js) — le formulaire ne décide plus lui-même ce qu'un type a le droit de
@@ -125,6 +141,8 @@ function appliquerPolitique(v) {
   } catch (e) {
     /* non bloquant */
   }
+  etat.raisonsCommande = v.raisonsCommande || null;
+  etat.partenairesDestination = v.partenairesDestination || [];
   const pol = v.politique;
   if (pol) {
     etat.typeStructure = pol.type;
@@ -360,7 +378,13 @@ function majRecapLateral() {
           return `<div class="cm-recap-ligne"><span>${q} × ${echapper(nom)}</span>${isFinite(pu) ? `<b>${formaterPrixProduit(pu * q)}</b>` : ''}</div>`;
         })
         .join('') +
-      (etat.urgent ? '<div class="cm-recap-ligne cm-recap-urgent"><span>Priorité</span><b>Urgente</b></div>' : '')
+      (etat.urgent ? '<div class="cm-recap-ligne cm-recap-urgent"><span>Priorité</span><b>Urgente</b></div>' : '') +
+      (etat.raisonsCommande && etat.homogene
+        ? '<div class="cm-recap-ligne"><span>Modèle</span><b>Identique</b></div>'
+        : '') +
+      (etat.raisonsCommande && etat.raison
+        ? `<div class="cm-recap-ligne"><span>Raison</span><b>${echapper(etat.raisonsCommande[etat.raison])}</b></div>`
+        : '')
     : '<div class="cm-recap-vide">Aucun matériel sélectionné pour le moment.</div>';
   $('cm-recap-total').hidden = !totalConnu;
   if (totalConnu) $('cm-recap-total-valeur').textContent = formaterPrixProduit(total);
@@ -383,7 +407,7 @@ function majBoutonSuivant() {
   const btn = $('btn-suivant');
   if (cle === '0') btn.disabled = false;
   else if (cle === '1') btn.disabled = Object.keys(etat.selection).length === 0;
-  else if (cle === 'paiement') btn.disabled = !$('zone-paiement').hidden && !etat.moyenPaiement;
+  else if (cle === 'paiement') btn.disabled = paiementIncomplet();
   else if (cle === 'quantites') btn.disabled = !!erreurQuantites();
   else btn.disabled = false;
   majRecapLateral();
@@ -452,7 +476,7 @@ $('btn-suivant').addEventListener('click', async () => {
     return;
   }
   if (cle === 'paiement') {
-    if (!$('zone-paiement').hidden && !etat.moyenPaiement) return;
+    if (paiementIncomplet()) return;
     $('bloc-date-livraison-souhaitee').hidden = !etat.estInterne || etat.urgent;
     indexEtapeActuelle++;
     afficherEtape();
@@ -474,7 +498,7 @@ async function verifierCode() {
   $('btn-suivant').textContent = 'Vérification…';
   $('retour-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'donnees-commande', code });
+    const r = await lireApi({ action: 'donnees-commande', code });
     if (!r.ok) {
       $('retour-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
       $('btn-suivant').disabled = false;
@@ -593,14 +617,23 @@ function formaterPrixProduit(valeur) {
   if (!isFinite(n)) return null;
   return `${n.toLocaleString('fr-FR', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })} €`;
 }
+let grilleDejaMontree = false;
 function construireGrilleProduits() {
   const zone = $('grille-produits');
+  // Cartes en cascade au premier affichage seulement (la grille est reconstruite à chaque choix).
+  if (!grilleDejaMontree && etat.produits.length) {
+    grilleDejaMontree = true;
+    zone.classList.add('cmd-premier');
+    setTimeout(() => zone.classList.remove('cmd-premier'), 900);
+  }
   const notes = PenseBete.notes();
   if (!etat.produits.length) {
     zone.innerHTML =
       '<div class="pk-etat pk-vide"><span data-ill="vide"></span>Aucun produit disponible pour le moment.</div>';
     return;
   }
+  // Ordinateurs sous Linux Mint dans le catalogue : bandeau d'information (linux-mint.js).
+  $('bandeau-linux').innerHTML = window.LinuxMintCvdl ? window.LinuxMintCvdl.bandeau(etat.produits) : '';
   zone.innerHTML = etat.produits
     .map((p) => {
       const dispo = p.disponible !== false;
@@ -647,6 +680,11 @@ $('grille-produits').addEventListener('click', (e) => {
   if (etat.selection[nom]) delete etat.selection[nom];
   else etat.selection[nom] = 1;
   construireGrilleProduits();
+  // Petit rebond de l'icône du produit qu'on vient d'ajouter.
+  if (etat.selection[nom])
+    [...$('grille-produits').querySelectorAll('[data-produit]')]
+      .find((c) => c.dataset.produit === nom)
+      ?.classList.add('cmd-pop');
   majBoutonSuivant();
 });
 
@@ -656,6 +694,7 @@ function construireEtapeQuantites() {
   const maxCmd = maxParCommande(),
     total = totalSelection();
   const resteCmd = maxCmd - total;
+  const notes = PenseBete.notes();
   zone.innerHTML = noms.length
     ? noms
         .map((nom) => {
@@ -675,7 +714,16 @@ function construireEtapeQuantites() {
           return `
     <div class="ligne-quantite${trop ? ' qte-ko' : ''}">
       <span class="icone-quantite">${illustrationProduitCommande(nom, ((etat.produits || []).find((x) => x.nom === nom) || {}).icone, 42)}</span>
-      <span class="qte-nom"><span style="font-weight:700;font-size:14px">${echapper(nom)}</span>${note}</span>
+      <span class="qte-nom"><span style="font-weight:700;font-size:14px">${echapper(nom)}</span>${note}${
+        // Rappel du pense-bête : quantité notée, et raccourci pour l'appliquer si elle diffère.
+        notes[nom]
+          ? `<span class="pb-note" title="Noté dans votre pense-bête">noté : ${notes[nom]}${
+              notes[nom] !== q
+                ? ` · <button type="button" class="pb-appliquer" data-pb-qte="${echapper(nom)}">mettre ${notes[nom]}</button>`
+                : ''
+            }</span>`
+          : ''
+      }</span>
       <div class="stepper-quantite">
         <button type="button" data-dec="${echapper(nom)}" aria-label="Retirer une unité">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>
@@ -712,10 +760,22 @@ function construireEtapeQuantites() {
   $('bloc-urgent').hidden = !etat.autoriseUrgent;
   $('toggle-urgent').checked = etat.urgent;
   $('bloc-urgent').classList.toggle('urgent-actif', etat.urgent);
+  afficherBlocInterne();
   if (typeof majBoutonSuivant === 'function' && etapesActives()[indexEtapeActuelle] === 'quantites') majBoutonSuivant();
   majPenseBete();
 }
 $('zone-quantites').addEventListener('click', (e) => {
+  const pb = e.target.closest('[data-pb-qte]');
+  if (pb) {
+    const nom = pb.dataset.pbQte;
+    const m = maxPourProduit(nom);
+    const autres = totalSelection() - (etat.selection[nom] || 0);
+    etat.selection[nom] = Math.max(1, Math.min(PenseBete.notes()[nom], m, maxParCommande() - autres));
+    construireEtapeQuantites();
+    construireZonePersonnesBo();
+    construireRecap();
+    return;
+  }
   const inc = e.target.closest('[data-inc]');
   const dec = e.target.closest('[data-dec]');
   if (inc) {
@@ -725,6 +785,7 @@ $('zone-quantites').addEventListener('click', (e) => {
     etat.selection[nom] = q + 1;
     construireEtapeQuantites();
     construireRecap();
+    animerQuantite(nom, 'plus');
   }
   if (dec) {
     const nom = dec.dataset.dec;
@@ -733,7 +794,53 @@ $('zone-quantites').addEventListener('click', (e) => {
     construireEtapeQuantites();
     construireZonePersonnesBo();
     construireRecap();
+    animerQuantite(nom, 'moins');
   }
+});
+/** Petit rebond du chiffre qui vient de changer (la ligne est reconstruite à chaque clic). */
+function animerQuantite(nom, sens) {
+  document
+    .querySelector(`[data-inc="${CSS.escape(nom)}"]`)
+    ?.parentElement.querySelector('.valeur-quantite')
+    ?.classList.add('qte-bond', sens);
+}
+/* Interne : commande homogène (même modèle), raison et structure concernée (liste ou saisie libre). */
+function afficherBlocInterne() {
+  $('bloc-interne').hidden = !etat.raisonsCommande;
+  if (!etat.raisonsCommande) return;
+  const opt = (v, l, actif) => `<option value="${echapper(v)}"${actif ? ' selected' : ''}>${echapper(l)}</option>`;
+  $('raison-commande').innerHTML =
+    opt('', 'Choisir…', !etat.raison) +
+    Object.entries(etat.raisonsCommande)
+      .map(([v, l]) => opt(v, l, etat.raison === v))
+      .join('');
+  $('destination-commande').innerHTML =
+    opt('', 'Aucune en particulier', !etat.destinationChoix) +
+    etat.partenairesDestination.map((p) => opt(String(p.id), p.nom, etat.destinationChoix === String(p.id))).join('') +
+    opt('autre', 'Autre structure (saisie libre)', etat.destinationChoix === 'autre');
+  $('toggle-homogene').checked = etat.homogene;
+  $('bloc-homogene').classList.toggle('actif', etat.homogene);
+  $('homogene-precision').hidden = !etat.homogene;
+  $('homogene-precision').value = etat.homogenePrecision;
+  $('raison-detail').value = etat.raisonDetail;
+  $('bloc-destination-libre').hidden = etat.destinationChoix !== 'autre';
+  $('destination-libre').value = etat.destinationLibre;
+}
+$('bloc-interne').addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.id === 'toggle-homogene') {
+    etat.homogene = t.checked;
+    $('bloc-homogene').classList.toggle('actif', etat.homogene);
+    $('homogene-precision').hidden = !etat.homogene;
+  } else if (t.id === 'homogene-precision') etat.homogenePrecision = t.value;
+  else if (t.id === 'raison-commande') etat.raison = t.value;
+  else if (t.id === 'raison-detail') etat.raisonDetail = t.value;
+  else if (t.id === 'destination-commande') {
+    etat.destinationChoix = t.value;
+    $('bloc-destination-libre').hidden = t.value !== 'autre';
+  } else if (t.id === 'destination-libre') etat.destinationLibre = t.value;
+  else return;
+  construireRecap();
 });
 $('toggle-urgent').addEventListener('change', () => {
   etat.urgent = $('toggle-urgent').checked;
@@ -786,7 +893,7 @@ function construireZonePersonnesBo() {
       <div class="grille-personne-bo">
         <div class="field"><label for="bo-prenom-${i}">Prénom</label><input type="text" class="input" id="bo-prenom-${i}" placeholder="Prénom" autocomplete="off"></div>
         <div class="field"><label for="bo-nomfamille-${i}">NOM</label><input type="text" class="input" id="bo-nomfamille-${i}" placeholder="NOM" autocomplete="off" style="text-transform:uppercase"></div>
-        <div class="field"><label for="bo-naissance-${i}">Date de naissance</label><input type="date" class="input" id="bo-naissance-${i}" min="1920-01-01" max="${new Date().toISOString().slice(0, 10)}"></div>
+        <div class="field"><label for="bo-naissance-${i}">Date de naissance</label><input type="date" class="input" id="bo-naissance-${i}" data-naissance min="1920-01-01" max="${new Date().toISOString().slice(0, 10)}"></div>
       </div>
     </div>`;
     })
@@ -855,11 +962,9 @@ function listePersonnesBo() {
     };
   });
 }
+/** Entre 1920 et aujourd'hui : même règle partout (portail-ui.js, serveur). */
 function dateNaissanceValide(s) {
-  const aujourdhui = new Date();
-  aujourdhui.setHours(0, 0, 0, 0);
-  const d = new Date(s);
-  return !isNaN(d) && d <= aujourdhui && d.getFullYear() >= 1920;
+  return !!s && !window.erreurNaissanceCvdl(s);
 }
 /** Indices (dans unitesCommandees()) des lignes "personne" incomplètes ou invalides, avec la
  *  cause précise — sert à la fois à la validation, au message d'erreur explicite et au
@@ -974,6 +1079,7 @@ function construireRecap() {
       </button>`;
       })
       .join('');
+    $('zone-numero-cheque').hidden = etat.moyenPaiement !== 'Chèque';
     if (!etat.moyenPaiement && moyens.length === 1) {
       etat.moyenPaiement = moyens[0];
       construireRecap();
@@ -995,6 +1101,11 @@ $('grille-paiement').addEventListener('click', (e) => {
   if (!b) return;
   etat.moyenPaiement = b.dataset.moyenPaiement;
   construireRecap();
+  majBoutonSuivant();
+  if (etat.moyenPaiement === 'Chèque' && !etat.numeroCheque) $('champ-numero-cheque').focus();
+});
+$('champ-numero-cheque').addEventListener('input', () => {
+  etat.numeroCheque = $('champ-numero-cheque').value;
   majBoutonSuivant();
 });
 $('grille-paiement-partage').addEventListener('click', (e) => {
@@ -1047,6 +1158,10 @@ async function envoyerCommande() {
     $('retour-envoi').innerHTML = '<div class="msg msg-erreur">Merci de choisir un moyen de paiement.</div>';
     return;
   }
+  if (etat.moyenPaiement === 'Chèque' && !etat.numeroCheque.trim()) {
+    $('retour-envoi').innerHTML = '<div class="msg msg-erreur">Merci d’indiquer le numéro du chèque.</div>';
+    return;
+  }
   const lignes = Object.keys(etat.selection).map((nom) => ({ produit: nom, quantite: etat.selection[nom] }));
   const moyenPaiementEnvoye =
     etat.moyenImpose ||
@@ -1065,11 +1180,24 @@ async function envoyerCommande() {
     code: etat.code,
     lignes,
     moyenPaiement: moyenPaiementEnvoye,
+    numeroCheque: moyenPaiementEnvoye === 'Chèque' ? etat.numeroCheque.trim() : '',
     commentaire: etat.commentaire,
     responsableCommande,
     demandeDevis: etat.devisPossible ? etat.demandeDevis : false,
     dateLivraisonSouhaitee: etat.urgent ? 'ASAP' : etat.estInterne ? dateSouhaiteeSaisie : '',
-    personnes: personnesRequises ? listePersonnesBo().map((p) => `${p.nomComplet} — ${p.dateNaissance}`) : [],
+    ...(etat.raisonsCommande
+      ? {
+          homogene: etat.homogene,
+          homogenePrecision: etat.homogenePrecision,
+          raison: etat.raison,
+          raisonDetail: etat.raisonDetail,
+          destinationStructureId: /^\d+$/.test(etat.destinationChoix) ? etat.destinationChoix : '',
+          destination: etat.destinationChoix === 'autre' ? etat.destinationLibre : '',
+        }
+      : {}),
+    personnes: personnesRequises
+      ? listePersonnesBo().map((p) => ({ nomComplet: p.nomComplet, dateNaissance: p.dateNaissance }))
+      : [],
   };
   if (!etat.estSansPaiement && etat.moyenPaiement === 'Paiement en ligne (CB)' && etat.paiementSepare) {
     payload.paiementSepare = etat.paiementSepare === 'Oui';

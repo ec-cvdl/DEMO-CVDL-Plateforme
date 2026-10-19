@@ -364,7 +364,7 @@ async function verifierCode() {
   $('btn-verifier-code').innerHTML = '<span class="spinner-inline"></span>Vérification…';
   $('retour-id-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code });
+    const r = await lireApi({ action: 'check', code });
     if (!r.ok) {
       $('retour-id-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
     } else if (!r.interne) {
@@ -392,9 +392,7 @@ $('id-code').addEventListener('keydown', (e) => {
 });
 
 $('btn-deconnexion-partenaires').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
@@ -402,7 +400,7 @@ async function chargerPartenaires(nomNouveau) {
   $('retour-liste-partenaires').innerHTML =
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   try {
-    const r = await jsonp({ action: 'structures-partenaires-lister', codeCreateur: codeValide });
+    const r = await lireApi({ action: 'structures-partenaires-lister', codeCreateur: codeValide });
     $('retour-liste-partenaires').innerHTML = '';
     if (!r.ok) {
       $('retour-liste-partenaires').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur)}</div>`;

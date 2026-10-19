@@ -176,7 +176,7 @@ const ICONES_UNIFIE = {
 };
 function icon(name, size) {
   size = size || 20;
-  if (estUnifie() && ICONES_UNIFIE[name]) {
+  if (ICONES_UNIFIE[name]) {
     const [fond, trait] = ICONES_UNIFIE[name];
     return `<svg class="ic-u" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${fond ? `<g class="ic-u-fond" fill="currentColor" stroke="none">${fond}</g>` : ''}<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${trait}</g></svg>`;
   }
@@ -217,14 +217,14 @@ function pilulesPaiement(texteLiens, libellePluriel, libelleSingulier) {
  *  de l'appareil. Design unique dans tout l'admin (récap commande, modale SAV...) : à réutiliser
  *  plutôt que redupliquer le style à chaque endroit. Accepte aussi bien un seul numéro qu'une
  *  liste multiligne. */
-function pilulesNumerosSerie(texteNumeros) {
+function pilulesNumerosSerie(numeros) {
   // Composant commun admin / public (portail-ui.js) : pilule unique, passeport ouvert en modale.
-  return window.pilulesSeriesCvdl ? window.pilulesSeriesCvdl(texteNumeros, { query: '&admin=1' }) : '';
+  return window.pilulesSeriesCvdl ? window.pilulesSeriesCvdl(numeros, { query: '&admin=1' }) : '';
 }
 /** Équivalent pour un code de produit dématérialisé (recharge...) — pastille rouge, jamais de
  *  lien (un code n'a pas de passeport numérique) : juste affiché, sélectionnable au clic. */
-function pilulesCodes(texteCodes) {
-  return window.pilulesSeriesCvdl ? window.pilulesSeriesCvdl(texteCodes, { code: true }) : '';
+function pilulesCodes(codes) {
+  return window.pilulesSeriesCvdl ? window.pilulesSeriesCvdl(codes, { code: true }) : '';
 }
 // Groupes de commande : chaque produit appartient à l'un des trois ; une structure peut être
 // limitée à un sous-ensemble (plusieurs cochés = profil "Mixte" dans les formulaires).
@@ -251,7 +251,7 @@ const ICONES_PRODUIT_OPTIONS = [
 // que texte libre, pour éviter les fautes de saisie et les formats différents d'un produit à
 // l'autre (ex. "8go" / "8 Go" / "8Go"). Les valeurs de RAM sont de simples nombres, le "Go" est
 // rajouté automatiquement à l'enregistrement (voir enregistrerProduit()).
-const SYSTEMES_OPTIONS = ['Windows 11', 'macOS', 'Linux', 'ChromeOS', 'Android', 'iOS'];
+const SYSTEMES_OPTIONS = ['Windows 11', 'Linux Mint', 'macOS', 'Linux', 'ChromeOS', 'Android', 'iOS'];
 const RAM_OPTIONS = [2, 3, 4, 6, 8, 12, 16, 24, 32, 64];
 const DISQUE_OPTIONS = ['32 Go', '64 Go', '128 Go', '256 Go', '500 Go', '512 Go', '1 To', '2 To'];
 const DONNEES_MOBILES_OPTIONS = [1, 2, 5, 10, 20, 50, 'Illimitées'];

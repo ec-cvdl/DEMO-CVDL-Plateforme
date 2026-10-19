@@ -5,7 +5,7 @@
    · Éditeur : plan de l'arbre (à gauche), étape choisie (au centre), aperçu de ce que verra la
      structure (à droite, depannage.js) ;
    · Import du fichier .json de l'outil externe d'arbres de décision.
-   Fonctions globales de l'admin utilisées : jsonp, poster, posterEtat, etat, echapper, icon,
+   Fonctions globales de l'admin utilisées : lireApi, poster, posterEtat, etat, echapper, icon,
    render, confirmerCvdl, motDePasse. Routes : src/routes/depannage.js. */
 const dpa = {
   charge: false,
@@ -31,8 +31,8 @@ async function dpaCharger(forcer) {
   dpa.chargement = true;
   try {
     const [r, rs] = await Promise.all([
-      jsonp({ action: 'depannage-admin', password: motDePasse }),
-      dpa.symptomes ? Promise.resolve(null) : jsonp({ action: 'sav-symptomes' }).catch(() => null),
+      lireApi({ action: 'depannage-admin' }),
+      dpa.symptomes ? Promise.resolve(null) : lireApi({ action: 'sav-symptomes' }).catch(() => null),
     ]);
     if (r && r.ok) {
       dpa.arbres = r.arbres || [];

@@ -159,6 +159,7 @@ function valeursInitialesStructure(s) {
     siret: s ? s.siret || '' : '',
     categorie: s ? s.categorie || '' : '',
     region: s ? s.region || '' : '',
+    departement: s ? deptStructure(s) : '',
     responsablePrenom: resp.prenom,
     responsableNom: resp.nom,
     email: s ? s.email || '' : '',
@@ -178,7 +179,7 @@ function valeursInitialesStructure(s) {
       .split(',')
       .map((x) => x.trim())
       .filter(Boolean),
-    depotVente: !!(s && s.depotVente),
+    depotVente: !!(s && s.depotVente && depotVentePossible(s.type)),
     lienConvention: s ? s.lienConvention || '' : '',
     comptesGoogle: texteEquipe(s),
     facturationDepotVente: s && s.facturationDepotVente === 'chaque-vente' ? 'chaque-vente' : 'aucune',
@@ -187,7 +188,11 @@ function valeursInitialesStructure(s) {
 function vueCreerStructure() {
   const m = state.modal;
   const s = m.id ? state.structures.find((x) => x.id === m.id) : null;
-  if (!m.v) m.v = valeursInitialesStructure(s);
+  if (!m.v) {
+    m.v = valeursInitialesStructure(s);
+    // Transformation d'une structure sans portail : un vrai code d'accès lui est donné.
+    if (m.transformer) m.v.nouveauCode = genererCodeStructure();
+  }
   if (m.etape == null) m.etape = 0;
   if (m.vues == null) m.vues = s ? ETAPES_STRUCTURE.length - 1 : 0;
   const v = m.v;
@@ -211,7 +216,7 @@ function vueCreerStructure() {
       <div class="dialog dialog-large csw" role="dialog" aria-modal="true" aria-labelledby="csw-titre">
         <header class="csw-tete">
           <div class="csw-tete-txt">
-            <div class="rp-surtitre">${s ? 'Modifier la structure' : 'Nouvelle structure'} · étape ${m.etape + 1} sur ${ETAPES_STRUCTURE.length}</div>
+            <div class="rp-surtitre">${m.transformer ? 'Transformer en structure avec portail' : s ? 'Modifier la structure' : 'Nouvelle structure'} · étape ${m.etape + 1} sur ${ETAPES_STRUCTURE.length}</div>
             <h2 class="csw-titre" id="csw-titre">${s ? echapper(s.nom) : v.nom ? echapper(v.nom) : 'Nouvelle structure'}</h2>
           </div>
           <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button>
@@ -227,7 +232,7 @@ function vueCreerStructure() {
           <span style="flex:1"></span>
           ${m.etape > 0 ? '<button type="button" class="btn btn-secondary" data-cs-precedent>← Précédent</button>' : ''}
           ${!derniere ? `<button type="button" class="btn ${s ? 'btn-secondary' : 'btn-primary'}" data-cs-suivant>Suivant →</button>` : ''}
-          ${s || derniere ? `<button type="button" class="btn btn-primary" id="cs-enregistrer">${s ? 'Enregistrer' : 'Créer la structure'}</button>` : ''}
+          ${s || derniere ? `<button type="button" class="btn btn-primary" id="cs-enregistrer">${m.transformer ? 'Ouvrir son portail' : s ? 'Enregistrer' : 'Créer la structure'}</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -262,6 +267,7 @@ function etapeStructureIdentite(v, s) {
     ? `<div class="field"><label>Code d’accès</label>
         <div class="csw-code-actuel"><span class="pk-sn">${state.revealedCodes[s.id] ? echapper(s.code) : '••••••••••'}</span>
           <button type="button" class="btn btn-ghost btn-icon" style="width:28px;height:28px" data-reveal-code="${s.id}" aria-label="Afficher le code">${icon(state.revealedCodes[s.id] ? 'eyeoff' : 'eye', 15)}</button>
+          <button type="button" class="btn btn-ghost btn-icon" style="width:28px;height:28px" data-copier-code="${s.id}" aria-label="Copier le code" title="Copier le code">${icon('copie', 15)}</button>
           <button type="button" class="btn btn-secondary" data-regenerer-code-structure="${s.id}">Régénérer</button></div>
         <label class="csw-sous-champ" for="cs-nouveau-code">Ou choisir un nouveau code <em>(l’ancien cessera de fonctionner)</em></label>
         <input class="input" id="cs-nouveau-code" data-cs="nouveauCode" autocomplete="off" value="${echapper(v.nouveauCode)}" placeholder="Laisser vide pour garder le code actuel">
@@ -293,7 +299,21 @@ function etapeStructureIdentite(v, s) {
       <div class="csw-large">${blocCode}</div>
       <div class="field"><label for="cs-siret">SIRET <em>(14 chiffres, facultatif)</em></label><input class="input" id="cs-siret" data-cs="siret" inputmode="numeric" maxlength="17" placeholder="123 456 789 00012" value="${echapper(v.siret)}"></div>
       <div class="field"><label for="cs-categorie">Catégorie</label><select class="input" id="cs-categorie" data-cs="categorie"><option value="">—</option>${CATEGORIES_STRUCTURE.map((c) => `<option value="${echapper(c)}" ${v.categorie === c ? 'selected' : ''}>${echapper(c)}</option>`).join('')}</select></div>
-      <div class="field csw-large"><label for="cs-region">Région analytique <em>(territoire EC, pour ventiler l’activité)</em></label><select class="input" id="cs-region" data-cs="region"><option value="">—</option>${[...REGIONS_ANALYTIQUE, ...(v.region && !REGIONS_ANALYTIQUE.includes(v.region) ? [v.region] : [])].map((r) => `<option value="${echapper(r)}" ${v.region === r ? 'selected' : ''}>${echapper(r)}</option>`).join('')}</select></div>
+      <div class="field"><label for="cs-region">Région *</label><select class="input" id="cs-region" data-cs="region"><option value="">Choisir…</option>${state.regions
+        .filter((r) => state.departements.some((d) => d.region === r))
+        .map((r) => `<option value="${echapper(r)}" ${v.region === r ? 'selected' : ''}>${echapper(r)}</option>`)
+        .join('')}</select></div>
+      <div class="field"><label for="cs-departement">Département *</label><select class="input" id="cs-departement" data-cs="departement" ${v.region ? '' : 'disabled'}><option value="">${v.region ? 'Choisir…' : 'Choisissez la région'}</option>${state.departements
+        .filter((d) => d.region === v.region)
+        .map(
+          (d) =>
+            `<option value="${echapper(d.code)}" ${v.departement === d.code ? 'selected' : ''}>${echapper(`${d.code} · ${d.nom}`)}</option>`,
+        )
+        .join('')}</select>${
+        !v.departement && departementDeAdresse(v.adresse)
+          ? `<small class="csw-aide">D’après l’adresse : ${echapper(nomDepartement(departementDeAdresse(v.adresse)))}</small>`
+          : ''
+      }</div>
     </div>`;
 }
 function etapeStructureContacts(v) {
@@ -362,12 +382,15 @@ function etapeStructureCommande(v) {
         : ''
     }`;
 }
+// Même règle que le back (regles/politique.js) : Interne et ESN ne paient pas à la commande.
+const depotVentePossible = (type) => !['interne', 'esn'].includes(type);
 function etapeStructureOptions(v) {
+  const possible = depotVentePossible(v.type);
   return `
-    <label class="csw-option${v.depotVente ? ' choisi' : ''}">
-      <span class="rp-switch"><input type="checkbox" id="cs-depot-vente" data-cs="depotVente" ${v.depotVente ? 'checked' : ''}><span class="rp-switch-piste"></span></span>
+    <label class="csw-option${v.depotVente ? ' choisi' : ''}${possible ? '' : ' indispo'}">
+      <span class="rp-switch"><input type="checkbox" id="cs-depot-vente" data-cs="depotVente" ${v.depotVente ? 'checked' : ''} ${possible ? '' : 'disabled'}><span class="rp-switch-piste"></span></span>
       <span class="csw-option-txt"><b>Dépôt-vente : payé à la vente, pas à la commande</b>
-        <small>Le matériel est <strong>confié</strong> à la structure : ni paiement, ni devis, ni facture à la commande. Elle déclare chaque vente dans sa flotte (« Vendu » au lieu de « Remis »). Vous suivez depuis l’admin le stock confié, les ventes et les alertes (appareil en stock depuis 2 mois, stock bas), avec un plafond de stock possible (« Stock restreint »).</small>
+        <small>Le matériel est <strong>confié</strong> à la structure : ni paiement, ni devis, ni facture à la commande. Elle déclare chaque vente dans sa flotte (« Vendu » au lieu de « Remis »). Vous suivez depuis l’admin le stock confié, les ventes et les alertes (appareil en stock depuis 2 mois, stock bas), avec un plafond de stock possible (« Stock restreint »).</small>${possible ? '' : '<small class="csw-indispo">Sans objet pour une structure Interne ou ESN : elle ne paie déjà rien à la commande, et ses appareils restent « Remis » (projets de distribution possibles).</small>'}
       </span>
     </label>
     ${
@@ -418,7 +441,7 @@ function etapeStructureRecap(v) {
   const nomComplet = (p, n) => [p, n].filter(Boolean).join(' ');
   return `<div class="csw-recap">
     ${bloc(0, 'Type', [['Type', typeLib]])}
-    ${bloc(1, 'Identité', [['Nom', v.nom], ...(state.modal.id ? (v.nouveauCode ? [['Nouveau code', v.nouveauCode]] : []) : [['Code d’accès', v.code]]), ['SIRET', v.siret], ['Catégorie', v.categorie], ['Région', v.region]])}
+    ${bloc(1, 'Identité', [['Nom', v.nom], ...(state.modal.id ? (v.nouveauCode ? [['Nouveau code', v.nouveauCode]] : []) : [['Code d’accès', v.code]]), ['SIRET', v.siret], ['Catégorie', v.categorie], ['Région', v.region], ['Département', v.departement ? nomDepartement(v.departement) : '']])}
     ${bloc(2, 'Contacts', [
       ['Responsable', nomComplet(v.responsablePrenom, v.responsableNom)],
       ['E-mail', v.email],
@@ -438,6 +461,7 @@ function verifierEtapeStructure(i) {
   if (cle === 'identite') {
     if (!v.nom.trim()) return 'Le nom est obligatoire.';
     if (!state.modal.id && !String(v.code).trim()) return 'Le code d’accès est obligatoire.';
+    if (!v.region || !v.departement) return 'Choisissez la région puis le département de la structure.';
     const siret = v.siret.replace(/\s+/g, '');
     if (siret && !/^\d{14}$/.test(siret)) return 'Le SIRET doit comporter exactement 14 chiffres.';
     const codeSaisi = state.modal.id ? v.nouveauCode.trim() : String(v.code).trim();
@@ -446,6 +470,8 @@ function verifierEtapeStructure(i) {
   }
   if (cle === 'contacts') {
     if (!v.responsablePrenom.trim() && !v.responsableNom.trim()) return 'Le responsable habituel est obligatoire.';
+    if (state.modal.transformer && !v.email.trim())
+      return 'L’e-mail de la structure est obligatoire pour ouvrir son portail.';
     const mailOk = (x) => !x || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.trim());
     if (!mailOk(v.email) || !mailOk(v.emailFacturation)) return 'Une adresse e-mail n’est pas valide.';
   }
@@ -481,10 +507,18 @@ function lireSaisieStructure(el) {
   const v = m.v;
   if (el.dataset && el.dataset.cs) {
     v[el.dataset.cs] = el.type === 'checkbox' ? el.checked : el.value;
+    // La région filtre les départements ; celui de l'adresse est proposé s'il en fait partie.
+    if (el.dataset.cs === 'region') {
+      const dansRegion = (c) => state.departements.some((d) => d.code === c && d.region === v.region);
+      if (!dansRegion(v.departement))
+        v.departement = dansRegion(departementDeAdresse(v.adresse)) ? departementDeAdresse(v.adresse) : '';
+      return 'rendre';
+    }
     return true;
   }
   if (el.name === 'cs-type') {
     v.type = el.value;
+    if (!depotVentePossible(v.type)) v.depotVente = false;
     return 'rendre';
   }
   if (el.name === 'cs-code-mode') {
@@ -534,10 +568,6 @@ document.addEventListener('change', (e) => {
     e.target.dataset.cs === 'facturationDepotVente'
   )
     render();
-  if (e.target.id === 'st-filtre-region') {
-    state.structuresFiltreRegion = e.target.value;
-    render();
-  }
 });
 document.addEventListener('click', (e) => {
   if (!state.modal || state.modal.kind !== 'creer-structure') return;
@@ -565,7 +595,8 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'md-enregistrer') enregistrerModeleDoc();
   if (e.target.id === 'ma-enregistrer') enregistrerModeleAttestation();
   if (e.target.id === 'ma-xlsx-enregistrer') enregistrerModeleAttestationXlsx();
-  if (e.target.id === 'ma-pdf-enregistrer') enregistrerModeleAttestationPdf();
+  const televerserPdf = e.target.closest('[data-modele-pdf-televerser]');
+  if (televerserPdf) enregistrerModelePdf(televerserPdf.dataset.modelePdfTeleverser, televerserPdf);
   if (e.target.id === 'rp-enregistrer-rappro') enregistrerRapprochement();
   if (e.target.id === 'rd-enregistrer') enregistrerRattachementDevis();
   if (e.target.id === 'ns-enregistrer') enregistrerSav();
@@ -574,7 +605,8 @@ document.addEventListener('click', (e) => {
   if (supprimerModeleDocBtn) supprimerModeleDoc(supprimerModeleDocBtn.dataset.supprimerModeleDoc);
   if (e.target.closest('[data-supprimer-modele-attestation]')) supprimerModeleAttestation();
   if (e.target.closest('[data-supprimer-modele-attestation-xlsx]')) supprimerModeleAttestationXlsx();
-  if (e.target.closest('[data-supprimer-modele-attestation-pdf]')) supprimerModeleAttestationPdf();
+  const supprimerPdf = e.target.closest('[data-modele-pdf-supprimer]');
+  if (supprimerPdf) supprimerModelePdf(supprimerPdf.dataset.modelePdfSupprimer);
 });
 async function enregistrerStructure() {
   const m = state.modal;
@@ -608,6 +640,7 @@ async function enregistrerStructure() {
     moyensPaiement: v.type === 'bo' ? v.moyensPaiement.join(',') : '',
     siret: v.siret.replace(/\s+/g, ''),
     region: v.region,
+    departement: v.departement,
     ...((state.distributions || []).some((p) => p.statut !== 'archive') ? { programmes: v.programmes.join(',') } : {}),
     depotVente: v.depotVente ? 'TRUE' : 'FALSE',
     lienConvention: v.lienConvention.trim(),
@@ -644,6 +677,7 @@ async function enregistrerStructure() {
         moyensPaiement: s.moyensPaiement || '',
         siret: s.siret || '',
         region: s.region || '',
+        departement: s.departement || '',
         programmes: s.programmes || '',
         depotVente: s.depotVente ? 'TRUE' : 'FALSE',
         lienConvention: s.lienConvention || '',
@@ -651,10 +685,14 @@ async function enregistrerStructure() {
         facturationDepotVente: s.facturationDepotVente === 'chaque-vente' ? 'chaque-vente' : 'aucune',
         type: avant.type,
       };
-      const aEnvoyer = Object.keys(champsCommuns).filter((c) => String(champsCommuns[c]) !== String(initiaux[c] ?? ''));
+      // La région suit le département (le serveur la déduit) : seul le département est envoyé.
+      const aEnvoyer = Object.keys(champsCommuns).filter(
+        (c) => c !== 'region' && String(champsCommuns[c]) !== String(initiaux[c] ?? ''),
+      );
       const nouveauCode = v.nouveauCode.trim();
       if (nouveauCode && nouveauCode !== s.code) {
         if (
+          !m.transformer &&
           !(await confirmerCvdl(
             `Remplacer le code de « ${s.nom} » ? L'ancien code cessera de fonctionner immédiatement (liens déjà partagés, portail, suivi de commande...).`,
           ))
@@ -667,17 +705,35 @@ async function enregistrerStructure() {
         const rc = await poster({ action: 'structure-update', id, champ: 'code', valeur: nouveauCode });
         if (!rc.ok) return echec(rc.erreur);
       }
+      // Le type d'abord : il décide si le dépôt-vente est possible.
+      if (aEnvoyer.includes('type')) {
+        const rt = await poster({ action: 'structure-update', id, champ: 'type', valeur: champsCommuns.type });
+        if (!rt.ok) return echec(rt.erreur);
+      }
       const reponses = await Promise.all(
-        aEnvoyer.map((c) => poster({ action: 'structure-update', id, champ: c, valeur: champsCommuns[c] })),
+        aEnvoyer
+          .filter((c) => c !== 'type')
+          .map((c) => poster({ action: 'structure-update', id, champ: c, valeur: champsCommuns[c] })),
       );
       const ko = reponses.find((r) => !r.ok);
       if (ko) return echec(ko.erreur);
+      if (m.transformer) {
+        const ro = await poster({ action: 'structure-espace', id, ouvert: true });
+        if (!ro.ok) return echec(ro.erreur);
+      }
     } else {
       const r = await poster({ action: 'structure-create', code: String(v.code).trim(), ...champsCommuns });
       if (!r.ok) return echec(r.erreur);
     }
-    etat(id ? 'Structure mise à jour' : 'Structure créée', 'succes');
-    const rst = await jsonp({ action: 'structures', password: motDePasse });
+    etat(
+      m.transformer
+        ? 'Portail ouvert : transmettez son code à la structure.'
+        : id
+          ? 'Structure mise à jour'
+          : 'Structure créée',
+      'succes',
+    );
+    const rst = await lireApi({ action: 'structures' });
     if (rst.ok) state.structures = rst.structures.slice().sort((a, b) => b.id - a.id);
     if (champsCommuns.depotVente === 'TRUE') chargerDepotVente();
     state.modal = null;

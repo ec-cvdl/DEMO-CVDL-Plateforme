@@ -1,7 +1,7 @@
-/* Pilotage du projet (projet.html) : rétroplanning modifiable et journal des mises à jour.
-   Lecture publique. Mode édition réservé à l'admin connecté (jeton de session de l'admin,
-   même onglet) : couloirs, tâches, jalons, glisser-déposer avec tâches liées, corrections du
-   journal. Le journal est lu dans CHANGELOG-CVDL.md (publié avec le site) et complété par les
+/* Onglet « Projet » de l'admin (projet.html, affichée dans un cadre) : rétroplanning
+   modifiable, journal des mises à jour, « À faire » et « Comprendre CVDL ». Réservé à l'admin connecté (jeton de session
+   de l'admin, même onglet) ; mode édition : couloirs, tâches, jalons, glisser-déposer avec
+   tâches liées, corrections du journal. Le journal est lu dans CHANGELOG-CVDL.md (publié avec le site) et complété par les
    corrections / entrées manuelles enregistrées en base. Back : src/routes/projet.js. */
 
 /* ── Constantes et outils ── */
@@ -40,11 +40,6 @@ const frDate = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.sli
 const frCourt = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '');
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
-/* Le pilotage concerne le projet réel : la page lit toujours le back de production, même
-   depuis le site démo (lecture seule là-bas : le jeton de l'admin démo n'est pas valable en prod). */
-const API_PROJET = API.replace(/-demo$/, '');
-const SITE_DEMO = API_PROJET !== API;
-
 /* ── État ── */
 const P = {
   couloirs: [],
@@ -63,22 +58,20 @@ const P = {
   voirMasquees: false,
 };
 try {
-  P.jeton = SITE_DEMO ? '' : sessionStorage.getItem('cvdl-admin-jeton') || '';
+  P.jeton = sessionStorage.getItem('cvdl-admin-jeton') || '';
   P.zoom = localStorage.getItem('cvdl-projet-zoom') || 'mois';
   P.pleineLargeur = localStorage.getItem('cvdl-projet-largeur') === 'pleine';
 } catch (e) {}
 if (!ZOOMS[P.zoom]) P.zoom = 'mois';
 
+// Version autonome (retroplanning.html) : projet-local.js répond à la place du serveur.
+const LOCAL = window.ProjetLocal;
+
 async function appel(action, donnees = {}) {
-  const entetes = { 'Content-Type': 'text/plain;charset=utf-8' };
-  if (P.jeton && action !== 'projet') entetes['X-CVDL-Admin'] = encodeURIComponent(P.jeton);
+  if (LOCAL) return LOCAL.appel(action, donnees);
+  const entetes = P.jeton ? { 'X-CVDL-Admin': encodeURIComponent(P.jeton) } : {};
   try {
-    const r = await fetch(API_PROJET, {
-      method: 'POST',
-      headers: entetes,
-      body: JSON.stringify({ action, ...donnees }),
-    });
-    return await r.json();
+    return await appelApi({ action, ...donnees }, { methode: 'POST', entetes });
   } catch (e) {
     return { ok: false, erreur: 'Serveur injoignable.' };
   }
@@ -375,10 +368,12 @@ function render() {
     .forEach((b) => b.setAttribute('aria-selected', String(b.dataset.vue === P.vue)));
   $('pj-vue-planning').hidden = P.vue !== 'planning';
   $('pj-vue-journal').hidden = P.vue !== 'journal';
-  $('pj-vue-demarche').hidden = P.vue !== 'demarche';
+  $('pj-vue-a-faire').hidden = P.vue !== 'a-faire';
+  $('pj-vue-comprendre').hidden = P.vue !== 'comprendre';
   renderBarreDroite();
   if (P.vue === 'planning') renderPlanning();
-  else if (P.vue === 'demarche') window.DemarcheProjet.rendre($('pj-vue-demarche'), appel);
+  else if (P.vue === 'a-faire') window.AFaireProjet.rendre($('pj-vue-a-faire'), appel);
+  else if (P.vue === 'comprendre') window.ComprendreProjet.rendre($('pj-vue-comprendre'), appel);
   else renderJournal();
 }
 
@@ -386,10 +381,7 @@ function renderTete() {
   const z = $('pj-tete-actions');
   if (P.peutModifier)
     z.innerHTML = `<button type="button" class="pj-edition" id="pj-bascule-edition" aria-pressed="${P.edition}">Mode édition <i></i></button>`;
-  else
-    z.innerHTML = SITE_DEMO
-      ? '<span class="pj-sous">Données réelles du projet · modification depuis l’admin de production</span>'
-      : `<a class="btn btn-ghost" href="admin.html?retour=projet" title="Réservé à l'équipe CVDL">Connexion équipe</a>`;
+  else z.innerHTML = '<span class="pj-sous">Session admin expirée : reconnectez-vous à l’admin.</span>';
 }
 
 function renderKpis() {
@@ -407,7 +399,7 @@ function renderKpis() {
     }</b><small>${principal ? `${echapper(principal.titre)} · ${frDate(principal.debut)}` : 'Aucun jalon principal'}</small></div></div>
     <div class="pj-kpi">${ic('<path d="M4 6h16M4 12h10M4 18h6"/>')}<div><b>${faites} / ${taches.length}</b><small>Tâches terminées</small></div></div>
     <div class="pj-kpi ${retards ? 'alerte' : ''}">${ic('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')}<div><b>${retards}</b><small>${retards > 1 ? 'Tâches en retard' : 'Tâche en retard'}</small></div></div>
-    <div class="pj-kpi">${ic('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')}<div><b>${maj}</b><small>Mises à jour publiées</small></div></div>`;
+    ${LOCAL ? '' : `<div class="pj-kpi">${ic('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>')}<div><b>${maj}</b><small>Mises à jour publiées</small></div></div>`}`;
 }
 
 function renderBarreDroite() {
@@ -417,7 +409,7 @@ function renderBarreDroite() {
   }"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${
     P.pleineLargeur ? '<path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/>' : '<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>'
   }</svg>${P.pleineLargeur ? 'Largeur limitée' : 'Pleine largeur'}</button>`;
-  if (P.vue === 'demarche') z.innerHTML = largeur;
+  if (['a-faire', 'comprendre'].includes(P.vue)) z.innerHTML = largeur;
   else if (P.vue === 'planning')
     z.innerHTML = `${largeur}<div class="pj-seg" role="group" aria-label="Échelle">${Object.keys(ZOOMS)
       .map(
@@ -974,7 +966,7 @@ function ouvrirEntree(cle) {
       manuelle ? 'Ce qui a changé, une ligne par point.' : 'Laisser vide pour garder le texte du changelog.'
     }">${echapper(v.texteCorrige || '')}</textarea></div>
     <label class="pj-case"><input type="checkbox" id="pj-j-epingle" ${v.epingle ? 'checked' : ''}> Mettre en avant (« À la une »)</label>
-    <label class="pj-case"><input type="checkbox" id="pj-j-masque" ${v.masque ? 'checked' : ''}> Masquer de la page publique</label>
+    <label class="pj-case"><input type="checkbox" id="pj-j-masque" ${v.masque ? 'checked' : ''}> Masquer du journal</label>
     <p class="pj-erreur" id="pj-f-erreur" role="alert"></p>
     <div class="pj-actions"><button type="button" class="btn btn-primary" id="pj-j-enregistrer">Enregistrer</button><button type="button" class="btn btn-secondary" data-fermer>Annuler</button><span class="espace"></span>${
       e && e.idCorrection
@@ -1134,7 +1126,7 @@ function htmlGroupe(g, date) {
 /* ════════════════ Évènements ════════════════ */
 
 function changerVue(vue) {
-  if (vue === 'demarche' && !P.peutModifier) return;
+  if (['a-faire', 'comprendre'].includes(vue) && !P.peutModifier) return;
   P.vue = vue;
   history.replaceState(null, '', '#' + vue);
   render();
@@ -1238,34 +1230,13 @@ document.addEventListener('pointercancel', () => {
   }
 });
 
-/* Bouton « Partager » dans l'en-tête (construit par cvdl-ui.js). */
-document.addEventListener('DOMContentLoaded', () => {
-  const actions = document.querySelector('.cvdl-entete-actions');
-  if (!actions) return;
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'btn btn-secondary';
-  b.innerHTML =
-    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4M12 2v14"/></svg>Partager';
-  b.addEventListener('click', async () => {
-    const url = location.href.split('#')[0] + '#' + P.vue;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast('Lien copié');
-    } catch (err) {
-      prompt('Lien de la page :', url);
-    }
-  });
-  actions.appendChild(b);
-});
-
 /* ── Démarrage ── */
 (async () => {
   const ancre = location.hash.slice(1);
   if (ancre === 'journal') P.vue = 'journal';
-  const [ok] = await Promise.all([charger(), chargerChangelog()]);
+  const [ok] = await Promise.all([charger(), LOCAL ? null : chargerChangelog()]);
   if (!ok) return;
-  if (P.jeton) {
+  if (P.jeton || LOCAL) {
     const r = await appel('projet-droits');
     P.peutModifier = !!r.ok;
     if (!P.peutModifier && r.sessionExpiree) {
@@ -1275,19 +1246,25 @@ document.addEventListener('DOMContentLoaded', () => {
       P.jeton = '';
     }
   }
-  // Démarche : journal privé de l'admin (projet-demarche.js), jamais affiché sans session admin.
-  if (P.peutModifier) {
-    const onglet = document.createElement('button');
-    onglet.type = 'button';
-    onglet.setAttribute('role', 'tab');
-    onglet.className = 'pj-pil pj-pil-prive';
-    onglet.dataset.vue = 'demarche';
-    onglet.innerHTML =
-      'Démarche <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-label="réservé à l’admin"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-    document.querySelector('.pj-onglets').appendChild(onglet);
-    if (ancre === 'demarche') P.vue = 'demarche';
+  // À faire et Comprendre CVDL : réservés à l'admin (projet-a-faire.js, projet-comprendre.js),
+  // jamais affichés sans session admin.
+  if (P.peutModifier && !LOCAL) {
+    for (const [vue, libelle] of [
+      ['a-faire', 'À faire'],
+      ['comprendre', 'Comprendre CVDL'],
+    ]) {
+      const onglet = document.createElement('button');
+      onglet.type = 'button';
+      onglet.setAttribute('role', 'tab');
+      onglet.className = 'pj-pil pj-pil-prive';
+      onglet.dataset.vue = vue;
+      onglet.textContent = libelle;
+      document.querySelector('.pj-onglets').appendChild(onglet);
+    }
+    if (ancre === 'a-faire' || ancre === 'comprendre') P.vue = ancre;
+    if (ancre === 'demarche') P.vue = 'comprendre';
   }
-  P.edition = P.peutModifier && ancre === 'edition';
+  P.edition = P.peutModifier && (ancre === 'edition' || (!!LOCAL && !P.taches.length));
   if (ancre === 'edition') history.replaceState(null, '', '#' + P.vue);
   render();
 })();

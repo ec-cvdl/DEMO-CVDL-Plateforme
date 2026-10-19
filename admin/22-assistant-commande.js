@@ -158,7 +158,61 @@ function etapeNcStructure(v) {
           .join('') || '<p class="csw-aide">Aucune structure enregistrée.</p>'
       }
     </div>
-    <p class="csw-aide ncw-aucune" ${q && !liste.some((s) => texte(s).includes(q)) ? '' : 'hidden'}>Aucune structure ne correspond à cette recherche.</p>`;
+    <p class="csw-aide ncw-aucune" ${q && !liste.some((s) => texte(s).includes(q)) ? '' : 'hidden'}>Aucune structure ne correspond à cette recherche.</p>
+    ${blocPonctuelleNc(v)}`;
+}
+/** Livraison « one shot » : structure créée ici, sans portail (code jamais communiqué). */
+function blocPonctuelleNc(v) {
+  const p = v.ponctuelle;
+  if (!p)
+    return `<button type="button" class="btn btn-secondary ncw-ponct-ouvrir" data-nc-ponctuelle>${icon('plus', 14)}Livraison ponctuelle : structure sans portail</button>`;
+  const deps = state.departements
+    .slice()
+    .sort((a, b) => a.code.localeCompare(b.code))
+    .map(
+      (d) =>
+        `<option value="${echapper(d.code)}" ${p.departement === d.code ? 'selected' : ''}>${echapper(`${d.code} · ${d.nom}`)}</option>`,
+    )
+    .join('');
+  return `<section class="ncw-ponct">
+    <h4>Structure sans portail</h4>
+    <p class="csw-aide">Pour une livraison ponctuelle : pas de portail ni de code. Elle pourra devenir une structure avec portail depuis sa fiche.</p>
+    <div class="ncw-ponct-grille">
+      <div class="field"><label for="ncp-nom">Nom de la structure *</label><input class="input" id="ncp-nom" data-ncp="nom" value="${echapper(p.nom || '')}"></div>
+      <div class="field"><label for="ncp-adresse">Adresse <em>(facultatif)</em></label><input class="input" id="ncp-adresse" data-ncp="adresse" value="${echapper(p.adresse || '')}"></div>
+      <div class="field"><label for="ncp-departement">Département <em>(sinon d’après l’adresse)</em></label><select class="input" id="ncp-departement" data-ncp="departement"><option value="">—</option>${deps}</select></div>
+    </div>
+    <div class="ncw-ponct-actions"><button type="button" class="btn btn-ghost" data-nc-ponctuelle-annuler>Annuler</button><button type="button" class="btn btn-primary" data-nc-ponctuelle-creer>Créer et choisir</button></div>
+  </section>`;
+}
+async function creerPonctuelleNc(bouton) {
+  const m = state.modal;
+  const p = m.v.ponctuelle;
+  if (!String(p.nom || '').trim()) {
+    $('rp-retour-modale').innerHTML = '<div class="msg msg-erreur">Le nom de la structure est obligatoire.</div>';
+    return;
+  }
+  bouton.disabled = true;
+  const r = await poster({
+    action: 'structure-create',
+    ponctuelle: true,
+    nom: p.nom.trim(),
+    adresse: String(p.adresse || '').trim(),
+    departement: p.departement || '',
+  });
+  if (!r || !r.ok) {
+    bouton.disabled = false;
+    $('rp-retour-modale').innerHTML =
+      `<div class="msg msg-erreur">${echapper((r && r.erreur) || 'Création impossible.')}</div>`;
+    return;
+  }
+  const rst = await lireApi({ action: 'structures' });
+  if (rst.ok) state.structures = rst.structures.slice().sort((a, b) => b.id - a.id);
+  m.v.ponctuelle = null;
+  m.v.code = r.code;
+  state.ncCode = r.code;
+  m.v.recherche = '';
+  render();
 }
 function etapeNcProduits(v, s) {
   const t = typeNc(s);
@@ -216,7 +270,7 @@ function etapeNcLivraison(v, s) {
           <span data-ill="personne" class="ill"></span>
           <input class="input" data-nc-pers="${i}" data-champ="prenom" placeholder="Prénom" value="${echapper(p.prenom)}" aria-label="Prénom">
           <input class="input" data-nc-pers="${i}" data-champ="nom" placeholder="NOM" value="${echapper(p.nom)}" aria-label="Nom">
-          <input class="input" data-nc-pers="${i}" data-champ="naissance" placeholder="jj/mm/aaaa" inputmode="numeric" maxlength="10" value="${echapper(p.naissance)}" aria-label="Date de naissance">
+          <input class="input" data-nc-pers="${i}" data-champ="naissance" data-naissance placeholder="jj/mm/aaaa" value="${echapper(p.naissance)}" aria-label="Date de naissance">
           <button type="button" class="btn btn-ghost btn-icon" style="width:28px;height:28px" data-nc-pers-retirer="${i}" aria-label="Retirer">${icon('x', 14)}</button>
         </div>`,
           )
@@ -285,11 +339,12 @@ function etapeNcPaiement(v, s) {
       </div>
     </section>`;
 }
-function libellePersonneNc(p) {
-  return (
-    [p.prenom.trim(), p.nom.trim().toUpperCase()].filter(Boolean).join(' ') +
-    (p.naissance.trim() ? ' — ' + p.naissance.trim() : '')
-  );
+/** Personne saisie → { nomComplet (« Prénom NOM »), dateNaissance }. */
+function personneNc(p) {
+  return {
+    nomComplet: [p.prenom.trim(), p.nom.trim().toUpperCase()].filter(Boolean).join(' '),
+    dateNaissance: p.naissance.trim(),
+  };
 }
 function etapeNcRecap(v, s) {
   const bloc = (
@@ -326,7 +381,7 @@ function etapeNcRecap(v, s) {
     ])}
     ${bloc(1, 'Produits', [...state.ncLignes.map((l) => [l.produit, '× ' + l.quantite]), sansPaiementNc(s) ? null : ['Montant estimé', formaterMontant(total)]])}
     ${bloc(2, 'Personnes & livraison', [
-      ['Personnes', personnes.length ? personnes.map((p) => libellePersonneNc(p).split(' — ')[0]).join(', ') : ''],
+      ['Personnes', personnes.length ? personnes.map((p) => personneNc(p).nomComplet).join(', ') : ''],
       ['Livraison', mode ? mode.label : 'À définir'],
       ['Échéance', v.urgent ? 'Urgente' : v.dateSouhaitee ? isoVersFrNc(v.dateSouhaitee) : ''],
       ['Prescripteur', v.responsable || (s && s.responsable)],
@@ -358,8 +413,8 @@ function verifierEtapeCommande(i) {
     const remplies = v.personnes.filter((p) => (p.prenom + p.nom + p.naissance).trim());
     if (remplies.some((p) => !p.prenom.trim() || !p.nom.trim()))
       return 'Chaque personne doit avoir un prénom et un nom.';
-    if (remplies.some((p) => p.naissance.trim() && !/^\d{2}\/\d{2}\/\d{4}$/.test(p.naissance.trim())))
-      return 'Date de naissance au format jj/mm/aaaa.';
+    const erreurNaissance = remplies.map((p) => window.erreurNaissanceCvdl(p.naissance)).find(Boolean);
+    if (erreurNaissance) return erreurNaissance;
     if (typeNc(s) === 'Vente solidaire' && !remplies.length) return 'Ajoutez au moins une personne accompagnée.';
   }
   if (cle === 'paiement' && typeNc(s) === 'Vente solidaire' && !v.moyenPaiement)
@@ -401,6 +456,23 @@ document.addEventListener('click', (e) => {
     allerEtapeCommande(m.etape - 1);
     return;
   }
+  if (e.target.closest('[data-nc-ponctuelle]')) {
+    m.v.ponctuelle = {};
+    render();
+    const champ = document.getElementById('ncp-nom');
+    if (champ) champ.focus();
+    return;
+  }
+  if (e.target.closest('[data-nc-ponctuelle-annuler]')) {
+    m.v.ponctuelle = null;
+    render();
+    return;
+  }
+  const creer = e.target.closest('[data-nc-ponctuelle-creer]');
+  if (creer) {
+    creerPonctuelleNc(creer);
+    return;
+  }
   const mode = e.target.closest('[data-nc-mode]');
   if (mode) {
     m.v.modeLivraison = m.v.modeLivraison === mode.dataset.ncMode ? '' : mode.dataset.ncMode;
@@ -438,6 +510,10 @@ document.addEventListener('input', (e) => {
     if (vide) vide.hidden = n > 0;
     return;
   }
+  if (el.dataset.ncp && m.v.ponctuelle) {
+    m.v.ponctuelle[el.dataset.ncp] = el.value;
+    return;
+  }
   if (el.dataset.ncPers != null) {
     const p = m.v.personnes[parseInt(el.dataset.ncPers, 10)];
     if (!p) return;
@@ -450,10 +526,6 @@ document.addEventListener('input', (e) => {
       const pos = el.selectionStart;
       el.value = el.value.toUpperCase();
       el.setSelectionRange(pos, pos);
-    }
-    if (el.dataset.champ === 'naissance') {
-      const ch = el.value.replace(/\D/g, '').slice(0, 8);
-      el.value = [ch.slice(0, 2), ch.slice(2, 4), ch.slice(4)].filter(Boolean).join('/');
     }
     p[el.dataset.champ] = el.value;
     return;
@@ -500,7 +572,7 @@ async function enregistrerCommande() {
   }
   const s = structureNc();
   const t = typeNc(s);
-  const personnes = v.personnes.filter((p) => (p.prenom + p.nom).trim()).map(libellePersonneNc);
+  const personnes = v.personnes.filter((p) => (p.prenom + p.nom).trim()).map(personneNc);
   const donnees = {
     action: 'commande-create-manuelle',
     code: s.code,
@@ -523,7 +595,7 @@ async function enregistrerCommande() {
   try {
     const r = await posterEtat(donnees, 'Création…', 'Commande créée');
     if (r.ok) {
-      const rc = await jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' });
+      const rc = await lireApi({ action: 'list', limite: -1, filtre: 'tout' });
       if (rc.ok) state.commandes = rc.commandes;
       // Créée depuis un devis libre (bouton "Générer la commande liée") : rattache
       // automatiquement le nouveau devis à cette commande fraîchement créée.
@@ -535,7 +607,7 @@ async function enregistrerCommande() {
             idDevis: m.rattacherDevisId,
             idCommande: nouvelleCommande.id,
           });
-          const rd = await jsonp({ action: 'devis', password: motDePasse, limite: 0 });
+          const rd = await lireApi({ action: 'devis', limite: 0 });
           if (rd.ok) state.devis = rd.devis;
         }
       }

@@ -1,8 +1,4 @@
-const esc = (v) =>
-  String(v == null ? '' : v).replace(
-    /[&<>"']/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-  );
+const esc = echapper;
 const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
 const params = new URLSearchParams(location.search);
 const ref = params.get('ref') || '';
@@ -141,9 +137,7 @@ async function charger() {
     return;
   }
   try {
-    const r = await fetch(API + '?' + new URLSearchParams({ action: 'rapport-impact-par-code', code })).then((x) =>
-      x.json(),
-    );
+    const r = await appelApi({ action: 'rapport-impact-par-code', code });
     if (!r.ok) throw new Error(r.erreur || 'Erreur');
     donnees = r;
     const annees = [...new Set(r.commandes.map((c) => c.annee).filter(Boolean))].sort().reverse();

@@ -14,7 +14,7 @@ async function afficherPrerequisPartenaire(c) {
   zone.innerHTML = '';
   try {
     // Composant partagé avec l'admin (fiche-commande.js) : même frise, même checklist.
-    const etat = await window.FicheCommande.charger(jsonp, { codeCreateur: codeValide, id: c.id });
+    const etat = await window.FicheCommande.charger(lireApi, { codeCreateur: codeValide, id: c.id });
     if (!etat || commandeOuverte !== c) return;
     $('dc-timeline').innerHTML = window.FicheCommande.frise(etat);
     if (!etat.etapeSuivante) return;
@@ -65,18 +65,9 @@ const SVG_LIEN_EXTERNE =
   '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
 
 // Noms des bénéficiaires déclarés à la commande, dans l'ordre — pour associer un lien de
-// paiement par personne quand le paiement séparé a été choisi. Même extraction que côté admin
-// (nomsPersonnesCommande) : ne lit que le premier segment de chaque ligne (le nom), qu'elle
-// soit au format "Nom|Naissance" ou déjà simple.
+// paiement par personne quand le paiement séparé a été choisi.
 function nomsPersonnesCommande(c) {
-  return String(c.personnes || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((ligneTexte) => {
-      const separateur = ligneTexte.includes('|') ? '|' : ligneTexte.includes('—') ? '—' : null;
-      return separateur ? ligneTexte.split(separateur)[0].trim() : ligneTexte;
-    });
+  return c.personnes.map((p) => p.nomComplet).filter(Boolean);
 }
 
 // Icône du produit principal d'une commande — repris de commande.html (même correspondance
@@ -166,7 +157,7 @@ async function verifierCode() {
   $('btn-verifier-code').innerHTML = '<span class="spinner-inline"></span>Vérification…';
   $('retour-id-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code });
+    const r = await lireApi({ action: 'check', code });
     if (!r.ok) {
       $('retour-id-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
     } else if (!r.interne) {
@@ -193,9 +184,7 @@ $('id-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') verifierCode();
 });
 $('btn-deconnexion-cp').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
@@ -203,7 +192,7 @@ async function chargerCommandes() {
   $('retour-liste-commandes-partenaires').innerHTML =
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   try {
-    const r = await jsonp({ action: 'commandes-partenaires-lister', codeCreateur: codeValide });
+    const r = await lireApi({ action: 'commandes-partenaires-lister', codeCreateur: codeValide });
     if (!r.ok) {
       $('retour-liste-commandes-partenaires').innerHTML =
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`;
@@ -232,10 +221,7 @@ function etatCp(c) {
 /** Ce qu'il reste à faire, en une phrase, pour la carte de la liste. */
 function prochaineActionCp(c) {
   if (c.transfereAdmin) return 'Gérée par l’équipe CVDL';
-  const deja = String(c.numerosSerie || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean).length;
+  const deja = c.numerosSerie.length;
   const besoin = c.quantiteAvecNumeroSerie || 0;
   switch (c.statutCommande || 'Reçue') {
     case 'Reçue':
@@ -362,10 +348,7 @@ async function ouvrirDetailCommande(reference) {
     ? `<span class="tag-statut" style="background:${COULEURS_STATUT['Annulée'].bg};color:${COULEURS_STATUT['Annulée'].fg}">Commande annulée</span>`
     : construireTimelinePartenaire(c.statutCommande);
 
-  const numerosDejaLa = String(c.numerosSerie || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const numerosDejaLa = c.numerosSerie;
 
   // "Qui a reçu quoi" — retrouve le bénéficiaire de chaque appareil déjà attribué, pour ne pas
   // avoir à recouper à la main la liste des numéros et celle des bénéficiaires déclarés.
@@ -423,7 +406,7 @@ async function ouvrirDetailCommande(reference) {
           <div style="display:flex;align-items:center;gap:8px">
             <span style="flex:0 0 130px;font-size:12.5px;font-weight:600;opacity:0.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${echapper(nom)}">${echapper(nom || `Personne accompagnée ${i + 1}`)}</span>
             <input type="text" class="input" data-lien-paiement-personne="${i}" placeholder="https://…" value="${echapper(liensActuelsPaiement[i] || '')}" style="flex:1">
-            ${liensActuelsPaiement[i] && c.statutPaiement !== 'Payé' ? `<a class="lien-paiement-cs" href="${echapper(API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference) + '&index=' + i)}" target="_blank" rel="noopener" title="Ouvrir ce lien de paiement">${SVG_LIEN_EXTERNE}</a>` : ''}
+            ${liensActuelsPaiement[i] && c.statutPaiement !== 'Payé' ? `<a class="lien-paiement-cs" href="${echapper(urlApi('clic-lien-paiement', { ref: c.reference, index: i }))}" target="_blank" rel="noopener" title="Ouvrir ce lien de paiement">${SVG_LIEN_EXTERNE}</a>` : ''}
           </div>`,
             )
             .join('')}
@@ -436,7 +419,7 @@ async function ouvrirDetailCommande(reference) {
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input type="text" class="input" id="dc-lien-paiement" placeholder="https://…" value="${echapper(c.lienPaiement || '')}" style="flex:1;min-width:200px">
           <button type="button" class="btn btn-ghost" id="dc-enregistrer-lien-paiement">Enregistrer</button>
-          ${c.lienPaiement && c.statutPaiement !== 'Payé' ? `<a class="lien-paiement-cs" href="${echapper(API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference))}" target="_blank" rel="noopener">Régler cette commande${SVG_LIEN_EXTERNE}</a>` : ''}
+          ${c.lienPaiement && c.statutPaiement !== 'Payé' ? `<a class="lien-paiement-cs" href="${echapper(urlApi('clic-lien-paiement', { ref: c.reference }))}" target="_blank" rel="noopener">Régler cette commande${SVG_LIEN_EXTERNE}</a>` : ''}
         </div>
       </div>`
       }
@@ -569,16 +552,26 @@ async function ouvrirDetailCommande(reference) {
   $('dc-tache-avancer').querySelector('.dc-num').textContent = etapeMateriel ? '2' : '1';
   $('dc-avancer-aide').textContent =
     AIDES[c.statutCommande] || 'Vous faites avancer la commande vous-même, sans passer par la logistique.';
-  // Colissimo : le numéro de suivi est exigé pour passer « En livraison » — il n'y avait aucun
-  // champ pour le saisir ici, la commande restait bloquée à « Préparée ».
-  const etapeColissimo = c.modeLivraison === 'Colissimo' && c.statutCommande === 'Préparée';
-  $('dc-tache-colissimo').hidden = !etapeColissimo;
-  $('dc-tache-colissimo').className = 'dc-tache ' + (c.colissimo ? 'ok' : 'cours');
-  $('dc-colissimo').value = c.colissimo || '';
-  $('dc-retour-colissimo').innerHTML = '';
-  if (etapeColissimo) {
+  // Expédition (« Préparée ») : mode de livraison, suivi Colissimo, date estimée — mêmes
+  // écrans et mêmes contrôles que l'admin et la logistique (etapes-commande.js).
+  const etapeExpedition = c.statutCommande === 'Préparée';
+  const expeditionPrete = !!c.modeLivraison && (c.modeLivraison !== 'Colissimo' || !!String(c.colissimo || '').trim());
+  $('dc-tache-expedition').hidden = !etapeExpedition;
+  $('dc-tache-expedition').className = 'dc-tache ' + (expeditionPrete ? 'ok' : 'cours');
+  $('dc-expedition').innerHTML = etapeExpedition
+    ? `<b class="dc-expedition-b">Mode de livraison</b>${window.EtapesCommande.modes(c)}${
+        c.modeLivraison === 'Colissimo'
+          ? `<b class="dc-expedition-b">Liens de suivi Colissimo (un par colis)</b>${window.EtapesCommande.colissimo(c)}`
+          : ''
+      }${
+        c.modeLivraison
+          ? `<b class="dc-expedition-b">${c.modeLivraison === 'Retrait' ? 'Retrait disponible à partir du' : 'Date estimée de livraison'} <small>(facultatif)</small></b>${window.EtapesCommande.dateCible(c)}`
+          : ''
+      }`
+    : '';
+  if (etapeExpedition) {
     $('dc-tache-avancer').querySelector('.dc-num').textContent = '2';
-    if (!c.colissimo) $('dc-tache-avancer').className = 'dc-tache avenir';
+    if (!expeditionPrete) $('dc-tache-avancer').className = 'dc-tache avenir';
   }
   $('dc-attr-detail').textContent = attributionComplete
     ? `${numerosDejaLa.length} appareil${numerosDejaLa.length > 1 ? 's' : ''} attribué${numerosDejaLa.length > 1 ? 's' : ''}.`
@@ -606,7 +599,7 @@ async function ouvrirDetailCommande(reference) {
   $('modale-detail-commande').classList.add('visible');
 
   try {
-    const r = await jsonp({ action: 'flotte-lister', code: codeValide });
+    const r = await lireApi({ action: 'flotte-lister', code: codeValide });
     flotteDisponible = (r.ok ? r.appareils : []).filter((a) => a.statut === 'En stock' && !a.verrouille);
     if (!flotteDisponible.length) {
       $('dc-liste-flotte').innerHTML =
@@ -725,7 +718,7 @@ async function ouvrirDetailCommande(reference) {
             <div class="grille-personne-appareil" data-personne-manuel="${id}" hidden style="margin-top:6px">
               <input type="text" class="input" placeholder="Prénom" data-personne-prenom="${id}">
               <input type="text" class="input" placeholder="NOM" style="text-transform:uppercase" data-personne-nom="${id}">
-              <input type="text" class="input" placeholder="Date de naissance (jj/mm/aaaa)" data-personne-naissance="${id}">
+              <input type="text" class="input" placeholder="Date de naissance (jj/mm/aaaa)" data-naissance data-personne-naissance="${id}">
             </div>`;
           conteneur.after(zonePersonne);
 
@@ -769,10 +762,7 @@ async function ouvrirDetailCommande(reference) {
 function majCompteurSelection() {
   const c = commandeOuverte;
   if (!c) return;
-  const deja = String(c.numerosSerie || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean).length;
+  const deja = c.numerosSerie.length;
   const reste = Math.max(0, (c.quantiteAvecNumeroSerie || 0) - deja);
   const n = appareilsFlotteSelectionnes.length;
   $('dc-compteur-selection').textContent = `${n} sélectionné${n > 1 ? 's' : ''} sur ${reste} à attribuer`;
@@ -840,6 +830,12 @@ $('dc-confirmer-attribution').addEventListener('click', async () => {
       const dateNaissance = document.querySelector(`[data-personne-naissance="${id}"]`)?.value.trim() || '';
       return { nomComplet: [prenom, nom].filter(Boolean).join(' '), dateNaissance };
     });
+    const erreurNaissance = personnes.map((p) => window.erreurNaissanceCvdl(p.dateNaissance)).find(Boolean);
+    if (erreurNaissance) {
+      $('dc-retour-attribution').innerHTML = `<div class="msg msg-erreur">${echapper(erreurNaissance)}</div>`;
+      $('dc-confirmer-attribution').disabled = false;
+      return;
+    }
 
     const r = await poster({
       action: 'commande-partenaire-attribuer-flotte',
@@ -867,35 +863,21 @@ $('dc-confirmer-attribution').addEventListener('click', async () => {
   $('dc-confirmer-attribution').disabled = false;
 });
 
-$('dc-enregistrer-colissimo').addEventListener('click', async () => {
-  if (!commandeOuverte) return;
-  const valeur = $('dc-colissimo').value.trim().replace(/\s+/g, '');
-  if (!/^[A-Za-z0-9]{8,30}$/.test(valeur)) {
-    $('dc-retour-colissimo').innerHTML =
-      '<div class="msg msg-erreur">Numéro de suivi invalide (lettres et chiffres, 8 à 30 caractères).</div>';
-    return;
+/* Expédition : enregistrée au fil de la saisie (etapes-commande.js), puis la fiche se met à jour. */
+async function enregistrerExpedition(ref, champ, valeur) {
+  const c = commandesCourantes.find((x) => x.reference === ref);
+  if (!c) return { ok: false, erreur: 'Commande introuvable : rechargez.' };
+  const r = await poster({ action: 'commande-partenaire-update', codeCreateur: codeValide, id: c.id, champ, valeur });
+  if (r.ok) {
+    await chargerCommandes();
+    await ouvrirDetailCommande(ref);
   }
-  $('dc-enregistrer-colissimo').disabled = true;
-  try {
-    const r = await poster({
-      action: 'commande-partenaire-update',
-      codeCreateur: codeValide,
-      id: commandeOuverte.id,
-      champ: 'colissimo',
-      valeur,
-    });
-    if (r.ok) {
-      const ref = commandeOuverte.reference;
-      await chargerCommandes();
-      await ouvrirDetailCommande(ref);
-      $('dc-retour-statut').innerHTML = '<div class="msg msg-succes">Numéro de suivi enregistré.</div>';
-    } else
-      $('dc-retour-colissimo').innerHTML =
-        `<div class="msg msg-erreur">${echapper(r.erreur || 'Enregistrement impossible.')}</div>`;
-  } catch (e) {
-    $('dc-retour-colissimo').innerHTML = '<div class="msg msg-erreur">Enregistrement impossible.</div>';
-  }
-  $('dc-enregistrer-colissimo').disabled = false;
+  return r;
+}
+window.EtapesCommande.brancher({
+  mode: (ref, valeur) => enregistrerExpedition(ref, 'modeLivraison', valeur),
+  colissimo: (ref, valeur) => enregistrerExpedition(ref, 'colissimo', valeur),
+  date: (ref, valeur) => enregistrerExpedition(ref, 'dateLivraisonCible', valeur),
 });
 $('dc-avancer-statut').addEventListener('click', async function () {
   const prochain = this.dataset.prochain;

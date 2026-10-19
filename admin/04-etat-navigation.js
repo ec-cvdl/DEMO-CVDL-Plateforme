@@ -44,16 +44,17 @@ const state = {
   passeportRecherche: '',
   passeportResultat: null,
   passeportChargement: false, // onglet Passeport matériel (admin) — recherche par numéro de série, accès complet (pas de restriction structure), inclut tec.tech
-  structuresFiltreRegion: '',
   distributions: [],
+  regions: [],
   rattachements: [],
   distFiltre: 'cours',
   distRegion: '', // programmes de distribution
   depotVente: [], // structures en dépôt-vente (routes/depotVente.js)
+  transfertsStock: [], // tableurs du stock déjà présent, envoyés par les structures (admin/41)
   calMois: '',
   calJour: '',
   calFiltres: { livraisons: true, programmes: true, factures: true }, // calendrier global
-  statsFiltres: { programme: '', region: '', departement: '', type: '' }, // filtres de l'onglet Statistiques // filtre « Région analytique » de la liste des structures
+  statsFiltres: { programme: '', type: '' }, // filtres de l'onglet Statistiques (territoire : admin/43)
   notifOuverte: false, // panneau de la cloche de notifications (sidebar), fermé par défaut
 };
 
@@ -70,13 +71,7 @@ async function preparerGoogleAdmin(automatique) {
     $('rp-google').remove();
     $('rp-google-ou').remove();
   };
-  const c = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'auth-config' }),
-  })
-    .then((r) => r.json())
-    .catch(() => ({}));
+  const c = await appelApi({ action: 'auth-config' }, { methode: 'POST' }).catch(() => ({}));
   if (!c.clientId) return masquer();
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
@@ -93,13 +88,9 @@ async function preparerGoogleAdmin(automatique) {
       cancel_on_tap_outside: false,
       callback: async (rep) => {
         $('retour-connexion').innerHTML = '';
-        const r = await fetch(API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'auth-google', credential: rep.credential }),
-        })
-          .then((x) => x.json())
-          .catch(() => ({ ok: false, erreur: 'Connexion au serveur impossible.' }));
+        const r = await appelApi({ action: 'auth-google', credential: rep.credential }, { methode: 'POST' }).catch(
+          () => ({ ok: false, erreur: 'Connexion au serveur impossible.' }),
+        );
         if (r.ok && r.compte && ['admin', 'compta'].includes(r.compte.role)) return connecter(r.jeton);
         const msg = r.ok
           ? 'Ce compte a le rôle « Logistique » : utilisez l’espace Logistique (support.html).'
@@ -132,7 +123,7 @@ async function connecter(valeurForcee) {
   try {
     // Jeton de compte Google (j2) : on garde l'identité, validée par auth-moi (réservé aux admins).
     const estCompte = mdp.startsWith('j2.');
-    let r = await jsonp(estCompte ? { action: 'auth-moi', password: mdp } : { action: 'login', password: mdp });
+    let r = await lireApi({ action: estCompte ? 'auth-moi' : 'login' }, mdp);
     if (estCompte && r && r.ok && (!r.compte || !['admin', 'compta'].includes(r.compte.role)))
       r = { ok: false, erreur: 'Ce compte a le rôle « Logistique » : utilisez l’espace Logistique (support.html).' };
     if (!r || !r.ok) {
@@ -142,7 +133,6 @@ async function connecter(valeurForcee) {
       document.documentElement.classList.remove('rp-reconnexion');
       try {
         sessionStorage.removeItem('cvdl-admin-jeton');
-        sessionStorage.removeItem('cvdl-admin-password');
       } catch (e) {}
       // Message réel du serveur (mot de passe admin non configuré ou trop court, trop de tentatives…) :
       // « Mot de passe incorrect » seulement quand c'est vraiment le cas.
@@ -156,23 +146,22 @@ async function connecter(valeurForcee) {
     motDePasse = estCompte ? mdp : r.jeton || mdp;
     $('mdp').value = '';
     try {
-      sessionStorage.removeItem('cvdl-admin-password');
       sessionStorage.setItem('cvdl-admin-jeton', motDePasse);
     } catch (e) {}
+    // Première connexion d'un compte : profil et rappel du rôle (embarquement-equipe.js).
+    if (estCompte && r.compte.aEmbarquer)
+      r.compte = await window.EmbarquementEquipe.ouvrir(r.compte, (action, d) =>
+        appelApi({ action, ...d }, { methode: 'POST', entetes: enteteAdmin(mdp) }),
+      );
     state.role = estCompte ? r.compte.role : r.role || 'admin';
     state.compte = estCompte ? r.compte : null;
-    // Connexion demandée depuis la page de pilotage (projet.html) : y retourner, en mode édition.
-    if (new URLSearchParams(location.search).get('retour') === 'projet' && state.role === 'admin') {
-      location.href = 'projet.html#edition';
-      return;
-    }
     // la fenêtre de connexion reste affichée pendant le chargement, pour ne pas montrer l'admin vide
     $('btn-connexion').textContent = 'Chargement des données…';
     await chargerTout();
     const snDepart = lireHash().sn;
-    const ongletDepart = lireHash().onglet || (state.role !== 'admin' ? ONGLETS_COMPTA[0] : 'dashboard');
-    state.activeTab =
-      state.role === 'admin' || ONGLETS_COMPTA.includes(ongletDepart) ? ongletDepart : ONGLETS_COMPTA[0];
+    const autorises = ongletsAutorises();
+    const ongletDepart = lireHash().onglet || autorises[0];
+    state.activeTab = autorises.includes(ongletDepart) ? ongletDepart : autorises[0];
     history.replaceState({ onglet: state.activeTab }, '', '#' + state.activeTab);
     $('connexion').hidden = true;
     render();
@@ -195,20 +184,24 @@ async function chargerTout() {
   // statistiques portent sur l'ensemble des données
   const compta = state.role === 'compta'; // rôle Comptabilité : ni SAV ni réglages
   const [rc, rs, rss, rst, rd, rf, rp, rr, rdi] = await Promise.all([
-    jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }).catch(() => null),
-    compta ? null : jsonp({ action: 'sav-list', password: motDePasse, limite: 0 }).catch(() => null),
-    compta ? null : jsonp({ action: 'sav-statuts-list', password: motDePasse }).catch(() => null),
-    jsonp({ action: 'structures', password: motDePasse }).catch(() => null),
-    jsonp({ action: 'devis', password: motDePasse, limite: 0 }).catch(() => null),
-    jsonp({ action: 'factures', password: motDePasse, limite: 0 }).catch(() => null),
-    jsonp({ action: 'produits', password: motDePasse }).catch(() => null),
-    compta ? null : jsonp({ action: 'reglages', password: motDePasse }).catch(() => null),
-    jsonp({ action: 'distributions', password: motDePasse }).catch(() => null),
+    lireApi({ action: 'list', limite: -1, filtre: 'tout' }).catch(() => null),
+    compta ? null : lireApi({ action: 'sav-list', limite: 0 }).catch(() => null),
+    compta ? null : lireApi({ action: 'sav-statuts-list' }).catch(() => null),
+    lireApi({ action: 'structures' }).catch(() => null),
+    lireApi({ action: 'devis', limite: 0 }).catch(() => null),
+    lireApi({ action: 'factures', limite: 0 }).catch(() => null),
+    lireApi({ action: 'produits' }).catch(() => null),
+    compta ? null : lireApi({ action: 'reglages' }).catch(() => null),
+    lireApi({ action: 'distributions' }).catch(() => null),
   ]);
   if (rc && rc.ok) state.commandes = rc.commandes || [];
   if (rs && rs.ok) state.sav = rs.tickets || [];
   if (rss && rss.ok) state.statutsSav = rss.statuts || [];
-  if (rst && rst.ok) state.structures = (rst.structures || []).slice().sort((a, b) => b.id - a.id);
+  if (rst && rst.ok) {
+    state.structures = (rst.structures || []).slice().sort((a, b) => b.id - a.id);
+    state.regions = rst.regions || []; // référentiel des régions (celles du compte s'il est régional)
+    state.departements = rst.departements || []; // départements de ces régions (code, nom, région)
+  }
   if (rd && rd.ok) state.devis = rd.devis || [];
   if (rf && rf.ok) state.factures = rf.factures || [];
   if (rp && rp.ok) state.produits = rp.produits || [];
@@ -217,8 +210,9 @@ async function chargerTout() {
     state.distributions = rdi.programmes || [];
     state.rattachements = rdi.rattachements || [];
   }
-  if (!compta) {
+  if (!compta && !estRegional()) {
     chargerDepotVente(); // non bloquant : alimente l'onglet Stock, les fiches et la cloche
+    chargerTransfertsStock(); // non bloquant : fil des priorités et fiches structure
     chargerModeStockBas(); // non bloquant : bouton / bandeau « Mode stock bas » de l'onglet Stock
   }
   if (typeof fin !== 'undefined') fin.d = null; // l'onglet Finances se recharge avec les nouvelles données
@@ -227,6 +221,16 @@ async function chargerTout() {
 
 /** Rôle « Comptabilité » (compte Google) : seuls ces onglets, le premier à l'ouverture. */
 const ONGLETS_COMPTA = ['finance', 'factures'];
+/** Admin régional (chargé·e de distribution) : onglets dont les données sont filtrées par région
+ *  côté serveur (regles/territoire.js). */
+const ONGLETS_REGIONAUX = ['dashboard', 'commandes', 'sav', 'factures', 'structures', 'distribution', 'stock'];
+/** Compte régional : ni mot de passe partagé (national) ni compte national. */
+const estRegional = () => !!state.compte && !state.compte.national;
+function ongletsAutorises() {
+  if (state.role === 'compta') return ONGLETS_COMPTA;
+  if (estRegional()) return ONGLETS_REGIONAUX;
+  return NAV_DEFS.map((n) => n.key);
+}
 
 /* ============================================================
    Rendu — nav + shell
@@ -246,7 +250,9 @@ const NAV_DEFS = [
   { key: 'bilan', label: 'Statistiques', ic: 'stats' },
   { key: 'retours', label: 'Retours', ic: 'bulle' }, // avis et erreurs des utilisateurs (retours-admin.js)
   { key: 'acces-demo', label: 'Accès démo', ic: 'key' }, // codes d'essai des structures (38-acces-demo.js)
+  { key: 'recette', label: 'Recette', ic: 'check' }, // résultats et remarques des testeurs (46-recette.js)
   { key: 'equipe', label: 'Équipe', ic: 'personne' }, // comptes Google de l'équipe, rôles (equipe-admin.js)
+  { key: 'projet', label: 'Projet', ic: 'calendrier' }, // rétroplanning, journal, démarche (40-projet.js)
   { key: 'reglages', label: 'Réglages', ic: 'gear' },
 ];
 
@@ -270,7 +276,7 @@ function naviguerVersOnglet(cle, remplacer) {
 }
 window.addEventListener('popstate', (e) => {
   const cle = (e.state && e.state.onglet) || lireHash().onglet || 'dashboard';
-  if (state.role === 'compta' && !ONGLETS_COMPTA.includes(cle)) return; // rôle Comptabilité : onglets financiers seulement
+  if (!ongletsAutorises().includes(cle)) return; // onglets du rôle et du territoire seulement
   if (NAV_DEFS.some((n) => n.key === cle) || cle === 'dashboard') {
     state.activeTab = cle;
     state.highlightRef = null;
@@ -296,6 +302,7 @@ const ILLUSTRATION_ONGLET = {
   distribution: 'distribution',
   calendrier: 'calendrier',
   bilan: 'stats',
+  projet: 'calendrier',
   reglages: 'reglages',
 };
 /** Sur-titres des en-têtes de page (maquette admin : illustration + sur-titre + titre). */
@@ -315,6 +322,7 @@ const SURTITRE_ONGLET = {
   calendrier: 'Planning',
   bilan: 'Pilotage',
   stats: 'Pilotage',
+  projet: 'Pilotage',
   reglages: 'Plateforme',
 };
 function decorerEnTeteOnglet(main, onglet) {
@@ -328,24 +336,20 @@ function decorerEnTeteOnglet(main, onglet) {
   const ill = document.createElement('span');
   ill.className = 'ill xl rp-titre-ill';
   ill.dataset.ill = ILLUSTRATION_ONGLET[onglet] || 'tableau';
-  // Style unifié : bloc « illustration à gauche + sur-titre + titre + sous-titre » (maquette).
-  if (estUnifie()) {
-    const sous = h1.nextElementSibling && h1.nextElementSibling.tagName === 'P' ? h1.nextElementSibling : null;
-    const bloc = document.createElement('div');
-    bloc.className = 'rp-titre-bloc';
-    const txt = document.createElement('div');
-    txt.className = 'rp-titre-txt';
-    const sur = document.createElement('div');
-    sur.className = 'rp-surtitre rp-titre-sur';
-    sur.textContent = SURTITRE_ONGLET[onglet] || '';
-    h1.before(bloc);
-    bloc.append(ill, txt);
-    if (sur.textContent) txt.append(sur);
-    txt.append(h1);
-    if (sous) txt.append(sous);
-  } else {
-    h1.parentNode.insertBefore(ill, h1);
-  }
+  // Bloc « illustration à gauche + sur-titre + titre + sous-titre ».
+  const sous = h1.nextElementSibling && h1.nextElementSibling.tagName === 'P' ? h1.nextElementSibling : null;
+  const bloc = document.createElement('div');
+  bloc.className = 'rp-titre-bloc';
+  const txt = document.createElement('div');
+  txt.className = 'rp-titre-txt';
+  const sur = document.createElement('div');
+  sur.className = 'rp-surtitre rp-titre-sur';
+  sur.textContent = SURTITRE_ONGLET[onglet] || '';
+  h1.before(bloc);
+  bloc.append(ill, txt);
+  if (sur.textContent) txt.append(sur);
+  txt.append(h1);
+  if (sous) txt.append(sous);
   if (window.portailIllustrations) window.portailIllustrations(ill.parentNode);
   if (NAV_DEFS.some((n) => n.key === onglet)) {
     ill.classList.remove('m', 't');
@@ -359,8 +363,69 @@ function teinteOnglet(cle) {
 }
 let derniereCleModale = '';
 let derniereCleVue = '';
+/* Modales de saisie : les fermer (croix, Annuler, clic à côté, Échap) demande confirmation dès
+   que quelque chose y a été saisi, pour ne pas faire tout retaper. */
+const MODALES_SAISIE = new Set([
+  'creer-structure',
+  'creer-commande',
+  'creer-produit',
+  'creer-devis',
+  'creer-facture',
+  'creer-sav',
+  'distribution-form',
+  'reglages-sav',
+  'coefficients-impact',
+  'modele-bon',
+  'modele-doc',
+  'modele-attestation',
+  'rapprochement',
+  'rattacher-devis',
+  'mode-stock-bas',
+  'stock-restreint',
+  'stocks-salesforce',
+]);
+const modalesSaisies = new WeakSet();
+function noterSaisieModale(e) {
+  if (!e.isTrusted || !state.modal || !MODALES_SAISIE.has(state.modal.kind)) return;
+  const zone = $('rp-modal-zone');
+  if (!zone || !zone.contains(e.target) || e.target.type === 'search' || e.target.closest('[data-sans-garde]')) return;
+  modalesSaisies.add(state.modal);
+}
+document.addEventListener('input', noterSaisieModale);
+document.addEventListener('change', noterSaisieModale);
+/** Ferme la dernière modale ouverte (la précédente, s'il y en a une, reste affichée). */
+async function fermerModale() {
+  const m = state.modal;
+  if (!m) return;
+  if (
+    modalesSaisies.has(m) &&
+    !(await confirmerCvdl('Fermer sans enregistrer ?\nCe que vous avez saisi sera perdu.', { ok: 'Fermer' }))
+  )
+    return;
+  if (state.modal !== m) return;
+  state.modal = m.modalParent || null;
+  state.ncLignes = [];
+  state.ndLignes = [];
+  render();
+}
+/** Rendu, avec le filtre « Territoire » appliqué aux listes le temps du dessin (admin/43). */
 function render() {
-  const navsVisibles = state.role === 'admin' ? NAV_DEFS : NAV_DEFS.filter((n) => ONGLETS_COMPTA.includes(n.key));
+  const rendre = appliquerFiltreTerritoire();
+  try {
+    renderOnglet();
+  } finally {
+    rendre();
+  }
+  const main = $('rp-main');
+  // Sous l'en-tête de l'onglet (titre), au-dessus de son contenu.
+  if (main && ONGLETS_TERRITOIRE.includes(state.activeTab) && !main.querySelector('.ter-barre')) {
+    const tete = main.firstElementChild;
+    if (tete) tete.insertAdjacentHTML('afterend', barreTerritoire());
+    else main.insertAdjacentHTML('afterbegin', barreTerritoire());
+  }
+}
+function renderOnglet() {
+  const navsVisibles = NAV_DEFS.filter((n) => ongletsAutorises().includes(n.key));
   const nbUrgentes = commandesUrgentes().length;
   const nbSavOuverts = savOuvertsListe().length;
   $('rp-nav').innerHTML = navsVisibles
@@ -394,6 +459,7 @@ function render() {
   else if (state.activeTab === 'retours') main.innerHTML = typeof vueRetours === 'function' ? vueRetours() : '';
   else if (state.activeTab === 'equipe') main.innerHTML = typeof vueEquipe === 'function' ? vueEquipe() : '';
   else if (state.activeTab === 'acces-demo') main.innerHTML = typeof vueAccesDemo === 'function' ? vueAccesDemo() : '';
+  else if (state.activeTab === 'recette') main.innerHTML = typeof vueRecette === 'function' ? vueRecette() : '';
   else if (state.activeTab === 'factures') main.innerHTML = vueFactures();
   else if (state.activeTab === 'finance') main.innerHTML = typeof vueFinance === 'function' ? vueFinance() : '';
   else if (state.activeTab === 'stock') main.innerHTML = vueStock();
@@ -403,6 +469,8 @@ function render() {
   else if (state.activeTab === 'distribution') main.innerHTML = vueDistribution();
   else if (state.activeTab === 'calendrier') main.innerHTML = vueCalendrierGlobal();
   else if (state.activeTab === 'reglages') main.innerHTML = vueReglages();
+  // Projet : le cadre n'est construit qu'une fois (un rafraîchissement de l'admin ne le recharge pas).
+  else if (state.activeTab === 'projet' && !main.querySelector('#pj-cadre')) main.innerHTML = vueProjet();
   decorerEnTeteOnglet(main, state.activeTab);
   if (state.activeTab === 'depannage' && typeof apresRenduDepannage === 'function') apresRenduDepannage();
   // Animations d'entrée (chiffres, barres) jouées une seule fois par onglet : un simple
@@ -417,6 +485,7 @@ function render() {
   zoneModale.classList.toggle('rp-modal-stable', !!cleModale && cleModale === derniereCleModale);
   derniereCleModale = cleModale;
   zoneModale.innerHTML = state.modal ? vueModal() : '';
+  if (typeof monterPersonnesStructure === 'function') monterPersonnesStructure();
 }
 
 document.addEventListener('click', async (e) => {
@@ -515,6 +584,12 @@ document.addEventListener('click', async (e) => {
     return;
   }
 
+  const copierCode = e.target.closest('[data-copier-code]');
+  if (copierCode) {
+    const s = state.structures.find((x) => String(x.id) === copierCode.dataset.copierCode);
+    if (s) copierTexte(s.code, 'Code copié');
+    return;
+  }
   const reveal = e.target.closest('[data-reveal-code]');
   if (reveal) {
     state.revealedCodes[reveal.dataset.revealCode] = !state.revealedCodes[reveal.dataset.revealCode];
@@ -652,12 +727,7 @@ document.addEventListener('click', async (e) => {
     e.target.matches('.dialog-backdrop') ||
     e.target.matches('.rp-drawer-backdrop')
   ) {
-    // Cas particulier de la modale "types de structure" (ouverte par-dessus la fiche
-    // structure) : la refermer doit revenir à la modale d'origine, pas tout fermer d'un coup.
-    state.modal = (state.modal && state.modal.modalParent) || null;
-    state.ncLignes = [];
-    state.ndLignes = [];
-    render();
+    fermerModale();
     return;
   }
 
@@ -719,11 +789,6 @@ document.addEventListener('click', async (e) => {
     validerCommandeLogistique(valideLogistique.dataset.validerLogistique);
     return;
   }
-  const enregSeries = e.target.closest('[data-confirmer-series]');
-  if (enregSeries) {
-    confirmerSeriesCommande(enregSeries.dataset.confirmerSeries);
-    return;
-  }
   const modifierSeries = e.target.closest('[data-modifier-series]');
   if (modifierSeries) {
     const c = state.commandes.find((x) => x.reference === modifierSeries.dataset.modifierSeries);
@@ -731,11 +796,6 @@ document.addEventListener('click', async (e) => {
       (state.confirmSubEtapes[c.id] ||= {}).series = false;
       render();
     }
-    return;
-  }
-  const confirmColissimo = e.target.closest('[data-confirmer-colissimo]');
-  if (confirmColissimo) {
-    confirmerColissimoPreparation(confirmColissimo.dataset.confirmerColissimo);
     return;
   }
   const modifierColissimo = e.target.closest('[data-modifier-colissimo]');
@@ -796,17 +856,6 @@ document.addEventListener('click', async (e) => {
     enregistrerLiensPaiementPersonnes(enregLiensPaiementPersonnes.dataset.enregistrerLiensPaiementPersonnes);
     return;
   }
-  const choixMode = e.target.closest('[data-choisir-mode-livraison]');
-  if (choixMode) {
-    state.etRouvrirMode = null;
-    choisirModeLivraison(choixMode.dataset.ref, choixMode.dataset.choisirModeLivraison);
-    return;
-  }
-  const enregColissimo = e.target.closest('[data-enregistrer-colissimo]');
-  if (enregColissimo) {
-    enregistrerColissimoCommande(enregColissimo.dataset.enregistrerColissimo);
-    return;
-  }
   const validerPrep = e.target.closest('[data-valider-preparation]');
   if (validerPrep && !validerPrep.disabled) {
     if (
@@ -821,11 +870,6 @@ document.addEventListener('click', async (e) => {
   const enregDateLivraison = e.target.closest('[data-enregistrer-date-livraison]');
   if (enregDateLivraison) {
     enregistrerDateLivraisonCommande(enregDateLivraison.dataset.enregistrerDateLivraison);
-    return;
-  }
-  const enregDateCible = e.target.closest('[data-enregistrer-date-cible]');
-  if (enregDateCible) {
-    enregistrerDateCibleCommande(enregDateCible.dataset.enregistrerDateCible);
     return;
   }
   const annuler = e.target.closest('[data-annuler-commande]');
@@ -1016,14 +1060,6 @@ document.addEventListener('click', async (e) => {
     render();
     return;
   }
-  if (e.target.closest('#rp-toggle-theme')) {
-    basculerTheme();
-    return;
-  }
-  if (e.target.closest('#rp-toggle-style')) {
-    basculerStyle();
-    return;
-  }
   if (e.target.closest('#rp-toggle-largeur')) {
     basculerLargeur();
     return;
@@ -1093,7 +1129,6 @@ document.addEventListener('click', async (e) => {
           id,
           champ: 'code',
           valeur: nouveauCode,
-          password: motDePasse,
         });
         if (r.ok) {
           const st = state.structures.find((x) => x.id === id);

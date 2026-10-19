@@ -3,7 +3,7 @@
    Le serveur n'envoie que des pseudonymes (P-XXXXX). « Afficher l'identité » demande un motif,
    est tracé côté serveur (journal), et l'identité se masque de nouveau après 5 minutes ou à
    la fermeture de l'admin (jamais mise en cache ni en stockage local).
-   S'appuie sur les fonctions globales de l'admin (admin/*.js) (poster, jsonp, etat, echapper, icon, render, motDePasse).
+   S'appuie sur les fonctions globales de l'admin (admin/*.js) (poster, lireApi, etat, echapper, icon, render, motDePasse).
    ════════════════════════════════════════════════════════════════════════════════════ */
 const IDR_DUREE_MS = 5 * 60 * 1000;
 const IDR_MOTIFS = [

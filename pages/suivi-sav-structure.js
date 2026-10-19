@@ -1,39 +1,6 @@
 function afficherMsg(id, texte, type) {
   $(id).innerHTML = texte ? `<div class="msg msg-${type}">${echapper(texte)}</div>` : '';
 }
-// Même calcul que côté admin (statutGarantiePourDate()/badgeGarantie() dans admin/) — dupliqué
-// ici, pas de module JS partagé entre l'admin et les pages publiques dans ce projet.
-function statutGarantiePublic(dateAchatFormatee) {
-  const [j, m, a] = String(dateAchatFormatee || '')
-    .split('/')
-    .map(function (n) {
-      return parseInt(n, 10);
-    });
-  if (!j || !m || !a) return { statut: null, dateFinGarantie: '' };
-  const dateMiGarantie = new Date(a + 1, m - 1, j);
-  const dateFinGarantie = new Date(a + 2, m - 1, j);
-  const maintenant = new Date();
-  const statut = maintenant >= dateFinGarantie ? 'expiree' : maintenant >= dateMiGarantie ? 'bientot' : 'en_cours';
-  return { statut, dateFinGarantie: dateFinGarantie.toLocaleDateString('fr-FR') };
-}
-// Même niveau d'information que l'admin (badgeGarantie()) : date de fin de garantie
-// comprise.
-function badgeGarantiePublicSav(dateAchatFormatee) {
-  const { statut, dateFinGarantie } = statutGarantiePublic(dateAchatFormatee);
-  const cfg = {
-    en_cours: { bg: '#1F9D55', texte: `Garantie en cours (jusqu'au ${dateFinGarantie})` },
-    bientot: { bg: '#7A5A00', texte: `Garantie bientôt expirée (jusqu'au ${dateFinGarantie})` },
-    expiree: { bg: '#E5484D', texte: `Hors garantie (${dateFinGarantie})` },
-  }[statut];
-  if (!cfg) return '';
-  return (
-    '<span style="display:inline-flex;align-items:center;gap:6px;background:' +
-    cfg.bg +
-    ';color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;flex:none;white-space:nowrap">' +
-    echapper(cfg.texte) +
-    '</span>'
-  );
-}
 /** Repérage depuis un lien direct (ex. "Activité récente" du portail structure, ?ref=XXX) :
  *  fait défiler jusqu'à la carte visée et la fait clignoter doucement en bleu quelques fois. */
 function cibleCarteDepuisUrl(selecteurCarte, classeAnimation) {
@@ -192,7 +159,7 @@ function rendreTicketsSuivi(tickets) {
         <div class="ts-tete-txt">
           <div class="cvdl-surtitre">${echapper(t.reference)} · ${t.dateResolution ? 'résolu le ' + echapper(t.dateResolution) : 'ouvert le ' + echapper(t.date || '')}</div>
           <b class="ts-titre">${echapper(t.symptome || 'Symptôme non précisé')}</b>
-          <div class="ts-pastilles"><span class="tag" data-forme="${formeTicket}" style="--forme:${teinte.texte}">${echapper(t.statut || '')}</span>${t.dateAchat ? badgeGarantiePublicSav(t.dateAchat) : ''}</div>
+          <div class="ts-pastilles"><span class="tag" data-forme="${formeTicket}" style="--forme:${teinte.texte}">${echapper(t.statut || '')}</span>${t.dateAchat ? window.badgeGarantieCvdl(t.dateAchat, true) : ''}</div>
         </div>
       </div>
       ${t.nomBeneficiaire || t.numeroSerie ? `<div class="ts-meta">${t.nomBeneficiaire ? `<span class="ts-personne"><span data-ill="personne" class="ill"></span><b>${echapper(t.nomBeneficiaire)}</b></span>` : ''}${t.numeroSerie ? window.piluleSerieCvdl(t.numeroSerie, { query: codeStructure }) : ''}</div>` : ''}
@@ -228,10 +195,10 @@ async function chargerTicketsSuivi() {
 
   try {
     const [r, rStatuts] = await Promise.all([
-      jsonp({ action: 'sav-par-code', code: code }),
+      lireApi({ action: 'sav-par-code', code: code }),
       statutsSavPublic.length
         ? Promise.resolve({ ok: true, statuts: statutsSavPublic })
-        : jsonp({ action: 'sav-statuts-public' }),
+        : lireApi({ action: 'sav-statuts-public' }),
     ]);
     if (rStatuts.ok) statutsSavPublic = rStatuts.statuts.sort((a, b) => a.ordre - b.ordre);
     if (r.ok) {
@@ -270,9 +237,7 @@ $('code-structure').addEventListener('keydown', (e) => {
 });
 
 $('btn-deconnexion-suivi-sav').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
@@ -296,7 +261,7 @@ async function rafraichirSuiviSilencieusement() {
   const code = $('code-structure').value.trim();
   if (!code) return;
   try {
-    const r = await jsonp({ action: 'sav-par-code', code: code });
+    const r = await lireApi({ action: 'sav-par-code', code: code });
     if (r.ok) {
       rendreTicketsSuivi(r.tickets);
       $('nb-tickets-texte').textContent =

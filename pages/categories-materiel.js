@@ -114,7 +114,7 @@ async function charger() {
     location.href = code ? 'portail-structure.html' : 'portail-beneficiaire.html';
   });
   try {
-    const r = await jsonp({ action: 'produits-public', code });
+    const r = await lireApi({ action: 'produits-public', code });
     $('etat-chargement').hidden = true;
     if (!r.ok || !r.produits) {
       $('etat-chargement').hidden = false;
@@ -195,6 +195,7 @@ function construireTableau() {
           <div class="ct-haut">${visuel(p)}${p.disponible === false ? '<span class="tag" data-forme="losange">Sur demande</span>' : ''}</div>
           <b class="ct-nom">${echapper(p.nom)}</b>
           <div class="ct-specs">${specs}</div>
+          ${p.usages ? `<p class="ct-usages">${echapper(p.usages)}</p>` : ''}
           ${masquerPrix || prix == null || prix === '' ? '' : `<div class="ct-prix"><span>Prix</span><b>${echapper(String(prix))} €</b></div>`}
         </article>`;
         })

@@ -66,7 +66,7 @@ function valeursInitialesSav() {
 function chargerSymptomesSav() {
   if (state.symptomesSav || state.symptomesSavEnCours) return;
   state.symptomesSavEnCours = true;
-  jsonp({ action: 'sav-symptomes' })
+  lireApi({ action: 'sav-symptomes' })
     .then((r) => {
       state.symptomesSav = r.ok ? r.symptomes : [];
     })
@@ -84,11 +84,7 @@ function numerosSerieStructureSav(code) {
   (state.commandes || [])
     .filter((c) => c.code === code && c.statutCommande === 'Livrée')
     .forEach((c) =>
-      String(c.numerosSerie || '')
-        .split('\n')
-        .map((x) => x.trim())
-        .filter(Boolean)
-        .forEach((sn) => liste.push({ sn, ref: c.reference, date: c.dateLivraison || c.date })),
+      (c.numerosSerie || []).forEach((sn) => liste.push({ sn, ref: c.reference, date: c.dateLivraison || c.date })),
     );
   return liste;
 }
@@ -210,10 +206,7 @@ function etapeNsAppareil(v, s) {
   const suggestions = numerosSerieStructureSav(v.code);
   const cmd = v.numeroSerie
     ? (state.commandes || []).find((c) =>
-        String(c.numerosSerie || '')
-          .split('\n')
-          .map((x) => x.trim().toLowerCase())
-          .includes(v.numeroSerie.trim().toLowerCase()),
+        (c.numerosSerie || []).map((x) => x.toLowerCase()).includes(v.numeroSerie.trim().toLowerCase()),
       )
     : null;
   return `
@@ -438,7 +431,7 @@ async function enregistrerSav() {
     if (marque) await poster({ action: 'sav-update', id: r.id, champ: 'marque', valeur: marque });
     if (modele) await poster({ action: 'sav-update', id: r.id, champ: 'modele', valeur: modele });
     etat('Ticket créé', 'succes');
-    const rs = await jsonp({ action: 'sav-list', password: motDePasse, limite: 0 });
+    const rs = await lireApi({ action: 'sav-list', limite: 0 });
     if (rs.ok) state.sav = rs.tickets;
     state.modal = { kind: 'sav', ref: r.reference };
     state.accordeonTerminalOuvert = false;

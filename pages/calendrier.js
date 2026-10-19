@@ -1,7 +1,8 @@
-/* Calendrier du portail structure (calendrier.html) : livraisons (faites, prévues, souhaitées)
-   et échéances de paiement des personnes. Serveur : portail-agenda (routes/echeancier.js). */
+/* Calendrier du portail structure (calendrier.html) : livraisons (faites, prévues, souhaitées),
+   échéances de paiement des personnes et ventes solidaires à préparer (Internes : toutes pour le
+   responsable, les siennes pour un conseiller numérique). Serveur : portail-agenda (routes/echeancier.js). */
 let codeValide = '';
-const C = { evenements: [], mois: null, jour: null, types: { livraison: true, paiement: true } };
+const C = { evenements: [], mois: null, jour: null, types: { livraison: true, paiement: true, vente: true } };
 const MOIS = [
   'Janvier',
   'Février',
@@ -26,6 +27,8 @@ const PASTILLE = {
   bientot: 'b',
   avenir: 'b',
   payee: 'g',
+  vente: 't',
+  passee: 'g',
 };
 const ETIQUETTE = {
   livree: ['Livrée', 'v'],
@@ -35,13 +38,17 @@ const ETIQUETTE = {
   bientot: ['À venir', 'b'],
   avenir: ['À venir', 'b'],
   payee: ['Payée', 'g'],
+  vente: ['Vente', 't'],
+  passee: ['Vente passée', 'g'],
 };
+const ILLUSTRATION = { paiement: 'facture', livraison: 'commandes', vente: 'calendrier' };
 
 const iso = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const aujourdhui = () => iso(new Date());
 const lienDe = (e) =>
-  e.type === 'paiement' ? `flotte-structure.html?personne=${encodeURIComponent(e.appareilId)}` : 'suivi.html';
+  e.lien ||
+  (e.type === 'paiement' ? `flotte-structure.html?personne=${encodeURIComponent(e.appareilId)}` : 'suivi.html');
 const visibles = () => C.evenements.filter((e) => C.types[e.type]);
 function dateLongue(cle) {
   const [a, m, j] = cle.split('-').map(Number);
@@ -57,7 +64,7 @@ async function verifierCode() {
   $('btn-verifier-code').disabled = true;
   $('retour-id-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code });
+    const r = await lireApi({ action: 'check', code });
     if (!r.ok) {
       $('retour-id-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
     } else {
@@ -81,14 +88,12 @@ $('id-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') verifierCode();
 });
 $('btn-deconnexion-cal').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
 async function charger() {
-  const r = await jsonp({ action: 'portail-agenda', code: codeValide }).catch(() => ({ ok: false }));
+  const r = await lireApi({ action: 'portail-agenda', code: codeValide }).catch(() => ({ ok: false }));
   if (!r.ok) {
     $('cx-erreur').innerHTML =
       `<div class="msg msg-erreur">${echapper(r.erreur || 'Calendrier indisponible pour le moment.')}</div>`;
@@ -100,9 +105,19 @@ async function charger() {
   rendre();
 }
 
+/** Vente à venir : appareils à préparer par catégorie (déjà prêts = liés à un appareil). */
+function lignePreparation(e) {
+  if (!e.preparation) return '';
+  return `<span class="cx-prep">${e.preparation
+    .map(
+      (x) =>
+        `<i class="${x.prets >= x.n ? 'ok' : ''}" title="${echapper(x.produit)}">${x.n} × ${echapper(x.produit.split(' — ')[0])}<small>${x.prets >= x.n ? 'prêts' : `${x.prets}/${x.n} prêt${x.prets > 1 ? 's' : ''}`}</small></i>`,
+    )
+    .join('')}</span>`;
+}
 function ligneEvenement(e) {
   const [lib, cls] = ETIQUETTE[e.etat] || ['', 'b'];
-  return `<a class="cx-it" href="${lienDe(e)}"><span data-ill="${e.type === 'paiement' ? 'facture' : 'commandes'}" class="ill s"></span><span class="cx-it-t"><b>${echapper(e.titre)}</b><span>${echapper(e.detail || '')}</span></span><em class="cx-e ${cls}">${lib}</em></a>`;
+  return `<a class="cx-it" href="${lienDe(e)}"><span data-ill="${ILLUSTRATION[e.type] || 'commandes'}" class="ill s"></span><span class="cx-it-t"><b>${echapper(e.titre)}</b><span>${echapper(e.detail || '')}</span>${lignePreparation(e)}</span><em class="cx-e ${cls}">${lib}</em></a>`;
 }
 
 function rendreGrille() {
@@ -125,7 +140,8 @@ function rendreGrille() {
       .join('')}${evs.length > 3 ? `<span class="cx-plus">+${evs.length - 3}</span>` : ''}</button>`;
   }
   $('cx-grille').innerHTML = html;
-  ['livraison', 'paiement'].forEach((t) => {
+  $('cx-filtre-vente').hidden = !C.evenements.some((e) => e.type === 'vente');
+  ['livraison', 'paiement', 'vente'].forEach((t) => {
     const n = C.evenements.filter((e) => e.type === t && e.date.slice(0, 7) === iso(m).slice(0, 7)).length;
     $(`cx-n-${t}`).textContent = n;
   });

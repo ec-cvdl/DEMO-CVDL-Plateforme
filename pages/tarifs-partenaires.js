@@ -11,7 +11,7 @@ async function verifierCode() {
   $('btn-verifier-code').innerHTML = '<span class="spinner-inline"></span>Vérification…';
   $('retour-id-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code });
+    const r = await lireApi({ action: 'check', code });
     if (!r.ok) {
       $('retour-id-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
     } else if (!r.interne) {
@@ -40,9 +40,7 @@ $('id-code').addEventListener('keydown', (e) => {
 });
 
 $('btn-deconnexion-tarifs').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
@@ -51,7 +49,7 @@ $('btn-deconnexion-tarifs').addEventListener('click', () => {
  *  structures-partenaires.html. */
 async function chargerPartenairesPourNoms() {
   try {
-    const r = await jsonp({ action: 'structures-partenaires-lister', codeCreateur: codeValide });
+    const r = await lireApi({ action: 'structures-partenaires-lister', codeCreateur: codeValide });
     if (r.ok) partenairesCourants = r.structures;
   } catch (e) {}
 }
@@ -63,7 +61,7 @@ async function chargerTarifsPartenaires() {
   $('liste-tarifs-partenaires').innerHTML =
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   try {
-    const r = await jsonp({ action: 'produits-partenaires-lister', codeCreateur: codeValide });
+    const r = await lireApi({ action: 'produits-partenaires-lister', codeCreateur: codeValide });
     if (!r.ok) {
       $('liste-tarifs-partenaires').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur)}</div>`;
       return;
@@ -214,7 +212,7 @@ $('btn-ouvrir-nouveau-tarif').addEventListener('click', async () => {
   $('nt-base').innerHTML = '<option value="">Chargement…</option>';
   $('modale-nouveau-tarif').classList.add('visible');
   try {
-    const r = await jsonp({ action: 'produits-public' });
+    const r = await lireApi({ action: 'produits-public' });
     if (r.ok) {
       $('nt-base').innerHTML =
         '<option value="">— Choisir —</option>' +

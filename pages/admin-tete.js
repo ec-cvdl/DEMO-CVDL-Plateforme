@@ -5,15 +5,8 @@ try {
   if (sessionStorage.getItem('cvdl-admin-jeton')) document.documentElement.classList.add('rp-reconnexion');
 } catch (e) {}
 
-// décidé avant le rendu du <body> : pas d'éclair clair → sombre pour qui a choisi le mode sombre
+// Style de l'admin (admin-unifie.css, actif sous html.rp-unifie) et largeur mémorisée.
+document.documentElement.classList.add('rp-unifie');
 try {
-  if (localStorage.getItem('cvdl-theme') === 'dark') document.documentElement.classList.add('rp-dark');
-  if (localStorage.getItem('cvdl-noel') === '1') document.documentElement.classList.add('rp-noel');
-} catch (e) {}
-// Style unifié (admin-unifie.css) actif par défaut ; « ancien » ramène l'ancien style en secours.
-try {
-  if (localStorage.getItem('cvdl-style') !== 'ancien') document.documentElement.classList.add('rp-unifie');
   if (localStorage.getItem('cvdl-largeur') === 'pleine') document.documentElement.classList.add('rp-pleine');
-} catch (e) {
-  document.documentElement.classList.add('rp-unifie');
-}
+} catch (e) {}

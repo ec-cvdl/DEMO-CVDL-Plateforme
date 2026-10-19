@@ -84,8 +84,8 @@ async function enregistrerDevis() {
     if (r.ok) {
       etat(r.avertissement || 'Devis généré', 'succes', r.avertissement ? 6000 : 2600);
       const [rc, rd] = await Promise.all([
-        jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }),
-        jsonp({ action: 'devis', password: motDePasse, limite: 0 }),
+        lireApi({ action: 'list', limite: -1, filtre: 'tout' }),
+        lireApi({ action: 'devis', limite: 0 }),
       ]);
       if (rc.ok) state.commandes = rc.commandes;
       if (rd.ok) state.devis = rd.devis;
@@ -110,9 +110,9 @@ async function annulerDocumentAction(type, id, motif) {
   );
   if (r.ok) {
     const [rc, rd, rf] = await Promise.all([
-      jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }),
-      jsonp({ action: 'devis', password: motDePasse, limite: 0 }),
-      jsonp({ action: 'factures', password: motDePasse, limite: 0 }),
+      lireApi({ action: 'list', limite: -1, filtre: 'tout' }),
+      lireApi({ action: 'devis', limite: 0 }),
+      lireApi({ action: 'factures', limite: 0 }),
     ]);
     if (rc.ok) state.commandes = rc.commandes;
     if (rd.ok) state.devis = rd.devis;
@@ -177,8 +177,8 @@ async function envoyerDocumentGenere() {
       dg.envoiOk = true;
       dg.envoiOuvert = false;
       const [rd, rf] = await Promise.all([
-        jsonp({ action: 'devis', password: motDePasse, limite: 0 }),
-        jsonp({ action: 'factures', password: motDePasse, limite: 0 }),
+        lireApi({ action: 'devis', limite: 0 }),
+        lireApi({ action: 'factures', limite: 0 }),
       ]);
       if (rd.ok) state.devis = rd.devis;
       if (rf.ok) state.factures = rf.factures;
@@ -204,7 +204,7 @@ async function enregistrerDevisLibre() {
   }
   $('cd-enregistrer').disabled = true;
   try {
-    const r = await posterEtat(
+    const r = await posterDevis(
       {
         action: 'devis-creer-libre',
         nomStructure,
@@ -212,11 +212,10 @@ async function enregistrerDevisLibre() {
         email: $('cdl-email').value.trim(),
         adresse: $('cdl-adresse').value.trim(),
       },
-      'Génération…',
       'Devis libre créé',
     );
     if (r.ok) {
-      const rd = await jsonp({ action: 'devis', password: motDePasse, limite: 0 });
+      const rd = await lireApi({ action: 'devis', limite: 0 });
       if (rd.ok) state.devis = rd.devis;
       state.modal = null;
       state.ndLignes = [];
@@ -274,8 +273,8 @@ async function enregistrerFacture() {
     );
     if (r.ok) {
       const [rc, rf] = await Promise.all([
-        jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }),
-        jsonp({ action: 'factures', password: motDePasse, limite: 0 }),
+        lireApi({ action: 'list', limite: -1, filtre: 'tout' }),
+        lireApi({ action: 'factures', limite: 0 }),
       ]);
       if (rc.ok) state.commandes = rc.commandes;
       if (rf.ok) state.factures = rf.factures;
@@ -291,31 +290,6 @@ async function enregistrerFacture() {
   }
 }
 
-/* ============================================================
-   Thème clair / sombre
-   ============================================================ */
-function basculerTheme() {
-  const sombre = document.documentElement.classList.toggle('rp-dark');
-  try {
-    localStorage.setItem('cvdl-theme', sombre ? 'dark' : 'light');
-  } catch (e) {}
-  majLabelTheme();
-}
-function majLabelTheme() {
-  const label = $('rp-toggle-theme-label');
-  if (label) label.textContent = document.documentElement.classList.contains('rp-dark') ? 'Mode clair' : 'Mode sombre';
-}
-
-/* Style unifié (admin-unifie.css) / ancien style — le fichier ne s'applique que sous
-   html.rp-unifie, donc retirer la classe suffit à revenir exactement à l'ancien rendu. */
-function basculerStyle() {
-  const unifie = document.documentElement.classList.toggle('rp-unifie');
-  try {
-    localStorage.setItem('cvdl-style', unifie ? 'unifie' : 'ancien');
-  } catch (e) {}
-  majLabelStyle();
-  render();
-}
 /* Contenu en pleine largeur / largeur limitée (mémorisé). */
 function basculerLargeur() {
   const pleine = document.documentElement.classList.toggle('rp-pleine');
@@ -340,10 +314,7 @@ function iconeAnnuler(t) {
   t = t || 18;
   return `<svg class="ic-annuler" viewBox="0 0 24 24" width="${t}" height="${t}" aria-hidden="true"><circle cx="13" cy="13" r="8.5" fill="#F5A3BC"/><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="11.5" cy="11.5" r="8.5"/><path d="M8.5 8.5l6 6M14.5 8.5l-6 6"/></g></svg>`;
 }
-function estUnifie() {
-  return document.documentElement.classList.contains('rp-unifie');
-}
-/* Formes des statuts (style unifié) — losange : en attente d'une décision, carré : pris en
+/* Formes des statuts — losange : en attente d'une décision, carré : pris en
    charge / en cours, rond : terminé. Déduites du libellé affiché, pour couvrir toutes les
    pastilles existantes sans toucher à chacun de leurs rendus. */
 const FORMES_STATUT = {
@@ -438,11 +409,6 @@ new MutationObserver((muts) =>
     }),
   ),
 ).observe(document.body, { childList: true, subtree: true });
-function majLabelStyle() {
-  const label = $('rp-toggle-style-label');
-  if (label)
-    label.textContent = document.documentElement.classList.contains('rp-unifie') ? 'Ancien style' : 'Nouveau style';
-}
 
 /* Éléments role="button" activables au clavier (Entrée / Espace) — lignes du fil, livraisons… */
 document.addEventListener('keydown', (e) => {
@@ -452,3 +418,20 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
   el.click();
 });
+
+/** Génère un devis (commande ou libre). Le tout premier : le serveur demande d'abord son numéro
+ *  (premierDevis) ; les suivants continuent à partir de lui. */
+async function posterDevis(donnees, libelleSucces) {
+  let r = await posterEtat(donnees, 'Génération…', libelleSucces);
+  let proposition = r && r.propose;
+  while (r && r.premierDevis) {
+    const intitule = await demanderCvdl(
+      `Numéro du premier devis\nC’est le tout premier devis : choisissez son numéro. Les suivants continueront à partir de lui (le numéro final augmente de 1 à chaque devis ; l’année en cours repart à 1 chaque année).${r.propose ? '' : `\n${r.erreur}`}\nNuméro du premier devis :`,
+      { valeur: proposition || '', requis: true, ok: 'Générer le devis' },
+    );
+    if (!intitule) return { ok: false };
+    proposition = intitule;
+    r = await posterEtat(Object.assign({}, donnees, { intitulePremierDevis: intitule }), 'Génération…', libelleSucces);
+  }
+  return r;
+}

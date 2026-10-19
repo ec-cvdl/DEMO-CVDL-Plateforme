@@ -3,9 +3,7 @@
 function commandeDansFiltresStats(c) {
   const f = state.statsFiltres;
   const s = state.structures.find((x) => x.code === c.code) || state.structures.find((x) => x.nom === c.nom) || {};
-  if (f.region && s.region !== f.region) return false;
   if (f.type && (s.type || 'standard') !== f.type) return false;
-  if (f.departement && departementDeAdresse(c.adresse || s.adresse) !== f.departement) return false;
   if (f.programme) {
     const r = (state.rattachements || []).find((x) => x.reference === c.reference);
     const aff = (c.distribution && c.distribution.affectation) || (r && r.affectation) || {};
@@ -16,16 +14,10 @@ function commandeDansFiltresStats(c) {
 }
 function barreFiltresStats() {
   const f = state.statsFiltres;
-  const regions = [...new Set(state.structures.map((s) => s.region).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, 'fr'),
-  );
-  const deps = [...new Set(state.structures.map((s) => departementDeAdresse(s.adresse)).filter(Boolean))].sort();
   const sel = (id, lib, opts, val) =>
     `<label class="st-f"><span>${lib}</span><select class="input" data-stats-filtre="${id}">${opts.map(([v, l]) => `<option value="${echapper(v)}" ${val === v ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select></label>`;
   return `<div class="st-filtres">
     ${sel('programme', 'Programme', [['', 'Tous'], ...state.distributions.map((p) => [String(p.id), p.nom]), ['__hors', 'Hors programme']], f.programme)}
-    ${sel('region', 'Région', [['', 'Toutes'], ...regions.map((r) => [r, r])], f.region)}
-    ${sel('departement', 'Département', [['', 'Tous'], ...deps.map((d) => [d, d])], f.departement)}
     ${sel('type', 'Type de structure', [['', 'Tous'], ...TYPES_PERIMETRE.map(([k, l]) => [k, l])], f.type)}
     ${Object.values(f).some(Boolean) ? '<button type="button" class="et-lien" data-stats-reinit>Réinitialiser</button>' : ''}
   </div>`;
@@ -39,7 +31,7 @@ document.addEventListener('change', (e) => {
 });
 document.addEventListener('click', (e) => {
   if (e.target.closest('[data-stats-reinit]')) {
-    state.statsFiltres = { programme: '', region: '', departement: '', type: '' };
+    state.statsFiltres = { programme: '', type: '' };
     render();
   }
 });

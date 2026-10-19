@@ -22,14 +22,10 @@ function vueBilan() {
   const facturesAnnee = state.factures.filter((f) => {
     const iso = dateVersISO(f.date);
     if (!(iso && new Date(iso).getFullYear() === anneeSelectionnee)) return false;
-    if (!fs.region && !fs.type && !fs.departement) return true;
-    const st = state.structures.find((x) => x.nom === f.nomStructure);
-    return (
-      !!st &&
-      (!fs.region || st.region === fs.region) &&
-      (!fs.type || (st.type || 'standard') === fs.type) &&
-      (!fs.departement || departementDeAdresse(st.adresse) === fs.departement)
-    );
+    if (!fs.type) return true;
+    const st =
+      state.structures.find((x) => x.code === f.code) || state.structures.find((x) => x.nom === f.nomStructure);
+    return !!st && (st.type || 'standard') === fs.type;
   });
 
   // Produits les plus distribués
@@ -115,6 +111,7 @@ function vueBilan() {
       </div>
     </div>
 
+    ${sectionTerritoiresStats(anneeSelectionnee)}
     <div class="card elev-sm" style="padding:var(--space-6);margin-bottom:var(--space-6)">
       <div class="card-title" style="margin-bottom:var(--space-4)">Commandes par mois — ${anneeSelectionnee}</div>
       <div style="display:flex;align-items:flex-end;gap:6px;height:140px">

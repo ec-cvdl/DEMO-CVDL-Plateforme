@@ -127,7 +127,8 @@ function svgIconeSymptomeTrait(texte) {
 }
 
 /* Machine à étapes */
-const etapes = ['identification', 'nom', 'symptome', 'details', 'envoi'];
+// Symptôme et dépannage d'abord : le numéro de série n'est demandé que si la panne n'est pas réglée.
+const etapes = ['symptome', 'identification', 'nom', 'details', 'envoi'];
 let indexEtape = 0;
 
 const etat = {
@@ -242,7 +243,7 @@ function envoyerAnalytique(termine) {
   };
   try {
     if (termine) poster(donnees).catch(function () {});
-    else navigator.sendBeacon(API, new Blob([JSON.stringify(donnees)], { type: 'text/plain;charset=utf-8' }));
+    else baliseApi(donnees);
   } catch (e) {}
 }
 window.addEventListener('beforeunload', function () {
@@ -275,7 +276,7 @@ try {
   if (serieMemorisee) $('id-numero-serie').value = serieMemorisee;
 } catch (e) {}
 
-/* Étape 1 : identification (numéro de série, sans code) */
+/* Après le dépannage : identification (numéro de série, sans code) */
 let essaisNumeroSerieInfructueux = 0;
 
 $('btn-verifier-serie').addEventListener('click', async function () {
@@ -289,7 +290,7 @@ $('btn-verifier-serie').addEventListener('click', async function () {
   afficherMsg('retour-id-serie', '', 'info');
   $('bloc-non-trouve').hidden = true;
   try {
-    const r = await jsonp({ action: 'sav-verifier-numero-serie', numeroSerie: numeroSerie });
+    const r = await lireApi({ action: 'sav-verifier-numero-serie', numeroSerie: numeroSerie });
     if (r.ok && r.trouve) {
       essaisNumeroSerieInfructueux = 0;
       etat.numeroSerie = numeroSerie;
@@ -352,10 +353,10 @@ $('btn-nom-suivant').addEventListener('click', function () {
   suivant();
 });
 
-/* Étape 3 : symptôme (numéro de série déjà connu depuis l'étape 1) */
+/* Étape 1 : symptôme (puis dépannage s'il existe un arbre pour ce symptôme) */
 async function chargerSymptomes() {
   try {
-    const r = await jsonp({ action: 'sav-symptomes' });
+    const r = await lireApi({ action: 'sav-symptomes' });
     if (r.ok) afficherSymptomes(r.symptomes);
   } catch (e) {
     afficherMsg('retour-symptome', 'Impossible de charger les symptômes.', 'erreur');
@@ -451,38 +452,8 @@ function lireFichier(f) {
 }
 
 /* Étape 5 : récap + envoi */
-// Même calcul que côté admin (statutGarantiePourDate()/badgeGarantie() dans admin/) — dupliqué
-// ici, pas de module JS partagé entre l'admin et les pages publiques dans ce projet.
-function statutGarantiePublic(dateAchatFormatee) {
-  const [j, m, a] = String(dateAchatFormatee || '')
-    .split('/')
-    .map(function (n) {
-      return parseInt(n, 10);
-    });
-  if (!j || !m || !a) return { statut: null };
-  const dateMiGarantie = new Date(a + 1, m - 1, j);
-  const dateFinGarantie = new Date(a + 2, m - 1, j);
-  const maintenant = new Date();
-  return { statut: maintenant >= dateFinGarantie ? 'expiree' : maintenant >= dateMiGarantie ? 'bientot' : 'en_cours' };
-}
-function badgeGarantiePublicSav(dateAchatFormatee) {
-  const statut = statutGarantiePublic(dateAchatFormatee).statut;
-  const cfg = {
-    en_cours: { bg: '#1F9D55', texte: 'Garantie en cours' },
-    bientot: { bg: '#7A5A00', texte: 'Garantie bientôt expirée' },
-    expiree: { bg: '#E5484D', texte: 'Hors garantie' },
-  }[statut];
-  if (!cfg) return '';
-  return (
-    '<span style="display:inline-flex;align-items:center;gap:6px;background:' +
-    cfg.bg +
-    ';color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;flex:none;white-space:nowrap">' +
-    cfg.texte +
-    '</span>'
-  );
-}
 function majRecapSav() {
-  const badgeGarantieHtml = etat.dateAchat ? badgeGarantiePublicSav(etat.dateAchat) : '';
+  const badgeGarantieHtml = etat.dateAchat ? window.badgeGarantieCvdl(etat.dateAchat) : '';
   $('recap-sav').innerHTML =
     '<div><strong>' +
     echapper(etat.nomStructure) +
@@ -584,4 +555,4 @@ $('btn-envoyer-sav').addEventListener('click', async function () {
 /* Démarrage */
 chargerSymptomes();
 if (window.CvdlDepannage) CvdlDepannage.charger(API); // arbres préchargés : aucune attente après le symptôme
-allerA('identification');
+allerA('symptome');

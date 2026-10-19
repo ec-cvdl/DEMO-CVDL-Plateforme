@@ -178,7 +178,8 @@ function panneauDevisPaiementCommande(c) {
   const paiementCB = c.moyenPaiement === 'Paiement en ligne (CB)';
   const paiementEnAttente =
     c.dernierClicLienPaiement && c.statutPaiement !== 'Payé' && c.statutPaiement !== 'Remboursé';
-  if (!devisEligible && !factureEligible && !paiementCB) return '';
+  const cheque = c.moyenPaiement === 'Chèque';
+  if (!devisEligible && !factureEligible && !paiementCB && !cheque) return '';
   const ligneDoc = (cls, ic, titre, detail, action, fait) => `
     <div class="rpd-docligne ${fait ? 'fait' : ''}"><span class="rpd-di ${cls}">${icon(ic, 15)}</span><span class="rpd-docligne-txt"><b>${titre}</b><small>${detail}</small></span>${action || ''}</div>`;
   return `
@@ -216,6 +217,20 @@ function panneauDevisPaiementCommande(c) {
           : ''
       }
       ${(devisEligible && !c.referenceDevis) || (factureEligible && !c.referenceFacture && !c.factureMensuelle) ? liensRaccourcis('commande') : ''}
+      ${
+        cheque
+          ? ligneDoc(
+              'amb',
+              'receipt',
+              c.numeroCheque ? `Chèque n° ${echapper(c.numeroCheque)}` : 'Chèque',
+              c.numeroCheque
+                ? `${echapper(c.statutPaiement || 'Non payé')} · numéro donné par la structure`
+                : 'Numéro du chèque non indiqué',
+              `<button type="button" class="btn btn-secondary btn-sm" data-modifier-cheque="${c.id}">${c.numeroCheque ? 'Modifier' : 'Indiquer'}</button>`,
+              c.statutPaiement === 'Payé',
+            )
+          : ''
+      }
       ${paiementEnAttente ? `<div class="rpd-alerte">${icon('alert', 14)}Lien de paiement cliqué, pas encore réglé</div>` : ''}
       ${
         paiementCB
@@ -247,48 +262,24 @@ function panneauDevisPaiementCommande(c) {
       }
     </section>`;
 }
-const MODES_LIVRAISON = [
-  { valeur: 'Colissimo', label: 'Colissimo', ic: 'truck', aide: 'Envoi postal suivi — un lien par colis.' },
-  {
-    valeur: 'Livraison EC',
-    label: 'Livraison Emmaüs Connect',
-    ic: 'package',
-    aide: 'Livrée par l’équipe, à une date estimée.',
-  },
-  { valeur: 'Retrait', label: 'Retrait', ic: 'building', aide: 'La structure vient récupérer sur place.' },
-];
-/* Illustrations des modes de livraison — même dessin que le reste de l'appli (aplat décalé
-   + trait bleu nuit), en grand dans les cartes de choix. */
-const ILL_MODE_LIVRAISON = {
-  Colissimo: [
-    '#F5A3BC',
-    '<path d="M10 17 25 10l15 7v17l-15 7-15-7z"/>',
-    '<path d="M8 15 23 8l15 7v17l-15 7-15-7z"/><path d="M8 15l15 7 15-7M23 22v17"/><path d="M15.5 11.5 30.5 18.5v6"/><path d="M2 27h4M1 32h5"/>',
-  ],
-  'Livraison EC': [
-    '#9FE0E1',
-    '<rect x="5" y="15" width="24" height="17" rx="2"/><path d="M29 20h7l5 6v6H29z"/>',
-    '<rect x="3" y="13" width="24" height="17" rx="2"/><path d="M27 18h7l5 6v6H27z"/><circle cx="11" cy="32" r="3.5" fill="#fff"/><circle cx="33" cy="32" r="3.5" fill="#fff"/><path d="M29 22h4l2.5 3"/>',
-  ],
-  Retrait: [
-    '#F5A3BC',
-    '<path d="M9 21h32v19H9z"/>',
-    '<path d="M7 19h32v19H7z"/><path d="M5 19l4-10h28l4 10"/><path d="M5 19a4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0 9 0 4.5 4.5 0 0 0 9 0"/><path d="M18 38v-9h10v9"/>',
-  ],
-};
-function illustrationModeLivraison(valeur, t) {
-  const d = ILL_MODE_LIVRAISON[valeur];
-  if (!d) return icon('truck', t || 20);
-  return `<svg viewBox="0 0 48 48" width="${t || 44}" height="${t || 44}" aria-hidden="true" style="overflow:visible;flex:none"><g fill="${d[0]}" stroke="none">${d[1]}</g><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d[2]}</g></svg>`;
-}
-/** Cartes de choix du mode de livraison (fiche commande admin). */
-function cartesModeLivraison(mode, ref) {
-  return `<div class="ml-cartes" role="radiogroup" aria-label="Mode de livraison">${MODES_LIVRAISON.map(
-    (m) => `
-    <button type="button" role="radio" class="ml-carte${mode === m.valeur ? ' choisi' : ''}" aria-checked="${mode === m.valeur}" data-choisir-mode-livraison="${echapper(m.valeur)}" data-ref="${ref}">
-      <span class="ml-ill">${illustrationModeLivraison(m.valeur, 54)}</span>
-      <b>${echapper(m.label)}</b><small>${echapper(m.aide)}</small>
-      <span class="coche-choix-admin" aria-hidden="true">✓</span>
-    </button>`,
-  ).join('')}</div>`;
-}
+/* Modes de livraison et leurs dessins : etapes-commande.js (partagés avec l'espace Logistique). */
+const MODES_LIVRAISON = EtapesCommande.MODES;
+const illustrationModeLivraison = EtapesCommande.illustrationMode;
+
+/** Numéro du chèque d'une commande : indiqué ou corrigé par l'admin. */
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-modifier-cheque]');
+  if (!b) return;
+  const c = state.commandes.find((x) => String(x.id) === b.dataset.modifierCheque);
+  if (!c) return;
+  const valeur = await demanderCvdl('Numéro du chèque :', { valeur: c.numeroCheque || '', ok: 'Enregistrer' });
+  if (valeur === null || valeur === false || valeur === undefined) return;
+  const r = await posterEtat(
+    { action: 'update', id: c.id, champ: 'numeroCheque', valeur },
+    'Enregistrement…',
+    'Numéro du chèque enregistré',
+  );
+  if (!r.ok) return;
+  c.numeroCheque = String(valeur).trim().replace(/\s+/g, ' ');
+  render();
+});

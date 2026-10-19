@@ -1,19 +1,35 @@
 /* Admin CVDL — stock. Scripts chargés dans l'ordre par admin.html (fonctions globales partagées). */
 function vueStock() {
+  const region = regionStock();
+  const national = !estRegional();
   return `
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-6)">
       <div>
         <h1 style="font-size:32px;margin-bottom:var(--space-2)">Stock</h1>
-        <p style="opacity:0.65;margin:0;font-size:15px">Matériel reconditionné disponible.</p>
+        <p style="opacity:0.65;margin:0;font-size:15px">${region ? `Catalogue de la région ${echapper(region)} : produits proposés, prix et stock.` : 'Matériel reconditionné disponible, toutes régions confondues.'}</p>
       </div>
       <button type="button" class="btn btn-primary" data-ouvrir-creation="produit">${icon('plus', 15)}Ajouter un produit</button>
     </div>
     <div class="stk-outils" role="toolbar" aria-label="Outils du stock">
-      <button type="button" class="btn msb-bouton${msbActif() ? ' actif' : ''}" data-mode-stock-bas title="Limiter toutes les commandes des structures">${icon('alert', 15)}${msbActif() ? 'Mode stock bas · actif' : 'Mode stock bas'}</button>
-      <span class="stk-sep" aria-hidden="true"></span>
+      ${
+        national
+          ? `<button type="button" class="btn msb-bouton${msbActif() ? ' actif' : ''}" data-mode-stock-bas title="Limiter toutes les commandes des structures">${icon('alert', 15)}${msbActif() ? 'Mode stock bas · actif' : 'Mode stock bas'}</button>
+      <span class="stk-sep" aria-hidden="true"></span>`
+          : ''
+      }
       <button type="button" class="btn btn-secondary" id="btn-synchroniser-tectech" title="Mettre à jour les quantités depuis tec.tech">${icon('refresh', 15)}Synchroniser tec.tech</button>
-      <button type="button" class="btn btn-secondary" data-organiser-materiel title="Ordre et couleurs de la page « Catégories de matériel » du portail">${icon('grip', 15)}Organiser le catalogue</button>
+      ${
+        national
+          ? `<button type="button" class="btn btn-secondary" data-stocks-salesforce title="Stock Salesforce de chaque produit, pour la saisie des ventes">${icon('package', 15)}Stocks Salesforce</button>
+      <button type="button" class="btn btn-secondary" data-organiser-materiel title="Ordre et couleurs de la page « Catégories de matériel » du portail">${icon('grip', 15)}Organiser le catalogue</button>`
+          : ''
+      }
     </div>
+    ${barreRegionsStock()}
+    ${region ? vueCatalogueRegion(region) : vueStockNational()}`;
+}
+function vueStockNational() {
+  return `
     ${bandeauModeStockBas()}
     ${sectionDepotVenteStock()}
     ${(state.depotVente || []).length ? '<h2 class="dv-titre-catalogue">Catalogue</h2>' : ''}
@@ -37,7 +53,12 @@ function vueStock() {
             <div style="font-weight:700;font-size:16px;margin-bottom:6px">${echapper(p.nom)}</div>
           </div>
           <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:var(--space-3);padding-top:var(--space-4);border-top:1px solid var(--color-divider)">
-            <span style="font-size:13px;opacity:0.7">${stock} en stock</span>
+            <span style="font-size:13px;opacity:0.7" title="${echapper(
+              Object.values(p.regions || {})
+                .filter((l) => l.actif)
+                .map((l) => `${l.region} : ${l.stock}`)
+                .join('\n'),
+            )}">${stock} en stock${Object.values(p.regions || {}).filter((l) => l.actif).length > 1 ? ` · ${Object.values(p.regions).filter((l) => l.actif).length} régions` : ''}${p.region ? ` · ${echapper(p.region)}` : ''}</span>
             <span style="font-family:var(--font-heading);font-size:22px">${formaterMontant(p.prixStandard)}</span>
           </div>
         </div>`;

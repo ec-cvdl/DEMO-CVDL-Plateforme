@@ -3,6 +3,7 @@ function vueModal() {
   const m = state.modal;
   if (m.kind === 'distribution-form') return vueDistributionForm();
   if (m.kind === 'distribution-detail') return vueDistributionDetail();
+  if (m.kind === 'projet-interne') return vueProjetInterne();
   if (m.kind === 'creer-structure') return vueCreerStructure();
   if (m.kind === 'flotte-structure') return vueFlotteStructure();
   if (m.kind === 'stock-restreint') return vueStockRestreint();
@@ -16,6 +17,8 @@ function vueModal() {
   if (m.kind === 'info-types-structure') return vueInfoTypesStructure();
   if (m.kind === 'structure-360') return vueStructure360();
   if (m.kind === 'coefficients-impact') return vueCoefficientsImpact();
+  if (m.kind === 'stocks-salesforce') return vueStocksSalesforce();
+  if (m.kind === 'reglage-region') return vueReglageRegion();
   if (m.kind === 'tectech-resultats') {
     const okCount = m.resultats.filter((r) => r.ok).length;
     return `
@@ -31,7 +34,7 @@ function vueModal() {
               .map(
                 (r) => `
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:${r.ok ? 'var(--color-accent-2-100)' : 'var(--color-accent-100)'}">
-                <span style="font-size:13px;font-weight:600">${echapper(r.nom)}</span>
+                <span style="font-size:13px;font-weight:600">${echapper(r.nom)}${r.region ? ` <small style="font-weight:400;opacity:.7">· ${echapper(r.region)}</small>` : ''}</span>
                 <span style="font-size:12.5px;color:${r.ok ? 'var(--color-accent-2-700)' : 'var(--color-accent-700)'}">${r.ok ? `${r.ancienStock} → ${r.nouveauStock}` : echapper(r.erreur || 'Erreur')}</span>
               </div>`,
               )
@@ -166,9 +169,6 @@ document.addEventListener('click', async (e) => {
  *  depuis l'étape "Validée" (il conditionne le passage à "Préparée"), cette section n'en
  *  affiche que le statut ; la facture, elle, n'est bloquante nulle part, donc entièrement
  *  gérée ici, disponible dès que la commande existe. */
-/** Noms des bénéficiaires associés à une commande, dans l'ordre — pour étiqueter chaque lien
- *  de paiement séparé avec le bon nom (même format pipe "nom|genre|produit|série" que le
- *  suivi public, ou "nom — date" tant que l'association n'a pas encore réécrit la ligne). */
 /** Reconstruit, dans l'ordre des lignes de la commande (c.lignes), quelle unité de quel produit
  *  correspond à quel bénéficiaire — utilisé pour BO uniquement (seule structure à nommer un
  *  bénéficiaire par unité). Un produit peut avoir besoin de l'un sans l'autre (une recharge
@@ -178,10 +178,7 @@ document.addEventListener('click', async (e) => {
  *  Sans ça, avec une commande mélangeant par exemple ordinateurs (série + nom) et recharges
  *  (code, pas de nom), rien n'indiquait quel numéro de série revenait à quel bénéficiaire. */
 function unitesSeriePersonnes(c) {
-  const lignesPersonnes = String(c.personnes || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const personnes = c.personnes || [];
   let idxPersonne = 0;
   const unites = [];
   (c.lignes || []).forEach((l) => {
@@ -191,10 +188,9 @@ function unitesSeriePersonnes(c) {
       let nom = null,
         dateNaissance = '';
       if (!p.sansPersonne) {
-        const ligneBrute = lignesPersonnes[idxPersonne++] || '';
-        const separateur = ligneBrute.includes('|') ? '|' : ligneBrute.includes(' — ') ? ' — ' : null;
-        nom = (separateur ? ligneBrute.split(separateur)[0] : ligneBrute).trim() || null;
-        dateNaissance = separateur ? (ligneBrute.split(separateur)[1] || '').trim() : '';
+        const pers = personnes[idxPersonne++] || {};
+        nom = pers.nomComplet || null;
+        dateNaissance = pers.dateNaissance || '';
       }
       if (!p.sansNumeroSerie) unites.push({ produit: l.produit, nom, dateNaissance, dematerialise: !!p.dematerialise });
     }
@@ -204,9 +200,7 @@ function unitesSeriePersonnes(c) {
 /** Appareils de la commande avec leur numéro de série (ou code) et la personne associée,
  *  dans l'ordre de saisie de la préparation — affiché dans la fiche commande. */
 function blocAppareilsCommande(c, titre = true) {
-  const valeurs = String(c.numerosSerie || '')
-    .split('\n')
-    .map((x) => x.trim());
+  const valeurs = c.numerosSerie || [];
   const unites = unitesSeriePersonnes(c);
   if (!unites.length && !valeurs.some(Boolean)) return '';
   const saisis = valeurs.filter(Boolean).length;
@@ -228,15 +222,10 @@ function blocAppareilsCommande(c, titre = true) {
       .join('')}</div>
   </section>`;
 }
+/** Noms des bénéficiaires associés à une commande, dans l'ordre — pour étiqueter chaque lien
+ *  de paiement séparé avec le bon nom. */
 function nomsPersonnesCommande(c) {
-  return String(c.personnes || '')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map((ligne) => {
-      const separateur = ligne.includes('|') ? '|' : ligne.includes('—') ? '—' : null;
-      return separateur ? ligne.split(separateur)[0].trim() : ligne;
-    });
+  return (c.personnes || []).map((p) => p.nomComplet).filter(Boolean);
 }
 /** Vrai si cette structure n'a jamais ni devis ni facture (Interne/ESN/BO) — même règle que le
  *  back (commande-devis-direct, commande-facturer-direct), à appliquer partout où l'admin choisit

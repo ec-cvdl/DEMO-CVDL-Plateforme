@@ -15,6 +15,32 @@ document.querySelectorAll('.bandeau-accueil .forme').forEach((forme) => {
   forme.style.animationDelay = `${(-Math.random() * 15).toFixed(1)}s`;
 });
 
+/** Code saisi et accepté : « Rester connecté » coché → jeton j4 mémorisé sur l'appareil (le code
+ *  lui-même n'y est jamais gardé) ; décoché → toute connexion mémorisée est oubliée. */
+async function memoriserConnexion(code) {
+  if (!$('rester-connecte').checked) {
+    try {
+      localStorage.removeItem(CLE_SESSION_STRUCTURE);
+    } catch (e) {}
+    return;
+  }
+  const r = await poster({ action: 'structure-session', code }).catch(() => null);
+  if (r && r.ok) {
+    garderSessionStructure(r.jeton, r.jours);
+    // L'onglet passe lui aussi au jeton : le code ne reste dans aucune mémoire du navigateur.
+    try {
+      sessionStorage.setItem('cvdl-code-structure', r.jeton);
+    } catch (e) {}
+  }
+}
+/** Bouton Déconnexion : rappelle jusqu'à quand cet appareil reste connecté. */
+function majInfoSession() {
+  const d = sessionStructureMemorisee();
+  $('btn-deconnexion-portail').title = d
+    ? `Connecté sur cet appareil jusqu’au ${new Date(d.jusqua).toLocaleDateString('fr-FR')}`
+    : '';
+}
+
 let derniereVerification = null; // réponse de « check », pour « Revoir la présentation »
 async function verifierCodePortail(code) {
   if (!code) {
@@ -25,13 +51,24 @@ async function verifierCodePortail(code) {
   $('btn-verifier-code-portail').textContent = 'Vérification…';
   $('retour-code-portail').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code: code });
+    const r = await lireApi({ action: 'check', code: code });
+    if (r.ok && r.jeton) {
+      // Connexion par e-mail : session prolongée par le serveur.
+      garderSessionStructure(r.jeton, r.jours);
+      code = r.jeton;
+    }
     if (r.ok) {
       try {
         sessionStorage.setItem('cvdl-code-structure', code);
       } catch (e) {}
+      if (!estJetonAcces(code)) await memoriserConnexion(code);
+      majInfoSession();
       const heure = new Date().getHours();
       const salutation = heure >= 5 && heure < 18 ? 'Bonjour' : 'Bonsoir';
+      const jour = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+      $('ps-date').textContent = jour[0].toUpperCase() + jour.slice(1);
+      $('ps-qui').hidden = !r.compte;
+      if (r.compte) $('ps-qui').textContent = `Connecté : ${r.compte.nom || r.compte.email}`;
       $('titre-structure-identifiee').innerHTML = r.nom
         ? `${echapper(salutation)}, <em>${echapper(r.nom)}</em>`
         : 'Espace structure';
@@ -46,6 +83,9 @@ async function verifierCodePortail(code) {
       document.querySelectorAll('[data-gate="interne"]').forEach((el) => {
         el.hidden = !r.interne;
       });
+      document.querySelectorAll('[data-gate="externe"]').forEach((el) => {
+        el.hidden = !!r.interne;
+      });
       document.querySelectorAll('[data-gate="partenaires"]').forEach((el) => {
         el.hidden = !(r.interne && partenaires);
       });
@@ -59,22 +99,22 @@ async function verifierCodePortail(code) {
       let finChargement = () => {};
       if (embarquement) embarquement.afficher(new Promise((res) => (finChargement = res)));
       else $('voile-verification-precoce').style.display = 'flex';
-      if (!conseiller) {
-        await chargerTableauBordPortail(code);
-        if (await PenseBete.charger(code)) PenseBete.majCarte();
-      }
+      if (!conseiller) await chargerTableauBordPortail(code);
+      // Pense-bête : toute l'équipe (responsable et conseillers).
+      if (await PenseBete.charger(code)) PenseBete.majCarte();
       $('voile-verification-precoce').style.display = 'none';
+      const entree = preparerEntreePortail();
       $('etape-portail').hidden = false;
       $('btn-deconnexion-portail').hidden = false;
       finChargement();
       if (embarquement) await embarquement.termine;
+      entree();
       demarrerTutoPortailSiDemande();
       if (!tutoPortailDejaLance) lancerVisiteGuidee(code, r.nom, false);
-    } else if (code.startsWith('j3.')) {
-      // Accès conseiller expiré ou retiré : on repart de la page code (et de Google s'il le peut).
-      try {
-        sessionStorage.removeItem('cvdl-code-structure');
-      } catch (e) {}
+    } else if (estJetonAcces(code)) {
+      // Accès conseiller ou connexion mémorisée expirés (ou code changé) : on repart de la page
+      // code (et de Google s'il le peut).
+      oublierCodeStructure();
       $('code-portail').value = '';
       $('retour-code-portail').innerHTML =
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Session expirée — reconnectez-vous.')}</div>`;
@@ -95,7 +135,7 @@ async function verifierCodePortail(code) {
  *  d'afficher un "0" ou un encart vide. */
 async function chargerTableauBordPortail(code) {
   try {
-    const r = await jsonp({ action: 'tableau-bord-structure', code });
+    const r = await lireApi({ action: 'tableau-bord-structure', code });
     if (!r.ok) return;
 
     if (r.messageContexte) {
@@ -346,7 +386,7 @@ $('code-portail').addEventListener('keydown', (e) => {
 
 $('btn-deconnexion-portail').addEventListener('click', () => {
   try {
-    sessionStorage.removeItem('cvdl-code-structure');
+    oublierCodeStructure();
     sessionStorage.setItem('cvdl-portail-google-off', '1');
   } catch (e) {}
   // Plus de connexion automatique Google après une déconnexion volontaire (un clic la rétablit).
@@ -354,6 +394,94 @@ $('btn-deconnexion-portail').addEventListener('click', () => {
     if (window.google && google.accounts) google.accounts.id.disableAutoSelect();
   } catch (e) {}
   location.reload();
+});
+
+/* ── Connexion par e-mail : code à 6 chiffres, puis jeton j6 gardé 90 jours sur l'appareil ── */
+const etapeConnexion = (nom) =>
+  ['email', 'code', 'google', 'choix'].forEach((e) => ($(`cx-etape-${e}`).hidden = e !== nom));
+const retourConnexion = (t, type = 'erreur') =>
+  ($('retour-code-portail').innerHTML = t ? `<div class="msg msg-${type}">${echapper(t)}</div>` : '');
+async function envoyerCodeConnexion() {
+  const email = $('cx-email').value.trim();
+  if (!email) return retourConnexion('Saisissez votre adresse e-mail.');
+  // L'équipe Emmaüs Connect (structures Internes) se connecte avec Google, jamais par code.
+  if (adresseEquipe(email, await configGoogle)) return connexionGoogle(email);
+  $('cx-envoyer').disabled = true;
+  const r = await postPortail({ action: 'connexion-code', email }).catch(() => ({ ok: false }));
+  $('cx-envoyer').disabled = false;
+  if (r.google) return connexionGoogle(email);
+  if (!r.ok) return retourConnexion(r.erreur || 'Envoi impossible — réessayez.');
+  $('cx-adresse').textContent = email;
+  etapeConnexion('code');
+  retourConnexion(r.codeDemo ? `Démo : votre code est ${r.codeDemo}` : '', 'info');
+  $('cx-code').value = '';
+  $('cx-code').focus();
+}
+function ouvrirAvecJeton(jeton, jours) {
+  garderSessionStructure(jeton, jours);
+  try {
+    sessionStorage.setItem('cvdl-code-structure', jeton);
+  } catch (e) {}
+  retourConnexion('');
+  verifierCodePortail(jeton);
+}
+async function validerCodeConnexion() {
+  $('cx-valider').disabled = true;
+  const r = await postPortail({
+    action: 'connexion-verifier',
+    email: $('cx-email').value,
+    code: $('cx-code').value,
+  }).catch(() => ({ ok: false }));
+  $('cx-valider').disabled = false;
+  if (!r.ok) return retourConnexion(r.erreur || 'Connexion impossible — réessayez.');
+  if (r.structures.length === 1) return ouvrirAvecJeton(r.structures[0].jeton, r.jours);
+  $('cx-structures').innerHTML = r.structures
+    .map(
+      (x, i) =>
+        `<button type="button" class="btn btn-secondary btn-block" data-cx-structure="${i}">${echapper(x.nom)}</button>`,
+    )
+    .join('');
+  $('cx-structures').onclick = (e) => {
+    const b = e.target.closest('[data-cx-structure]');
+    if (b) ouvrirAvecJeton(r.structures[Number(b.dataset.cxStructure)].jeton, r.jours);
+  };
+  retourConnexion('');
+  etapeConnexion('choix');
+}
+$('cx-envoyer').addEventListener('click', envoyerCodeConnexion);
+$('cx-renvoyer').addEventListener('click', envoyerCodeConnexion);
+$('cx-email').addEventListener('keydown', (e) => e.key === 'Enter' && envoyerCodeConnexion());
+$('cx-valider').addEventListener('click', validerCodeConnexion);
+$('cx-code').addEventListener('input', () => {
+  if ($('cx-code').value.replace(/\D/g, '').length === 6) validerCodeConnexion();
+});
+document.querySelectorAll('[data-cx-changer]').forEach((b) =>
+  b.addEventListener('click', () => {
+    retourConnexion('');
+    etapeConnexion('email');
+    $('cx-email').focus();
+  }),
+);
+
+/* ── Fenêtres (personnes, accès de l'équipe, aide à la décision) : <dialog> par-dessus la page,
+   fermées par « Fermer », Échap ou un clic à côté. ── */
+function ouvrirPanneau(id) {
+  const d = $(id);
+  if (!d.open) d.showModal();
+}
+document.querySelectorAll('.pv-panneau').forEach((d) =>
+  d.addEventListener('click', (e) => {
+    if (e.target === d || e.target.closest('[data-fermer-panneau]')) d.close();
+  }),
+);
+
+/* ── Personnes de la structure (comptes à connexion par e-mail) ── */
+let personnesMontees = false;
+$('carte-personnes').addEventListener('click', () => {
+  if (!personnesMontees)
+    PersonnesStructure.monter($('pst-zone'), { appel: postPortail, cible: { code: codeEquipe() } });
+  personnesMontees = true;
+  ouvrirPanneau('panneau-personnes');
 });
 
 /* ── Accès de l'équipe (responsable, structure Interne) ── */
@@ -379,7 +507,7 @@ function afficherEquipe(contact) {
 }
 async function chargerEquipe() {
   $('eq-retour').innerHTML = '';
-  const r = await jsonp({ action: 'equipe-structure', code: codeEquipe() }).catch(() => ({ ok: false }));
+  const r = await lireApi({ action: 'equipe-structure', code: codeEquipe() }).catch(() => ({ ok: false }));
   if (!r.ok) {
     $('eq-retour').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`;
     return;
@@ -390,13 +518,10 @@ async function chargerEquipe() {
   afficherEquipe(r.contact);
 }
 async function enregistrerEquipe(nouvelle) {
-  const r = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'equipe-structure-enregistrer', code: codeEquipe(), comptes: nouvelle }),
-  })
-    .then((x) => x.json())
-    .catch(() => ({ ok: false }));
+  const r = await appelApi(
+    { action: 'equipe-structure-enregistrer', code: codeEquipe(), comptes: nouvelle },
+    { methode: 'POST' },
+  ).catch(() => ({ ok: false }));
   if (!r.ok) {
     $('eq-retour').innerHTML =
       `<div class="msg msg-erreur">${echapper(r.erreur || 'Enregistrement impossible.')}</div>`;
@@ -407,13 +532,72 @@ async function enregistrerEquipe(nouvelle) {
   afficherEquipe($('panneau-equipe').dataset.contact);
   return true;
 }
+$('carte-transfert-stock').addEventListener('click', () => TransfertStock.ouvrir());
 $('carte-equipe').addEventListener('click', () => {
-  const p = $('panneau-equipe');
-  p.hidden = !p.hidden;
-  if (!p.hidden) {
-    chargerEquipe();
-    p.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  chargerEquipe();
+  ouvrirPanneau('panneau-equipe');
+});
+$('carte-aide-decision').addEventListener('click', () => ouvrirPanneau('panneau-aide-decision'));
+
+/* ── Dépannage : les arbres de décision (depannage.js) par symptôme, dans une fenêtre ; « ce
+   n'est pas réglé » mène à la déclaration de panne avec le symptôme et le parcours repris. ── */
+let vueDepannagePortail = null;
+async function listeDepannage() {
+  if (vueDepannagePortail) vueDepannagePortail.detruire();
+  vueDepannagePortail = null;
+  const zone = $('dp-portail');
+  zone.innerHTML = '<p class="pk-etat"><span class="spinner-inline"></span>Chargement…</p>';
+  const [d, s] = await Promise.all([
+    CvdlDepannage.charger(API),
+    lireApi({ action: 'sav-symptomes' }).catch(() => ({ ok: false })),
+  ]);
+  const symptomes = ((s && s.symptomes) || []).filter((x) => d.parSymptome[x.toLowerCase()]);
+  const ill = (x) =>
+    window.illustrationCvdl
+      ? window.illustrationCvdl('sym-' + ((window.cleSymptomeCvdl && window.cleSymptomeCvdl(x)) || 'generique_sav'), 40)
+      : '';
+  zone.innerHTML = `<p style="margin:0 0 var(--space-4);opacity:.75">Quel est le problème ? Quelques vérifications suffisent souvent ; sinon, vous déclarez la panne sans tout ressaisir.</p>
+    ${
+      symptomes.length
+        ? `<div class="dpp-grille">${symptomes
+            .map(
+              (x) =>
+                `<button type="button" class="dpp-symptome" data-dpp-symptome="${echapper(x)}">${ill(x)}<span>${echapper(x)}</span></button>`,
+            )
+            .join('')}</div>`
+        : '<p class="pk-etat">Aucun guide de dépannage pour le moment.</p>'
+    }
+    <p class="dpp-autre">Autre problème ? <a href="sav.html">Déclarer une panne</a></p>`;
+}
+async function ouvrirDepannagePortail(symptome) {
+  const arbre = await CvdlDepannage.pourSymptome(API, symptome);
+  if (!arbre) return;
+  const infos = { arbre: arbre.identifiant, symptome, origine: 'structure', code: codeEquipe() };
+  vueDepannagePortail = CvdlDepannage.monter($('dp-portail'), arbre, {
+    symptome,
+    urlFin: 'portail-structure.html',
+    onRetour: listeDepannage,
+    onResolu: (chemin) => CvdlDepannage.enregistrerParcours(API, { issue: 'resolu', chemin, ...infos }),
+    onSav: async (chemin) => {
+      const r = await CvdlDepannage.enregistrerParcours(API, { issue: 'sav', chemin, ...infos });
+      try {
+        sessionStorage.setItem(
+          'cvdl-sav-depuis-depannage',
+          JSON.stringify({ symptome, parcours: r && r.ok ? r.parcours : null }),
+        );
+      } catch (e) {}
+      location.href = 'sav.html';
+    },
+  });
+  $('dp-portail').scrollIntoView({ block: 'start' });
+}
+$('carte-depannage').addEventListener('click', () => {
+  ouvrirPanneau('panneau-depannage');
+  listeDepannage();
+});
+$('dp-portail').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-dpp-symptome]');
+  if (b) ouvrirDepannagePortail(b.dataset.dppSymptome);
 });
 $('eq-ajouter').addEventListener('click', async () => {
   const email = $('eq-email').value.trim().toLowerCase();
@@ -438,58 +622,109 @@ $('panneau-equipe').addEventListener('change', (e) => {
 });
 
 /**
- * Connexion Google silencieuse, structures Internes seulement : `hd` limite Google aux
- * comptes du domaine autorisé. Si le compte est l'e-mail de contact ou un compte autorisé d'une
- * Interne, l'espace s'ouvre sans code (One Tap). Sinon, saisie du code.
+ * Connexion Google de l'équipe Emmaüs Connect (structures Internes : responsables et
+ * conseillers numériques), sans code. Proposée seulement quand l'adresse saisie est du domaine
+ * de l'équipe : les partenaires ne voient jamais Google. La fenêtre automatique (One Tap) ne
+ * s'ouvre que sur un appareil où quelqu'un s'est déjà connecté ainsi. `hd` limite Google aux
+ * comptes du domaine autorisé.
  */
-async function preparerGooglePortail(automatique) {
-  if (!automatique) return;
-  const post = (corps) =>
-    fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(corps),
-    }).then((r) => r.json());
-  const c = await post({ action: 'auth-config' }).catch(() => ({}));
-  if (!c.clientId) return;
-  const s = document.createElement('script');
-  s.src = 'https://accounts.google.com/gsi/client';
-  s.async = true;
-  s.onload = () => {
-    google.accounts.id.initialize({
-      client_id: c.clientId,
-      hd: c.domaine,
-      auto_select: true,
-      ux_mode: 'popup',
-      cancel_on_tap_outside: false,
-      callback: async (rep) => {
-        $('retour-code-portail').innerHTML = '<div class="msg">Connexion…</div>';
-        const r = await post({ action: 'auth-google-structure', credential: rep.credential }).catch(() => ({
-          ok: false,
-          erreur: 'Connexion impossible — réessaie.',
-        }));
-        if (r.ok && r.acces) {
-          $('retour-code-portail').innerHTML = '';
-          if (!r.acces.startsWith('j3.')) $('code-portail').value = r.acces;
-          return verifierCodePortail(r.acces);
-        }
-        if (r.ok && r.choix && r.choix.length) {
-          $('retour-code-portail').innerHTML =
-            `<div class="msg"><p style="margin:0 0 8px">Plusieurs espaces sont liés à ${echapper(r.email)} :</p>${r.choix.map((x) => `<button type="button" class="btn btn-secondary btn-block" style="margin-top:6px" data-pg-code="${echapper(x.acces)}">${echapper(x.nom)}<small style="opacity:.6"> · ${x.role === 'responsable' ? 'responsable' : 'conseiller'}</small></button>`).join('')}</div>`;
-          return;
-        }
-        // Compte non rattaché à une structure : rien à signaler, la saisie du code reste là.
-        $('retour-code-portail').innerHTML = '';
-      },
+const CLE_GOOGLE_PORTAIL = 'cvdl-portail-google';
+let googlePret = null;
+const postPortail = (corps) => appelApi(corps, { methode: 'POST' });
+
+async function reponseGoogle(rep) {
+  $('retour-code-portail').innerHTML = '<div class="msg">Connexion…</div>';
+  const r = await postPortail({ action: 'auth-google-structure', credential: rep.credential }).catch(() => ({
+    ok: false,
+    erreur: 'Connexion impossible — réessaie.',
+  }));
+  if (r.ok) {
+    try {
+      localStorage.setItem(CLE_GOOGLE_PORTAIL, '1');
+    } catch (e) {}
+  }
+  if (r.ok && r.acces) {
+    $('retour-code-portail').innerHTML = '';
+    if (!estJetonAcces(r.acces)) $('code-portail').value = r.acces;
+    return verifierCodePortail(r.acces);
+  }
+  if (r.ok && r.choix && r.choix.length) {
+    $('retour-code-portail').innerHTML =
+      `<div class="msg"><p style="margin:0 0 8px">Plusieurs espaces sont liés à ${echapper(r.email)} :</p>${r.choix.map((x) => `<button type="button" class="btn btn-secondary btn-block" style="margin-top:6px" data-pg-code="${echapper(x.acces)}">${echapper(x.nom)}<small style="opacity:.6"> · ${x.role === 'responsable' ? 'responsable' : 'conseiller'}</small></button>`).join('')}</div>`;
+    return;
+  }
+  $('retour-code-portail').innerHTML = r.aucune
+    ? '<div class="msg">Ce compte Google n’a accès à aucun espace : saisissez votre code structure.</div>'
+    : `<div class="msg msg-erreur">${echapper(r.erreur || 'Connexion impossible.')}</div>`;
+}
+
+const configGoogle = postPortail({ action: 'auth-config' }).catch(() => ({}));
+const adresseEquipe = (email, config) =>
+  (config.domaines || []).some((d) =>
+    email
+      .trim()
+      .toLowerCase()
+      .endsWith('@' + d),
+  );
+
+/** Charge Google une fois et l'initialise (`email` : adresse proposée) ; renvoie false si la
+ *  connexion Google n'est pas configurée ou ne charge pas. */
+function chargerGoogle(config, email) {
+  if (!config.clientId) return Promise.resolve(false);
+  if (!googlePret)
+    googlePret = new Promise((resoudre) => {
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.onload = () => resoudre(true);
+      s.onerror = () => resoudre(false);
+      document.head.appendChild(s);
     });
-    google.accounts.id.prompt();
-  };
-  document.head.appendChild(s);
+  return googlePret.then((ok) => {
+    if (ok)
+      google.accounts.id.initialize({
+        client_id: config.clientId,
+        hd: config.domaine,
+        login_hint: email || undefined,
+        auto_select: true,
+        ux_mode: 'popup',
+        cancel_on_tap_outside: false,
+        callback: reponseGoogle,
+      });
+    return ok;
+  });
+}
+
+/** Adresse de l'équipe saisie : bouton Google (et fenêtre Google) à la place du code. */
+async function connexionGoogle(email) {
+  retourConnexion('');
+  if (!(await chargerGoogle(await configGoogle, email)))
+    return retourConnexion('La connexion Google n’est pas disponible ici : utilisez votre code structure.');
+  $('cx-adresse-google').textContent = email;
+  etapeConnexion('google');
+  $('pg-google-bouton').replaceChildren();
+  google.accounts.id.renderButton($('pg-google-bouton'), {
+    type: 'standard',
+    theme: 'outline',
+    size: 'large',
+    text: 'signin_with',
+    locale: 'fr',
+  });
+  google.accounts.id.prompt();
+}
+
+/** Appareil où l'équipe s'est déjà connectée avec Google : fenêtre One Tap d'office. */
+async function preparerGooglePortail(automatique) {
+  let dejaConnecte = false;
+  try {
+    dejaConnecte = localStorage.getItem(CLE_GOOGLE_PORTAIL) === '1';
+  } catch (e) {}
+  if (automatique && dejaConnecte && (await chargerGoogle(await configGoogle))) google.accounts.id.prompt();
 }
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-pg-code]');
   if (!b) return;
-  if (!b.dataset.pgCode.startsWith('j3.')) $('code-portail').value = b.dataset.pgCode;
+  if (!estJetonAcces(b.dataset.pgCode)) $('code-portail').value = b.dataset.pgCode;
   verifierCodePortail(b.dataset.pgCode);
 });
 
@@ -498,7 +733,7 @@ try {
   const codeMemorise = sessionStorage.getItem('cvdl-code-structure');
   preparerGooglePortail(!codeMemorise && !sessionStorage.getItem('cvdl-portail-google-off'));
   if (codeMemorise) {
-    if (!codeMemorise.startsWith('j3.')) $('code-portail').value = codeMemorise;
+    if (!estJetonAcces(codeMemorise)) $('code-portail').value = codeMemorise;
     verifierCodePortail(codeMemorise).finally(() => {
       document.documentElement.classList.remove('deja-identifie');
       const v = document.getElementById('voile-verification-precoce');
@@ -511,8 +746,27 @@ PenseBete.brancherPortail();
 
 // « Retour » vers le choix structure / personne : seulement si l'espace bénéficiaires est ouvert
 // (fermé, portail.html renvoie ici).
-jsonp({ action: 'perimetre' })
+lireApi({ action: 'perimetre' })
   .then((p) => {
     if (p.ok && p.beneficiaires) $('retour-portail').hidden = false;
   })
   .catch(() => {});
+
+/** Première arrivée de la session : cartes masquées pendant l'accueil, puis la 1re apparaît
+ *  d'un coup et les autres suivent en domino. Renvoie la fonction qui lance l'animation. */
+function preparerEntreePortail() {
+  let premiere = false;
+  try {
+    premiere = !sessionStorage.getItem('cvdl-portail-vu');
+    sessionStorage.setItem('cvdl-portail-vu', '1');
+  } catch {
+    /* stockage indisponible : pas d'animation d'entrée */
+  }
+  const zone = $('etape-portail');
+  if (!premiere) return () => {};
+  zone.classList.add('ps-attente');
+  return () => {
+    zone.classList.replace('ps-attente', 'ps-entree');
+    setTimeout(() => zone.classList.remove('ps-entree'), 2000);
+  };
+}

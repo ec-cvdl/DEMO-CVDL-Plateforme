@@ -64,14 +64,26 @@ function valeursInitialesProduit() {
     'cp-donnees-mobiles': '',
     'cp-sms': '',
     'cp-appels': '',
+    'cp-usages': '',
     'cp-visible': true,
     'cp-sans-suivi': false,
     'cp-dematerialise': false,
     'cp-facturation-mensuelle': false,
     'cp-tectech-type': '',
     'cp-tectech-categorie': '',
+    'cp-sf-stock': '',
+    'cp-region': estRegional() ? state.regions[0] || '' : '',
   };
 }
+/** Région d'un nouveau produit : commun (national) ou propre à une région. */
+function selectRegionProduit(v) {
+  const opts = [
+    ...(estRegional() ? [] : [['', 'Toutes les régions — produit commun']]),
+    ...state.regions.map((r) => [r, r]),
+  ];
+  return `<select class="input" id="cp-region">${opts.map(([val, l]) => `<option value="${echapper(val)}" ${v === val ? 'selected' : ''}>${echapper(l)}</option>`).join('')}</select>`;
+}
+const linuxProduit = (systeme) => /linux/i.test(systeme || '');
 /** Recopie dans state.modal.v ce qui est saisi à l'étape affichée. */
 function memoriserEtapeProduit() {
   const m = state.modal;
@@ -152,6 +164,11 @@ function etapeCpCategorie(v) {
       <div class="cpw-cats" role="radiogroup" aria-label="Catégorie">${cartes}</div>
     </section>
     <section class="csw-section">
+      <h4>Région</h4>
+      <div class="field"><label for="cp-region">Catalogue</label>${selectRegionProduit(v['cp-region'])}
+      <small class="cpw-aide">Produit commun : proposé dans les régions qui ont des structures, chacune ajuste ensuite ses prix et son stock (onglet Stock). Une région : seulement ses structures.</small></div>
+    </section>
+    <section class="csw-section">
       <h4>Groupe de commande</h4>
       <div class="cpw-groupes" role="radiogroup" aria-label="Groupe de commande">
         ${GROUPES_COMMANDE.map((g) => `<label class="csw-option${v['cp-groupe'] === g ? ' choisi' : ''}"><input type="radio" name="cpw-groupe" value="${echapper(g)}" ${v['cp-groupe'] === g ? 'checked' : ''}><span class="csw-option-txt"><b>${echapper(g)}</b></span></label>`).join('')}
@@ -171,7 +188,7 @@ function etapeCpPrix(v) {
     <section class="csw-section">
       <h4>Stock</h4>
       <div class="csw-grille">
-        <div class="field"><label for="cp-stock">Stock de départ *</label><input class="input" id="cp-stock" type="number" step="1" min="0" inputmode="numeric" value="${echapper(v['cp-stock'])}"></div>
+        <div class="field"><label for="cp-stock">Stock de départ * <em>(dans chaque région)</em></label><input class="input" id="cp-stock" type="number" step="1" min="0" inputmode="numeric" value="${echapper(v['cp-stock'])}"></div>
         <div class="field"><label for="cp-message-rupture">Message si indisponible <em>(facultatif)</em></label><textarea class="input" id="cp-message-rupture" rows="2" placeholder="Ce produit est temporairement indisponible.">${echapper(v['cp-message-rupture'])}</textarea></div>
       </div>
     </section>
@@ -195,10 +212,11 @@ function etapeCpCaracteristiques(v) {
     </div></section>`;
   }
   return `<section class="csw-section"><h4>Fiche technique</h4><div class="csw-grille">
-    <div class="field"><label for="cp-systeme">Système</label>${selectSimple('cp-systeme', SYSTEMES_OPTIONS, v['cp-systeme'])}</div>
+    <div class="field"><label for="cp-systeme">Système</label>${selectSimple('cp-systeme', SYSTEMES_OPTIONS, v['cp-systeme'])}<small class="cpw-aide">Linux : la case « Linux » est cochée dans Salesforce à la saisie de la vente.</small></div>
     <div class="field"><label for="cp-ram">Mémoire (RAM)</label>${selectAvecUnite('cp-ram', RAM_OPTIONS, 'Go', v['cp-ram'])}</div>
     <div class="field"><label for="cp-disque">Stockage (disque)</label>${selectSimple('cp-disque', DISQUE_OPTIONS, v['cp-disque'])}</div>
     ${c.processeur ? `<div class="field"><label for="cp-processeur">Processeur</label><input class="input" id="cp-processeur" placeholder="Intel Core i5" value="${echapper(v['cp-processeur'])}"></div>` : ''}
+    <div class="field" style="grid-column:1 / -1"><label for="cp-usages">Usages <em style="font-weight:400">— montrés aux structures qui orientent des personnes</em></label><textarea class="input" id="cp-usages" rows="2" maxlength="600" placeholder="Démarches en ligne, bureautique, visio…">${echapper(v['cp-usages'] || '')}</textarea></div>
   </div></section>`;
 }
 function etapeCpComportement(v) {
@@ -218,6 +236,9 @@ function etapeCpComportement(v) {
         <div class="field"><label for="cp-tectech-type">Type tec.tech</label><select class="input" id="cp-tectech-type"><option value="">—</option>${TECTECH_TYPES.map((t) => `<option value="${t}" ${v['cp-tectech-type'] === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
         <div class="field"><label for="cp-tectech-categorie">Catégorie tec.tech</label><select class="input" id="cp-tectech-categorie"><option value="">—</option>${TECTECH_CATEGORIES.map((c) => `<option value="${c}" ${v['cp-tectech-categorie'] === c ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
       </div>
+    </details>
+    <details class="csw-section cp-avance"${v['cp-sf-stock'] ? ' open' : ''}><summary class="rp-surtitre">Salesforce (saisie des ventes)</summary>
+      <div class="field"><label for="cp-sf-stock">Adresse de la fiche du Stock Salesforce</label><input class="input" id="cp-sf-stock" type="url" placeholder="https://emmaus-connect.lightning.force.com/lightning/r/…" value="${echapper(v['cp-sf-stock'])}"><small class="cpw-aide">Ouvrez le stock correspondant dans Salesforce (ex. « Ordinateur - Catégorie B ») et collez l’adresse : les ventes de ce produit le reprendront. Case « Linux » : ${linuxProduit(v['cp-systeme']) ? 'Oui' : 'Non'} (d’après le système).</small></div>
     </details>`;
 }
 function etapeCpRecap(v) {
@@ -241,6 +262,7 @@ function etapeCpRecap(v) {
         ['RAM', go(v['cp-ram'])],
         ['Disque', v['cp-disque']],
         c.processeur ? ['Processeur', v['cp-processeur']] : null,
+        ['Usages', v['cp-usages']],
       ]
     : c.recharge
       ? [
@@ -255,6 +277,7 @@ function etapeCpRecap(v) {
       ['Nom', v['cp-nom']],
       ['Catégorie', cat],
       ['Groupe', v['cp-groupe']],
+      ['Région', v['cp-region'] || 'Toutes (produit commun)'],
     ])}
     ${bloc(1, 'Prix et stock', [
       ['Prix standard', euros(v['cp-prix-standard'])],
@@ -270,6 +293,8 @@ function etapeCpRecap(v) {
       ['Sans n° de série ni personne', oui(v['cp-sans-suivi'])],
       ['Dématérialisé', oui(v['cp-dematerialise'])],
       ['Facture mensuelle', oui(v['cp-facturation-mensuelle'])],
+      ['Stock Salesforce', v['cp-sf-stock'] ? 'Renseigné' : ''],
+      ['Case Linux (Salesforce)', c.materiel ? oui(linuxProduit(v['cp-systeme'])) : ''],
     ])}
   </div>`;
 }
@@ -373,7 +398,7 @@ function vueCreerProduit() {
     ${champ('Icône (détermine la catégorie et les caractéristiques ci-dessous)', `<select class="input" id="cp-icone">${ICONES_PRODUIT_OPTIONS.map((o) => `<option value="${o.value}" ${p && p.icone === o.value ? 'selected' : ''}>${echapper(o.label)}</option>`).join('')}</select>`)}
     ${champ('Groupe de commande *', `<select class="input" id="cp-groupe">${GROUPES_COMMANDE.map((g) => `<option value="${echapper(g)}" ${p && p.groupe === g ? 'selected' : ''}>${echapper(g)}</option>`).join('')}</select>`)}
     </div>
-    <div class="cp-section"><div class="rp-surtitre">Prix et stock</div>
+    <div class="cp-section"><div class="rp-surtitre">Prix par défaut</div>
     <div class="cp-grille2">
     ${champ('Prix standard (€) *', `<input class="input" id="cp-prix-standard" type="number" step="0.01" value="${p ? echapper(p.prixStandard) : ''}">`)}
     ${champ('Prix Relais Numérique (€) *', `<input class="input" id="cp-prix-rn" type="number" step="0.01" value="${p ? echapper(p.prixRN) : ''}">`)}
@@ -381,7 +406,7 @@ function vueCreerProduit() {
       <input class="input" id="cp-prix-revente-max" type="number" step="0.01" min="0" value="${p && p.prixReventeMax != null ? echapper(p.prixReventeMax) : ''}" placeholder="Pas de plafond">
       <p style="margin:4px 0 0;font-size:12px;opacity:.65">Plafond du prix auquel une structure peut revendre cet appareil à la personne accompagnée (tarifs de revente dans sa flotte).</p></div>
     </div>
-    ${champ('Stock *', `<input class="input" id="cp-stock" type="number" step="1" value="${p ? echapper(p.stock) : ''}">`)}
+    <p class="cr-aide">Prix, quantité max. et message : valeurs par défaut, ajustables par région. Stock : ${p ? `${echapper(p.stock)} au total, ` : ''}réglé par région (onglet Stock → choisir la région).</p>
     ${champ(`Quantité maximale par commande (vide = par défaut : ${quantiteMaxDefautAffiche()})`, `<input class="input" id="cp-quantite-max" type="number" step="1" min="1" max="1000" value="${p && p.quantiteMax ? echapper(p.quantiteMax) : ''}" placeholder="Par défaut">`)}
     ${champ("Message d'indisponibilité", `<textarea class="input" id="cp-message-rupture" rows="2" placeholder="Ce produit est temporairement indisponible.">${p ? echapper(p.messageRupture || '') : ''}</textarea>`)}
     </div>
@@ -400,6 +425,7 @@ function vueCreerProduit() {
       ${champ('Appels', `<input class="input" id="cp-appels" placeholder="Illimités" value="${p ? echapper(p.appels || '') : ''}">`)}
     </div>
     <p style="font-size:11.5px;opacity:0.55;margin:2px 0 0">Système/RAM/disque : ordinateur, smartphone ou tablette (processeur en plus pour ordinateur et smartphone). Données mobiles/SMS/appels : recharge uniquement. Rien pour les autres catégories.</p>
+    ${champ('Usages (montrés aux structures qui orientent des personnes et dans le catalogue)', `<textarea class="input" id="cp-usages" rows="2" maxlength="600" placeholder="Démarches en ligne, bureautique, visio…">${p ? echapper(p.usages || '') : ''}</textarea>`)}
     </div>
     <div class="cp-section"><div class="rp-surtitre">Comportement dans une commande</div>
     <div class="cp-effets">
@@ -415,6 +441,10 @@ function vueCreerProduit() {
     ${champ('Catégorie tec.tech', `<select class="input" id="cp-tectech-categorie"><option value="">—</option>${TECTECH_CATEGORIES.map((c) => `<option value="${c}" ${p && p.tectechCategorie === c ? 'selected' : ''}>${c}</option>`).join('')}</select>`)}
     </div>
     </details>
+    <details class="cp-section cp-avance"${p && p.sfStock ? ' open' : ''}><summary class="rp-surtitre">Salesforce (saisie des ventes)</summary>
+    ${champ('Adresse de la fiche du Stock Salesforce', `<input class="input" id="cp-sf-stock" type="url" placeholder="https://emmaus-connect.lightning.force.com/lightning/r/…" value="${p ? echapper(p.sfStock || '') : ''}">`)}
+    <p style="font-size:11.5px;opacity:0.55;margin:2px 0 0">Ouvrez dans Salesforce le stock correspondant à ce produit (ex. « Ordinateur - Catégorie A ») et collez l’adresse de sa page : les ventes de ce produit le reprendront.</p>
+    </details>
   `,
     'cp-enregistrer',
     p
@@ -425,9 +455,11 @@ function vueCreerProduit() {
 async function synchroniserStockTecTech() {
   etat('Synchronisation tec.tech…', 'chargement');
   try {
-    const r = await poster({ action: 'stock-synchroniser-tectech' });
+    const region = regionStock();
+    const r = await poster({ action: 'stock-synchroniser-tectech', region });
     if (r.ok) {
       state.produits = r.produits || state.produits;
+      if (region) chargerCatalogueRegion(region);
       etat('Synchronisation terminée', 'succes');
       state.modal = { kind: 'tectech-resultats', resultats: r.resultats || [] };
       render();
@@ -445,7 +477,7 @@ document.addEventListener('click', (e) => {
 async function supprimerProduitAction(id) {
   const r = await posterEtat({ action: 'produit-supprimer', id }, 'Suppression…', 'Produit supprimé');
   if (r.ok) {
-    const rp = await jsonp({ action: 'produits', password: motDePasse });
+    const rp = await lireApi({ action: 'produits' });
     if (rp.ok) state.produits = rp.produits;
     state.modal = null;
     render();
@@ -454,7 +486,7 @@ async function supprimerProduitAction(id) {
 async function supprimerStructureAction(id) {
   const r = await posterEtat({ action: 'structure-delete', id }, 'Suppression…', 'Structure supprimée');
   if (r.ok) {
-    const rst = await jsonp({ action: 'structures', password: motDePasse });
+    const rst = await lireApi({ action: 'structures' });
     if (rst.ok) state.structures = rst.structures.slice().sort((a, b) => b.id - a.id);
     state.modal = null;
     render();
@@ -481,8 +513,8 @@ async function enregistrerProduit() {
   const nom = lire('cp-nom').trim();
   const prixStandard = lire('cp-prix-standard'),
     prixRN = lire('cp-prix-rn'),
-    stock = lire('cp-stock');
-  if (!nom || prixStandard === '' || prixRN === '' || stock === '') {
+    stock = id ? '' : lire('cp-stock');
+  if (!nom || prixStandard === '' || prixRN === '' || (!id && stock === '')) {
     $('rp-retour-modale').innerHTML =
       '<div class="msg msg-erreur">Nom, prix standard, prix Relais Numérique et stock sont obligatoires.</div>';
     return;
@@ -511,7 +543,6 @@ async function enregistrerProduit() {
     nom,
     prixStandard,
     prixRN,
-    stock,
     icone,
     prixReventeMax: lire('cp-prix-revente-max').trim(),
     quantiteMax: lire('cp-quantite-max').trim(),
@@ -522,6 +553,7 @@ async function enregistrerProduit() {
     groupe: lire('cp-groupe'),
     tectechType: lire('cp-tectech-type'),
     tectechCategorie: lire('cp-tectech-categorie'),
+    sfStock: lire('cp-sf-stock').trim(),
     dematerialise,
     messageRupture: lire('cp-message-rupture').trim(),
     facturationMensuelle: coche('cp-facturation-mensuelle'),
@@ -532,6 +564,7 @@ async function enregistrerProduit() {
     donneesMobiles: estRecharge ? avecGo(lire('cp-donnees-mobiles').trim()) : '',
     sms: estRecharge ? lire('cp-sms').trim() : '',
     appels: estRecharge ? lire('cp-appels').trim() : '',
+    usages: lire('cp-usages').trim(),
   };
   try {
     etat(id ? 'Enregistrement…' : 'Création…', 'chargement');
@@ -559,12 +592,14 @@ async function enregistrerProduit() {
         // tous les champs saisis sont envoyés dès la création
         action: 'produit-create',
         ...champsCommuns,
+        stock,
+        region: lire('cp-region'),
       });
       ok = r.ok;
     }
     if (ok) {
       etat(id ? 'Produit mis à jour' : 'Produit créé', 'succes');
-      const rp = await jsonp({ action: 'produits', password: motDePasse });
+      const rp = await lireApi({ action: 'produits' });
       if (rp.ok) state.produits = rp.produits;
       // Les commandes déjà chargées portent des champs calculés à partir de la config produit du
       // moment (dematerialisee, quantiteAvecNumeroSerie) — sans ce rafraîchissement, corriger un
@@ -572,7 +607,7 @@ async function enregistrerProduit() {
       // laissait ces commandes figées sur l'ancienne config : l'étape de saisie affichait "aucun
       // code requis" au lieu du champ Codes, jusqu'au prochain rechargement complet de la page.
       if (id) {
-        const rc = await jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' });
+        const rc = await lireApi({ action: 'list', limite: -1, filtre: 'tout' });
         if (rc.ok) state.commandes = rc.commandes;
       }
       state.modal = null;

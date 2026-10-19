@@ -13,15 +13,11 @@ const VUE_MATERIEL = (() => {
 })();
 if (VUE_MATERIEL) document.documentElement.classList.add('vue-materiel');
 const avecVue = (o) => (VUE_MATERIEL ? { ...o, vue: 'materiel' } : o);
-function jsonpVue(params) {
-  return fetch(API + '?' + new URLSearchParams(avecVue(params))).then((r) => r.json());
+function lireVue(params) {
+  return appelApi(avecVue(params));
 }
 function posterVue(data) {
-  return fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(avecVue(data)),
-  }).then((r) => r.json());
+  return appelApi(avecVue(data), { methode: 'POST' });
 }
 function afficherMsg(cible, texte, type) {
   $(cible).innerHTML = texte ? '<div class="msg msg-' + type + '">' + texte + '</div>' : '';
@@ -56,7 +52,7 @@ function majPersonneFlotte(a) {
 function champsPersonneFlotte(a) {
   const champ = (cle, lib) =>
     `<input type="text" class="tl-champ" data-id="${a.id}" data-champ="${cle}" value="${echapper(a[cle])}" placeholder="${lib}" aria-label="${lib}" size="${Math.max(6, String(a[cle] || '').length + 1)}">`;
-  return `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? initialesFlotte(a.personne) : '+'}</span>${champ('prenom', 'Prénom')}${champ('nom', 'Nom')}</span>`;
+  return `<span class="tl-personne-champ"><span class="tl-av${a.personne ? '' : ' tl-av-plus'}">${a.personne ? echapper(initialesFlotte(a.personne)) : '+'}</span>${champ('prenom', 'Prénom')}${champ('nom', 'Nom')}</span>`;
 }
 
 let codeValide = '';
@@ -99,7 +95,7 @@ async function verifierCode() {
   $('btn-verifier').disabled = true;
   $('btn-verifier').innerHTML = '<span class="spinner-inline"></span>Vérification…';
   try {
-    const r = await jsonpVue({ action: 'check', code: code });
+    const r = await lireVue({ action: 'check', code: code });
     if (r.ok) {
       codeValide = code;
       // Une structure BO auto-créée par une Interne (structurePartenaireDe renseigné) utilise
@@ -149,9 +145,7 @@ $('code').addEventListener('keydown', (e) => {
 });
 
 $('btn-deconnexion-flotte').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
@@ -181,13 +175,23 @@ async function chargerAppareils() {
   $('zone-flotte').innerHTML =
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   try {
-    const r = await jsonpVue({ action: 'flotte-lister', code: codeValide });
+    const r = await lireVue({ action: 'flotte-lister', code: codeValide });
     if (!r.ok) {
       $('zone-flotte').innerHTML = `<p class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</p>`;
       return;
     }
     appareilsCourants = r.appareils;
     equipeSalesforceFlotte = r.equipeSalesforce || [];
+    lieuxSalesforceFlotte = r.lieuxSalesforce || [];
+    vendeursFlotte = r.vendeurs || [];
+    moiFlotte = r.moi || '';
+    peutConfierFlotte = !!r.peutConfier;
+    // Conseiller : arrive sur ses propres appareils (une fois ; il peut ensuite tout voir).
+    if (!filtreVendeurInitialise) {
+      filtreVendeurInitialise = true;
+      if (moiFlotte && !peutConfierFlotte && vendeursFlotte.some((v) => v.email === moiFlotte))
+        filtreVendeurFlotte = '__moi__';
+    }
     await chargerProjetsFlotte();
     rendreAppareils(appareilsCourants);
     ouvrirPersonneDemandee();
@@ -220,7 +224,7 @@ async function chargerProjetsFlotte() {
   projetsFlotte = [];
   if (!estProprietaireInterne || estDepotVenteFlotte) return;
   try {
-    const r = await jsonpVue({ action: 'projets-structure', code: codeValide });
+    const r = await lireVue({ action: 'projets-structure', code: codeValide });
     if (r && r.ok) projetsFlotte = r.projets || [];
   } catch (e) {
     /* non bloquant : la flotte s'affiche sans les projets */
@@ -268,12 +272,100 @@ document.addEventListener('change', async (e) => {
   sel.disabled = false;
 });
 
+/* ── « Confié à » (structures Internes) : chaque appareil peut être confié à un vendeur de
+   l'équipe (compte de la structure). Le responsable confie (flotte-confier) ; chacun filtre :
+   ses appareils, ceux d'un collègue, les non confiés ou toute la structure. ── */
+let vendeursFlotte = [];
+let moiFlotte = '';
+let peutConfierFlotte = false;
+let filtreVendeurFlotte = ''; // '' tout · '__moi__' · '__aucun__' · e-mail d'un vendeur
+let filtreVendeurInitialise = false;
+const avecVendeursFlotte = () => !VUE_MATERIEL && vendeursFlotte.length > 0;
+const confierFlotte = () => avecVendeursFlotte() && peutConfierFlotte;
+const nomVendeurFlotte = (email) => {
+  const v = vendeursFlotte.find((x) => x.email === email);
+  return v ? v.nom : email;
+};
+function filtrerParVendeur(appareils) {
+  if (!avecVendeursFlotte() || !filtreVendeurFlotte) return appareils;
+  if (filtreVendeurFlotte === '__aucun__') return appareils.filter((a) => !a.confieA);
+  const cible = filtreVendeurFlotte === '__moi__' ? moiFlotte : filtreVendeurFlotte;
+  return appareils.filter((a) => a.confieA === cible);
+}
+/** Menu « Voir » de la barre d'outils. */
+function filtreVendeurHtml() {
+  if (!avecVendeursFlotte()) return '';
+  const opt = (v, lib) =>
+    `<option value="${echapper(v)}"${filtreVendeurFlotte === v ? ' selected' : ''}>${echapper(lib)}</option>`;
+  const moiConnu = moiFlotte && vendeursFlotte.some((v) => v.email === moiFlotte);
+  return `<label class="flotte-vendeur"><span class="flotte-lab">Voir</span><select id="filtre-vendeur-flotte" class="input" aria-label="Appareils confiés à">
+    ${opt('', 'Toute la structure')}${moiConnu ? opt('__moi__', 'Mes appareils') : ''}${opt('__aucun__', 'Non confiés')}
+    <optgroup label="Confiés à">${vendeursFlotte
+      .filter((v) => v.email !== moiFlotte || !moiConnu)
+      .map((v) => opt(v.email, v.nom))
+      .join('')}</optgroup>
+  </select></label>`;
+}
+/** « Confié à » d'un appareil : menu pour le responsable, texte pour les autres. */
+function confieAFlotte(a, compact) {
+  if (!avecVendeursFlotte()) return '';
+  if (!confierFlotte() || a.verrouille)
+    return a.confieA
+      ? `<span class="fl-confie-lu">${echapper(a.confieA === moiFlotte ? 'Moi' : nomVendeurFlotte(a.confieA))}</span>`
+      : '<span class="tl-muet">—</span>';
+  const inconnu = a.confieA && !vendeursFlotte.some((v) => v.email === a.confieA);
+  return `<select class="fl-confie${a.confieA ? ' on' : ''}${compact ? ' compact' : ''}" data-confier="${a.id}" aria-label="Confié à" title="Vendeur à qui l’appareil est confié">
+    <option value="">Personne</option>
+    ${inconnu ? `<option value="${echapper(a.confieA)}" selected>${echapper(a.confieA)} (hors équipe)</option>` : ''}
+    ${vendeursFlotte.map((v) => `<option value="${echapper(v.email)}"${v.email === a.confieA ? ' selected' : ''}>${echapper(v.nom)}</option>`).join('')}
+  </select>`;
+}
+async function confierAppareils(ids, vendeur) {
+  try {
+    const r = await posterVue({ action: 'flotte-confier', code: codeValide, ids, vendeur });
+    if (r && r.ok) {
+      appareilsCourants.forEach((a) => {
+        if (ids.includes(a.id)) a.confieA = r.confieA;
+      });
+      return true;
+    }
+    alerteCvdl((r && r.erreur) || 'Enregistrement impossible.');
+  } catch (err) {
+    alerteCvdl('Enregistrement impossible — réessaie.');
+  }
+  return false;
+}
+document.addEventListener('change', async (e) => {
+  const filtre = e.target.closest('#filtre-vendeur-flotte');
+  if (filtre) {
+    filtreVendeurFlotte = filtre.value;
+    rendreFlotteInterneParitePortail(appareilsCourants);
+    return;
+  }
+  const sel = e.target.closest('[data-confier]');
+  if (!sel) return;
+  const id = parseInt(sel.dataset.confier, 10);
+  const item = appareilsCourants.find((a) => a.id === id);
+  sel.disabled = true;
+  if (await confierAppareils([id], sel.value)) {
+    sel.classList.toggle('on', !!sel.value);
+    // L'appareil sort de la vue filtrée (« Mes appareils », un collègue…) : on redessine.
+    if (filtreVendeurFlotte) rendreFlotteInterneParitePortail(appareilsCourants);
+  } else if (item) sel.value = item.confieA || '';
+  sel.disabled = false;
+});
+
 let personnePortailIdCourant = null;
-let listesPersoFlottePortail = { lieux: [], vendeurs: [], orientations: [], paiements: [] };
+let listesPersoFlottePortail = { lieux: [], vendeurs: [], orientations: [], paiements: [], situations: [], usages: [] };
+// Public équipé : valeurs communes (serveur : regles/listesFlotte.js), plus celles de la structure.
+let situationsCommunes = [];
+let usagesCommuns = [];
 // Modes de paiement communs à toutes les structures (envoyés par le serveur avec les listes).
 let typesPaiementCommuns = ['Chèque x1', 'Chèque x2', 'CB', 'Monétaire', 'Mixte'];
 // Noms de l'équipe (réglages Salesforce) : menu « Vente suivie par » des Internes.
 let equipeSalesforceFlotte = [];
+// Lieux de vente (réglages Salesforce, { id, nom }) : menu « Lieu de vente » des Internes.
+let lieuxSalesforceFlotte = [];
 
 /* Informations de vente pour la saisie Salesforce (Internes) : valeur du formulaire (texte)
    ↔ valeur de l'appareil (booléen, ou null pour Linux « d'après le produit »). */
@@ -281,6 +373,7 @@ const ouiNon = (b) => (b ? 'Oui' : 'Non');
 const CHAMPS_SF_PERSONNE = {
   sfContactExistant: { versForm: (v) => ouiNon(v === true), depuisForm: (v) => v === 'Oui' },
   sfSuiviPar: { versForm: (v) => v || '', depuisForm: (v) => v },
+  sfLieu: { versForm: (v) => v || '', depuisForm: (v) => v },
   sfPaiementComplet: { versForm: (v) => ouiNon(v !== false), depuisForm: (v) => v === 'Oui' },
   sfLinux: {
     versForm: (v) => (v === true ? 'Oui' : v === false ? 'Non' : ''),
@@ -306,6 +399,16 @@ function encartSalesforcePersonne(a) {
   return `<div class="pp-groupe pp-sf" role="group" aria-labelledby="pp-titre-sf">
     <h4 class="pp-titre" id="pp-titre-sf">Pour la saisie Salesforce <em>facultatif</em></h4>
     <label class="pp-case"><input type="checkbox" data-pp-champ="sfContactExistant" ${v('sfContactExistant') === 'Oui' ? 'checked' : ''}><span>Déjà connue dans Salesforce</span></label>
+    ${
+      lieuxSalesforceFlotte.length > 1 || (v('sfLieu') && lieuxSalesforceFlotte.length)
+        ? `<div class="field"><label>Lieu de vente
+      <select class="input" data-pp-champ="sfLieu">${options(
+        [['', 'À préciser'], ...lieuxSalesforceFlotte.map((l) => [l.id, l.nom])],
+        lieuxSalesforceFlotte.some((l) => l.id === v('sfLieu')) ? v('sfLieu') : '',
+      )}</select>
+    </label></div>`
+        : ''
+    }
     <div class="field"><label>Vente suivie par
       <select class="input" data-pp-champ="sfSuiviPar">${options(
         [['', 'Qui saisit'], ...equipe.map((n) => [n, n])],
@@ -359,10 +462,17 @@ function ouvrirModalePersonnePortail(id) {
             <option ${a.genre === 'Femme' ? 'selected' : ''}>Femme</option>
           </select>
         </label></div>
-        <div class="field"><label>Date de naissance<input type="text" class="input" data-pp-champ="dateNaissance" value="${echapper(a.dateNaissance)}" placeholder="jj/mm/aaaa"></label></div>
+        <div class="field"><label>Date de naissance<input type="text" class="input" data-pp-champ="dateNaissance" data-naissance value="${echapper(a.dateNaissance)}" placeholder="jj/mm/aaaa"></label></div>
         <div class="field pp-large"><label>Personne orientée par <em>(facultatif)</em>
           ${selectListePerso('orientePar', a.orientePar, 'class="input" data-pp-champ="orientePar"')}
         </label></div>
+        <div class="field"><label>Situation <em>(facultatif)</em>
+          ${selectListePerso('situation', a.situation, 'class="input" data-pp-champ="situation"')}
+        </label></div>
+        <div class="field"><label>Usage principal <em>(facultatif)</em>
+          ${selectListePerso('usagePrincipal', a.usagePrincipal, 'class="input" data-pp-champ="usagePrincipal"')}
+        </label></div>
+        <p class="pp-note pp-large">Situation et usage : pour le bilan du public équipé (chiffres d’ensemble seulement).</p>
       </div>
       <div class="pp-groupe" role="group" aria-labelledby="pp-titre-vente">
         <h4 class="pp-titre" id="pp-titre-vente">Vente</h4>
@@ -420,7 +530,7 @@ async function ouvrirTarifsRevente() {
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   $('modale-tarifs-revente').classList.add('visible');
   try {
-    const r = await jsonpVue({ action: 'flotte-tarifs-revente', code: codeValide });
+    const r = await lireVue({ action: 'flotte-tarifs-revente', code: codeValide });
     if (!r.ok) {
       $('tarifs-revente-contenu').innerHTML =
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`;
@@ -529,6 +639,8 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
     genre: val('genre'),
     dateNaissance: val('dateNaissance'),
     orientePar: val('orientePar'),
+    situation: val('situation'),
+    usagePrincipal: val('usagePrincipal'),
     typePaiement: val('typePaiement'),
     vendeur: val('vendeur'),
     dateVente: val('dateVente'),
@@ -544,6 +656,11 @@ $('personne-portail-enregistrer')?.addEventListener('click', async () => {
   }
   if (!dateOk(valeurs.dateNaissance) || !dateOk(valeurs.dateVente)) {
     retour.innerHTML = '<div class="msg msg-erreur">Les dates s’écrivent jj/mm/aaaa.</div>';
+    return;
+  }
+  const erreurNaissance = window.erreurNaissanceCvdl ? window.erreurNaissanceCvdl(valeurs.dateNaissance) : '';
+  if (erreurNaissance) {
+    retour.innerHTML = `<div class="msg msg-erreur">${echapper(erreurNaissance)}</div>`;
     return;
   }
   const aEnvoyer = Object.keys(valeurs).filter((k) => valeurs[k] !== valeurFormPersonne(a, k));
@@ -657,6 +774,22 @@ const LISTES_PERSO = {
     nouveau: '+ Nouveau mode de paiement…',
     communs: () => typesPaiementCommuns,
   },
+  situation: {
+    liste: 'situation',
+    cle: 'situations',
+    question: 'Nouvelle situation (propre à votre structure) :',
+    nouveau: '+ Autre situation…',
+    groupe: 'Ajoutées par vous',
+    communs: () => situationsCommunes,
+  },
+  usagePrincipal: {
+    liste: 'usage',
+    cle: 'usages',
+    question: 'Nouvel usage (propre à votre structure) :',
+    nouveau: '+ Autre usage…',
+    groupe: 'Ajoutés par vous',
+    communs: () => usagesCommuns,
+  },
 };
 /** Menu déroulant d'un champ à liste (`attributs` : data-id/data-champ du tableau, ou
  *  data-pp-champ de la fiche personne). */
@@ -672,7 +805,7 @@ function selectListePerso(champ, valeur, attributs) {
   // Liste avec des valeurs communes (modes de paiement) : celles de la structure à part.
   const perso = communs.length
     ? siens.length
-      ? `<optgroup label="Vos modes">${siens.map(option).join('')}</optgroup>`
+      ? `<optgroup label="${def.groupe || 'Vos modes'}">${siens.map(option).join('')}</optgroup>`
       : ''
     : siens.map(option).join('');
   return `<select ${attributs}>${options.map(option).join('')}${perso}<option value="__nouveau__">${def.nouveau || '+ Nouveau…'}</option></select>`;
@@ -801,17 +934,16 @@ function statutTeinteFlotte(statut) {
   if (/d3e/.test(t)) return 'd3e';
   return 'stock';
 }
-/** Sablier violet : « en stock depuis plus de 2 mois » (même couleur que la tuile, la ligne et
+/** Horloge violette : « en stock depuis plus de 2 mois » (même couleur que la tuile, la ligne et
  *  la puce de la fiche). */
-const ICONE_2_MOIS = (titre) =>
-  `<svg class="ic-2mois" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"${titre ? ` role="img" aria-label="${titre}"` : ' aria-hidden="true"'}><path d="M6 3h12M6 21h12M7.5 3c0 5 4.5 6 4.5 9s-4.5 4-4.5 9M16.5 3c0 5-4.5 6-4.5 9s4.5 4 4.5 9"/></svg>`;
+const ICONE_2_MOIS = () =>
+  '<svg class="ic-2mois" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>';
+/** Pilule « + de 2 mois » de la vue Liste, à côté du nom de l'appareil. */
+const PUCE_2_MOIS = '<span class="tl-puce-2mois" title="En stock depuis plus de 2 mois">+ de 2 mois</span>';
 /** Icône passeport + numéro de série réunis en une seule pastille cliquable. */
-function pillePasseportFlotte(numeroSerie, alerte) {
+function pillePasseportFlotte(numeroSerie) {
   // Pilule commune (portail-ui.js) : ouvre le passeport en modale ; le QR reste sur le passeport.
-  return (
-    window.piluleSerieCvdl(numeroSerie, { query: '&code=' + encodeURIComponent(codeValide || '') }) +
-    (alerte ? ' ' + ICONE_2_MOIS('En stock depuis plus de 2 mois') : '')
-  );
+  return window.piluleSerieCvdl(numeroSerie, { query: '&code=' + encodeURIComponent(codeValide || '') });
 }
 /** Carte d'un appareil — composant unique partagé par les deux designs (structure Interne/
  *  partenaire Vente solidaire et autres structures), pour qu'ils restent visuellement identiques
@@ -827,7 +959,7 @@ function carteDispositif(a, opts) {
     <div data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="carte-dispositif fiche fi3 fiche-verrouillee" title="Attribué à ${echapper(a.attribueANom || a.attribueA)}">
       <div class="fi3-tete">
         <span class="fi3-vis">${visuel}</span>
-        <div class="fi3-titre"><b class="fi3-produit">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b><span class="fi3-sn">${pillePasseportFlotte(a.numeroSerie, false)}</span></div>
+        <div class="fi3-titre"><b class="fi3-produit">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b><span class="fi3-sn">${pillePasseportFlotte(a.numeroSerie)}</span></div>
       </div>
       <div class="fi3-ident-lu">${[a.marque, a.modele, a.categorie].filter(Boolean).map(echapper).join(' · ') || '—'}</div>
       ${VUE_MATERIEL || a.masque ? '' : `<div class="fi3-infos"><div class="fi3-l"><span class="fi3-k">Utilisé par</span><span class="fi3-v">${a.personne ? `<span class="tl-personne vide"><span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}</span>` : '—'}</span></div></div>`}
@@ -853,6 +985,9 @@ function carteDispositif(a, opts) {
       : '',
     aSaisieSalesforce()
       ? `<div class="fi3-l"><span class="fi3-k">Salesforce</span><span class="fi3-v fi-sf">${caseSalesforce(a)}</span></div>`
+      : '',
+    avecVendeursFlotte()
+      ? `<div class="fi3-l"><span class="fi3-k">Confié à</span><span class="fi3-v">${confieAFlotte(a)}</span></div>`
       : '',
     selectProjetFlotte(a)
       ? `<div class="fi3-l"><span class="fi3-k">Projet</span><span class="fi3-v">${selectProjetFlotte(a)}</span></div>`
@@ -881,7 +1016,7 @@ function carteDispositif(a, opts) {
       </div>
     </div>
     <div class="fi3-sn-ligne">
-      <span class="fi3-sn">${pillePasseportFlotte(a.numeroSerie, false)}</span>
+      <span class="fi3-sn">${pillePasseportFlotte(a.numeroSerie)}</span>
       <select class="cd-select-statut fi3-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${statutKit}" data-id="${a.id}" data-champ="statut" aria-label="Statut de l'appareil">
         ${opts.statuts.map((s) => `<option value="${echapper(s)}" ${a.statut === s ? 'selected' : ''}>${echapper(s)}</option>`).join('')}
       </select>
@@ -928,16 +1063,16 @@ function construireTableauFlotteInterne(appareils, opts) {
   const entetes = `
     <tr>
       ${colonneAttribution ? '<th class="tl-col-case"></th>' : ''}
-      <th>Appareil</th><th>N° de série</th>${VUE_MATERIEL ? '' : '<th>Personne</th>'}<th>Statut</th>${VUE_MATERIEL ? '' : '<th>Prix</th>'}${opts.stockage ? '<th>Lieu de stockage</th>' : ''}${aSaisieSalesforce() ? '<th class="tl-centre">Salesforce</th>' : ''}<th>Livré le</th>
+      <th>Appareil</th><th>N° de série</th>${VUE_MATERIEL ? '' : '<th>Personne</th>'}<th>Statut</th>${VUE_MATERIEL ? '' : '<th>Prix</th>'}${opts.stockage ? '<th>Lieu de stockage</th>' : ''}${avecVendeursFlotte() ? '<th>Confié à</th>' : ''}${aSaisieSalesforce() ? '<th class="tl-centre">Salesforce</th>' : ''}<th>Livré le</th>
     </tr>`;
-  const celluleAppareil = (a, modifiable) => `
+  const celluleAppareil = (a, modifiable, alerte) => `
       <td><div class="tl-appareil">
         <span class="tl-ico">${visuelAppareilFlotte(a, 34)}</span>
         <span class="tl-app-txt">
-          <b class="tl-produit-nom">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b>
+          <span class="tl-titre"><b class="tl-produit-nom" title="${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}">${echapper(a.produit || [a.marque, a.modele].filter(Boolean).join(' ') || 'Appareil')}</b>${alerte ? PUCE_2_MOIS : ''}</span>
           ${
             modifiable
-              ? `<span class="tl-ident">${['marque', 'modele', 'categorie'].map((ch) => `<input type="text" class="tl-champ tl-ident-champ" data-id="${a.id}" data-champ="${ch}" value="${echapper(a[ch])}" placeholder="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}" size="${Math.max(6, String(a[ch] || '').length + 1)}" aria-label="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}">`).join('<i aria-hidden="true">·</i>')}</span>`
+              ? `<span class="tl-ident">${['marque', 'modele', 'categorie'].map((ch) => `<input type="text" class="tl-champ tl-ident-champ" data-id="${a.id}" data-champ="${ch}" value="${echapper(a[ch])}" placeholder="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}" aria-label="${ch === 'marque' ? 'Marque' : ch === 'modele' ? 'Modèle' : 'Catégorie'}">`).join('<i aria-hidden="true">·</i>')}</span>`
               : `<span class="tl-ident tl-ident-lu">${[a.marque, a.modele, a.categorie].filter(Boolean).map(echapper).join(' · ') || '—'}</span>`
           }
         </span>
@@ -950,11 +1085,11 @@ function construireTableauFlotteInterne(appareils, opts) {
       <tr data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="tf-verrouillee" title="Attribué à ${echapper(a.attribueANom || a.attribueA)}">
         ${colonneAttribution ? '<td class="tl-col-case"></td>' : ''}
         ${celluleAppareil(a, false)}
-        <td>${pillePasseportFlotte(a.numeroSerie, a.alerte2Mois)}</td>
+        <td>${pillePasseportFlotte(a.numeroSerie)}</td>
         ${VUE_MATERIEL ? '' : `<td><span class="tl-personne vide">${a.masque ? '<span class="tl-muet">Géré par la structure</span>' : a.personne ? `<span class="tl-av">${initialesFlotte(a.personne)}</span>${echapper(a.personne)}` : '—'}</span></td>`}
         <td><span class="tl-verrou"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> ${echapper(a.attribueANom || a.attribueA)}</span></td>
         ${VUE_MATERIEL ? '' : `<td>${a.masque ? '<span class="tl-muet">—</span>' : prixFlotteHtml(a, true)}</td>`}
-        ${opts.stockage ? `<td class="tl-muet">${echapper(a.lieuStockage) || '—'}</td>` : ''}${aSaisieSalesforce() ? `<td class="tl-centre">${a.saisieSalesforce === 'Oui' ? '✓' : '—'}</td>` : ''}
+        ${opts.stockage ? `<td class="tl-muet">${echapper(a.lieuStockage) || '—'}</td>` : ''}${avecVendeursFlotte() ? `<td>${confieAFlotte(a, true)}</td>` : ''}${aSaisieSalesforce() ? `<td class="tl-centre">${a.saisieSalesforce === 'Oui' ? '✓' : '—'}</td>` : ''}
         <td class="tl-muet">${a.dateLivraison ? echapper(a.dateLivraison) : '—'}</td>
       </tr>`;
       }
@@ -965,8 +1100,8 @@ function construireTableauFlotteInterne(appareils, opts) {
       return `
     <tr data-statut-flotte="${echapper(statutTeinteFlotte(a.statut))}" class="${alerte ? 'tl-alerte' : ''}${a.statut === 'D3E' ? ' tl-d3e' : ''}${idsSelectionnesAttribution.has(a.id) ? ' tl-selection' : ''}">
       ${colonneAttribution ? `<td class="tl-col-case"><input type="checkbox" class="tl-case" data-select-attribution="${a.id}" ${idsSelectionnesAttribution.has(a.id) ? 'checked' : ''} aria-label="Sélectionner pour attribution"></td>` : ''}
-      ${celluleAppareil(a, true)}
-      <td>${pillePasseportFlotte(a.numeroSerie, a.alerte2Mois)}</td>
+      ${celluleAppareil(a, true, alerte)}
+      <td>${pillePasseportFlotte(a.numeroSerie)}</td>
       ${VUE_MATERIEL ? '' : `<td><span class="tl-personne-cel">${personne}${boutonAttestation(a)}</span></td>`}
       <td>
         <select class="cd-select-statut ${a.statut === 'D3E' ? 'select-d3e' : ''} ${classeStatutKitFlotte(a.statut)}" data-id="${a.id}" data-champ="statut">
@@ -974,7 +1109,7 @@ function construireTableauFlotteInterne(appareils, opts) {
         </select>${selectProjetFlotte(a, true)}
       </td>
       ${VUE_MATERIEL ? '' : `<td>${prixFlotteHtml(a, true)}</td>`}
-      ${opts.stockage ? `<td class="tl-lieu">${selectListePerso('lieuStockage', a.lieuStockage, `data-id="${a.id}" data-champ="lieuStockage"`)}</td>` : ''}${aSaisieSalesforce() ? `<td class="tl-centre">${caseSalesforce(a)}</td>` : ''}
+      ${opts.stockage ? `<td class="tl-lieu">${selectListePerso('lieuStockage', a.lieuStockage, `data-id="${a.id}" data-champ="lieuStockage"`)}</td>` : ''}${avecVendeursFlotte() ? `<td>${confieAFlotte(a, true)}</td>` : ''}${aSaisieSalesforce() ? `<td class="tl-centre">${caseSalesforce(a)}</td>` : ''}
       <td class="tl-muet">${a.dateLivraison ? echapper(a.dateLivraison) : '—'}</td>
     </tr>`;
     })
@@ -1042,7 +1177,7 @@ function construireTableauComptaFlotte(appareils) {
     .map(
       (a) => `
     <tr class="${a.statutRapprochement === 'Rapproché' ? 'cd-remis' : ''}">
-      <td class="tf-serie">${pillePasseportFlotte(a.numeroSerie, false)}</td>
+      <td class="tf-serie">${pillePasseportFlotte(a.numeroSerie)}</td>
       <td>${echapper(a.categorie) || '—'}</td>
       <td>${echapper(a.marque) || '—'}</td>
       <td>${echapper(a.modele) || '—'}</td>
@@ -1070,7 +1205,7 @@ function construireTableauComptaFlotte(appareils) {
 const SF = { onglet: 'ensemble', periode: '12m', stats: null };
 async function chargerStatsFlotte() {
   $('stats-flotte-portail-contenu').innerHTML = '<p class="sf-vide">Calcul des statistiques…</p>';
-  const r = await jsonpVue({ action: 'flotte-statistiques', code: codeValide, periode: SF.periode }).catch(() => ({
+  const r = await lireVue({ action: 'flotte-statistiques', code: codeValide, periode: SF.periode }).catch(() => ({
     ok: false,
   }));
   SF.stats = r.ok ? r : null;
@@ -1104,6 +1239,10 @@ $('stats-flotte-image')?.addEventListener('click', async function () {
   ).catch(() => false);
   this.disabled = false;
   if (!ok) alerteCvdl('Image impossible à créer — réessayez.');
+});
+$('stats-flotte-csv')?.addEventListener('click', () => {
+  if (!SF.stats) return;
+  window.StatsFlotte.exporterCsv(SF.stats, `Statistiques-flotte-${SF.periode}.csv`);
 });
 $('stats-flotte-portail-fermer')?.addEventListener('click', () =>
   $('modale-stats-flotte-portail').classList.remove('visible'),
@@ -1142,7 +1281,7 @@ function rendreFlotteInterneParitePortail(appareils) {
   const referencesEnStock = new Set(appareils.filter((a) => a.statut === 'En stock').map((a) => a.produit)).size;
   const alerte2Mois = appareils.filter((a) => a.statut === 'En stock' && a.alerte2Mois).length;
 
-  let appareilsAffiches = rechercherAppareils(appareils);
+  let appareilsAffiches = filtrerParVendeur(rechercherAppareils(appareils));
   if (masquerTransferes || vueFlotteInterne === 'compta')
     appareilsAffiches = appareilsAffiches.filter((a) => !a.verrouille);
   if (vueFlotteInterne === 'compta') {
@@ -1161,7 +1300,7 @@ function rendreFlotteInterneParitePortail(appareils) {
       ? construireTableauComptaFlotte(appareilsAffiches)
       : vueFlotteInterne === 'tableau'
         ? construireTableauFlotteInterne(appareilsAffiches, {
-            avecCheckbox: attributionPartenaires,
+            avecCheckbox: selectionFlotte(),
             statuts: STATUTS_FLOTTE_INTERNE_PORTAIL,
             personneMode: 'button',
             stockage: aColonnesStockage(),
@@ -1169,8 +1308,7 @@ function rendreFlotteInterneParitePortail(appareils) {
         : `<div class="grille-dispositifs">${appareilsAffiches
             .map((a) =>
               carteDispositif(a, {
-                checkbox:
-                  attributionPartenaires && !a.verrouille ? { checked: idsSelectionnesAttribution.has(a.id) } : null,
+                checkbox: selectionFlotte() && !a.verrouille ? { checked: idsSelectionnesAttribution.has(a.id) } : null,
                 verrouille: !!a.verrouille,
                 statuts: STATUTS_FLOTTE_INTERNE_PORTAIL,
                 personneMode: 'button',
@@ -1200,13 +1338,23 @@ function rendreFlotteInterneParitePortail(appareils) {
               `<button type="button" class="flotte-tri${filtreStatutFlotte === s ? ' actif' : ''}" data-filtre-statut-flotte="${echapper(s)}">${formeFiltreFlotte(s)}${s || 'Tous'}</button>`,
           )
           .join('');
-  const barreAttribution = !attributionPartenaires
+  const barreAttribution = !selectionFlotte()
     ? ''
     : `
   <div class="card elev-sm" data-role="responsable" id="barre-attribution-flotte" style="padding:12px 16px;margin-top:16px;display:none;align-items:center;gap:12px;flex-wrap:wrap">
     <span style="font-size:13px;font-weight:700" id="compteur-selection-attribution"></span>
-    <select class="input" id="select-partenaire-attribution" style="flex:1;min-width:200px"><option value="">Attribuer à…</option></select>
-    <button type="button" class="btn btn-primary" id="btn-confirmer-attribution">Attribuer définitivement</button>
+    ${
+      confierFlotte()
+        ? `<span class="fl-confier-groupe"><select class="input" id="select-vendeur-confier" aria-label="Confier à"><option value="">Confier à…</option><option value="__personne__">Personne (retirer)</option>${vendeursFlotte.map((v) => `<option value="${echapper(v.email)}">${echapper(v.nom)}</option>`).join('')}</select>
+    <button type="button" class="btn btn-secondary" id="btn-confier-selection">Confier</button></span>`
+        : ''
+    }
+    ${
+      attributionPartenaires
+        ? `<select class="input" id="select-partenaire-attribution" style="flex:1;min-width:200px"><option value="">Attribuer à…</option></select>
+    <button type="button" class="btn btn-primary" id="btn-confirmer-attribution">Attribuer définitivement</button>`
+        : ''
+    }
     <div id="retour-attribution-flotte" style="width:100%"></div>
   </div>`;
 
@@ -1223,12 +1371,13 @@ function rendreFlotteInterneParitePortail(appareils) {
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" id="recherche-flotte" class="input" placeholder="${VUE_MATERIEL ? 'Rechercher (n° de série, modèle…)' : 'Rechercher (n° de série, personne, modèle…)'}" value="${echapper(rechercheFlotte)}">
     </div>
+    ${filtreVendeurHtml()}
     <div class="flotte-filtres">${libelleFiltreFlotte}${filtres}</div>
     ${attributionPartenaires ? `<label class="flotte-toggle" title="Masque les appareils déjà transférés à une structure partenaire"><input type="checkbox" data-toggle-transferes ${masquerTransferes ? 'checked' : ''}><span class="piste"></span>Masquer les appareils transférés</label>` : ''}
     ${vueFlotteInterne !== 'compta' ? `<div class="flotte-tris">${libelleTriFlotte}${optionsTri.map(([champ, label]) => `<button type="button" class="flotte-tri${flotteTriColonne === champ ? ' actif' : ''}" data-tri-champ-standard="${champ}">${label}${flotteTriColonne === champ ? (flotteTriSens === 1 ? ' ↑' : ' ↓') : ''}</button>`).join('')}</div>` : ''}
   </div>
   ${cartes}
-  ${vueFlotteInterne === 'tableau' ? `<div style="display:flex;gap:16px;margin-top:14px;font-size:11.5px;opacity:0.7;flex-wrap:wrap"><span>${ICONE_2_MOIS()} ligne violette : en stock depuis plus de 2 mois</span><span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> attribué à une structure partenaire (verrouillé)</span><span>Le statut se change directement dans sa pastille.</span></div>` : ''}
+  ${vueFlotteInterne === 'tableau' ? `<div style="display:flex;gap:16px;margin-top:14px;font-size:11.5px;opacity:0.7;flex-wrap:wrap"><span class="tl-legende-2mois">${PUCE_2_MOIS} ligne violette : en stock depuis plus de 2 mois</span><span><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> attribué à une structure partenaire (verrouillé)</span><span>Le statut se change directement dans sa pastille.</span></div>` : ''}
   ${vueFlotteInterne === 'cartes' ? `<div class="cvdl-legende fl-legende"><span data-forme="rond" style="--forme:var(--vert)">En stock</span><span data-forme="carre" style="--forme:var(--tur)">${statutVenduFlotte()}</span><span data-forme="losange" style="--forme:var(--rouge)">SAV</span><span data-forme="rond" style="--forme:#8FA3B3">D3E</span>${attributionPartenaires ? '<span>Verrouillé : attribué à une structure partenaire</span>' : ''}</div>` : ''}
   ${barreAttribution}`;
 
@@ -1239,8 +1388,12 @@ function rendreFlotteInterneParitePortail(appareils) {
     });
   });
   cablerBarreOutilsPortailInterne();
-  if (attributionPartenaires) cablerAttributionFlottePortail();
+  if (selectionFlotte()) cablerAttributionFlottePortail();
   majLargeurMain();
+}
+/** Cases de sélection : transfert à une partenaire et/ou « Confier à » groupé (responsable). */
+function selectionFlotte() {
+  return attributionPartenaires || confierFlotte();
 }
 
 function cablerRechercheFlotte() {
@@ -1349,6 +1502,16 @@ function cablerAttributionFlottePortail() {
         select.disabled = true;
       });
   }
+
+  $('btn-confier-selection')?.addEventListener('click', async function () {
+    const choix = $('select-vendeur-confier').value;
+    if (!choix) return afficherMsg('retour-attribution-flotte', 'Choisissez à qui confier ces appareils.', 'erreur');
+    this.disabled = true;
+    const ids = [...idsSelectionnesAttribution];
+    if (await confierAppareils(ids, choix === '__personne__' ? '' : choix))
+      rendreFlotteInterneParitePortail(appareilsCourants);
+    else this.disabled = false;
+  });
 
   $('btn-confirmer-attribution')?.addEventListener('click', async function () {
     const codePartenaire = select?.value;
@@ -1674,7 +1837,7 @@ const aAttestation = (a) => !VUE_MATERIEL && !a.masque && !!a.personne && ['Remi
 function boutonAttestation(a) {
   if (!aAttestation(a)) return '';
   const fait = !!a.numeroAttestation;
-  return `<button type="button" class="tl-attest${fait ? ' fait' : ''}" data-attestation-id="${a.id}" title="${fait ? 'Retélécharger' : 'Générer'} l’attestation de paiement de ${echapper(a.personne)}">${fait ? '✓' : '⤓'} Attestation</button>`;
+  return `<button type="button" class="tl-attest${fait ? ' fait' : ''}" data-attestation-id="${a.id}" title="${fait ? 'Retélécharger' : 'Générer'} l’attestation de paiement de ${echapper(a.personne)}"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${fait ? '<path d="m5 12.5 4.5 4.5L19 7.5"/>' : '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>'}</svg>Attestation</button>`;
 }
 /** Télécharge le document renvoyé par le serveur (PDF en mémoire, ou lien Drive). */
 function ouvrirAttestation(r) {
@@ -1745,6 +1908,11 @@ $('btn-generer-attestation-flotte').addEventListener('click', async () => {
     $('retour-attestation-flotte').innerHTML = '<div class="msg msg-erreur">Le nom est obligatoire.</div>';
     return;
   }
+  const erreurNaissance = window.erreurNaissanceCvdl ? window.erreurNaissanceCvdl(dateNaissanceISO) : '';
+  if (erreurNaissance) {
+    $('retour-attestation-flotte').innerHTML = `<div class="msg msg-erreur">${echapper(erreurNaissance)}</div>`;
+    return;
+  }
   $('btn-generer-attestation-flotte').disabled = true;
   $('retour-attestation-flotte').innerHTML = '<div class="msg msg-info">Génération en cours…</div>';
   const r = await genererAttestation(a, nomComplet, isoVersDateFr(dateNaissanceISO));
@@ -1784,15 +1952,19 @@ async function chargerFlotte() {
   try {
     // Listes de la structure (lieux de stockage, vendeurs, « orienté par », modes de paiement),
     // rechargées à chaque ouverture pour voir ce qu'un collègue vient d'ajouter.
-    const rListes = await jsonpVue({ action: 'flotte-listes-perso', code: codeValide }).catch(() => null);
+    const rListes = await lireVue({ action: 'flotte-listes-perso', code: codeValide }).catch(() => null);
     if (rListes && rListes.ok) {
       listesPersoFlottePortail = {
         lieux: rListes.lieux || [],
         vendeurs: rListes.vendeurs || [],
         orientations: rListes.orientations || [],
         paiements: rListes.paiements || [],
+        situations: rListes.situations || [],
+        usages: rListes.usages || [],
       };
       if (Array.isArray(rListes.typesPaiement)) typesPaiementCommuns = rListes.typesPaiement;
+      situationsCommunes = rListes.situationsCommunes || [];
+      usagesCommuns = rListes.usagesCommuns || [];
     }
     await chargerAppareils();
   } catch (e) {

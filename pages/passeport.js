@@ -1,11 +1,6 @@
-function posterPasseport(data) {
-  // Mot de passe admin éventuel : en-tête X-CVDL-Admin, jamais dans le corps ni l'URL.
-  const d = { ...data };
-  const mdp = d.password;
-  delete d.password;
-  const h = { 'Content-Type': 'text/plain;charset=utf-8' };
-  if (mdp) h['X-CVDL-Admin'] = encodeURIComponent(mdp);
-  return fetch(API, { method: 'POST', headers: h, body: JSON.stringify(d) }).then((r) => r.json());
+/** POST sur une route ; `mdp` : mot de passe ou jeton admin éventuel (en-tête X-CVDL-Admin). */
+function posterPasseport(data, mdp) {
+  return appelApi(data, { methode: 'POST', entetes: mdp ? { 'X-CVDL-Admin': encodeURIComponent(mdp) } : {} });
 }
 
 /* ─── Identification : code structure ou mot de passe admin, tous deux persistés en
@@ -48,7 +43,7 @@ $('btn-identifier-admin').addEventListener('click', async () => {
   // Le mot de passe est échangé contre un jeton de session : seul le jeton est gardé.
   let jeton = '';
   try {
-    const r = await posterPasseport({ action: 'login', password: mdp });
+    const r = await posterPasseport({ action: 'login' }, mdp);
     jeton = r && r.ok ? r.jeton || '' : '';
   } catch (e) {}
   $('champ-mot-de-passe-admin').value = '';
@@ -114,7 +109,7 @@ if (codeDepuisUrl) {
 
 $('btn-deconnexion-passeport').addEventListener('click', () => {
   try {
-    sessionStorage.removeItem('cvdl-code-structure');
+    oublierCodeStructure();
     sessionStorage.removeItem('cvdl-passeport-admin');
   } catch (e) {}
   codeIdentifie = '';
@@ -131,18 +126,16 @@ $('btn-deconnexion-passeport').addEventListener('click', () => {
 async function afficherPasseport(numeroSerie) {
   $('zone-passeport').innerHTML = '<p class="etat-passeport">Recherche en cours…</p>';
   try {
-    const r = await posterPasseport({
-      action: 'passeport-materiel',
-      numeroSerie,
-      code: codeIdentifie,
-      password: motDePasseAdminIdentifie,
-    });
+    const r = await posterPasseport(
+      { action: 'passeport-materiel', numeroSerie, code: codeIdentifie },
+      motDePasseAdminIdentifie,
+    );
     if (!r.ok) {
       if (r.identificationRequise || r.sessionExpiree) {
         // Le code ou le mot de passe s'est avéré invalide (ou a été révoqué depuis) : on
         // revient à l'identification.
         try {
-          sessionStorage.removeItem('cvdl-code-structure');
+          oublierCodeStructure();
           sessionStorage.removeItem('cvdl-passeport-admin');
         } catch (e) {}
         codeIdentifie = '';

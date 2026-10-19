@@ -73,16 +73,18 @@ function blocInfosSuivi(c, o) {
   const statutP = c.statutPaiement
     ? `<span class="pk-pill ${c.statutPaiement === 'Payé' ? 'pk-ok' : 'pk-att'}">${echapper(c.statutPaiement)}</span>`
     : '';
-  const bloc = (ic, lab, val, sous) =>
-    `<div class="cs-info"><span class="cs-info-lab">${ic}${lab}</span><span class="cs-info-val">${val}</span>${sous ? `<span class="cs-info-sous">${sous}</span>` : ''}</div>`;
+  // `docs` : documents du bloc (suivi du colis, devis, facture…), rangés sous son contenu.
+  const bloc = (ic, lab, val, sous, docs) =>
+    `<div class="cs-info"><span class="cs-info-lab">${ic}${lab}</span><span class="cs-info-val">${val}</span>${sous ? `<span class="cs-info-sous">${sous}</span>` : ''}${docs ? `<span class="cs-info-docs">${docs}</span>` : ''}</div>`;
   const blocs = [
     bloc(
       SVG_MODE_LIVRAISON[c.modeLivraison] || SVG_MODE_LIVRAISON['Colissimo'] || '',
       'Livraison',
       modeLib ? echapper(modeLib) : '<em>Mode à définir</em>',
       dateLiv ? `${echapper(dateLab)} <b>${echapper(dateLiv)}</b>` : '',
+      o.docsLivraison,
     ),
-    montant || o.moyenAffiche || c.statutPaiement
+    montant || o.moyenAffiche || c.statutPaiement || o.docsPaiement
       ? bloc(
           o.moyenAffiche ? iconeMoyenPaiementV1(o.moyenAffiche) : '',
           'Paiement',
@@ -93,11 +95,14 @@ function blocInfosSuivi(c, o) {
           ]
             .filter(Boolean)
             .join(' '),
+          o.docsPaiement,
         )
       : '',
     c.responsableCommande
       ? bloc(SVG_V1.personne || '', 'Personne prescriptrice', echapper(c.responsableCommande), '')
       : '',
+    // Interne : raison de la commande, structure concernée, même modèle.
+    c.destinationResume ? bloc(SVG_V1.personne || '', 'Pour', echapper(c.destinationResume), '') : '',
   ].filter(Boolean);
   return `<div class="cs-infos" style="--n:${blocs.length}">${blocs.join('')}</div>`;
 }
@@ -141,10 +146,7 @@ function commandeCorrespondRechercheSuivi(c, terme) {
   if (!terme) return true;
   if ((c.reference || '').toLowerCase().includes(terme)) return true;
   if ((c.personnesDetail || []).some((p) => (p.nomComplet || '').toLowerCase().includes(terme))) return true;
-  const numeros = String(c.numerosSerie || '')
-    .split('\n')
-    .map((s) => s.trim().toLowerCase());
-  if (numeros.some((n) => n.includes(terme))) return true;
+  if (c.numerosSerie.some((n) => n.toLowerCase().includes(terme))) return true;
   return false;
 }
 function appliquerRechercheEtRendreSuivi() {
@@ -367,10 +369,7 @@ function rendreCommandesSuivi(commandes) {
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean);
-      const numerosSerie = String(c.numerosSerie || '')
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const numerosSerie = c.numerosSerie;
 
       // ── Carte « colonne d'état + tiroir » ──────────────────────────────────────────────
       // Famille de couleur de la colonne : annulée (gris) · livrée (vert) · urgente (magenta) ·
@@ -388,7 +387,7 @@ function rendreCommandesSuivi(commandes) {
       const liensPaiementPersonnes =
         paiementAttendu && c.lienPaiement && c.paiementSepare && c.personnesDetail && c.personnesDetail.length
           ? c.personnesDetail.map((pp, i) => ({
-              href: API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference) + '&index=' + i,
+              href: urlApi('clic-lien-paiement', { ref: c.reference, index: i }),
               titre: pp.nomComplet || 'Personne ' + (i + 1),
               detail: pp.prix != null ? formaterMontant(pp.prix) : '',
               libelle: 'Régler',
@@ -414,7 +413,7 @@ function rendreCommandesSuivi(commandes) {
             ? `<button type="button" class="btn btn-primary v1-btn" data-liens-modale="${echapper(c.reference + '|paiement')}">Régler · ${liensPaiementPersonnes.length} liens</button>`
             : liensPaiementPersonnes.length === 1
               ? `<a class="btn btn-primary v1-btn" href="${echapper(urlSure(liensPaiementPersonnes[0].href))}" target="_blank" rel="noopener">Régler${SVG_LIEN_EXTERNE}</a>`
-              : `<a class="btn btn-primary v1-btn" href="${echapper(API + '?action=clic-lien-paiement&ref=' + encodeURIComponent(c.reference))}" target="_blank" rel="noopener">Régler${SVG_LIEN_EXTERNE}</a>`
+              : `<a class="btn btn-primary v1-btn" href="${echapper(urlApi('clic-lien-paiement', { ref: c.reference }))}" target="_blank" rel="noopener">Régler${SVG_LIEN_EXTERNE}</a>`
           : '';
       const codeStructure = (() => {
         try {
@@ -442,7 +441,9 @@ function rendreCommandesSuivi(commandes) {
         const cls = estLivree || i < indexEtape ? 'fait' : i === indexEtape ? 'cours' : 'avenir';
         return `<li class="${cls}"><i></i><span>${echapper(LIBELLES_COURTS_TIMELINE[e] || e)}</span></li>`;
       }).join('');
-      const docs = [
+      // Documents rangés dans leur bloc : livraison (bon, suivi du colis), paiement (devis, facture) ;
+      // en bas de la carte, seulement le rapport d'impact (après la livraison).
+      const docsLivraison = [
         c.bonLivraison
           ? `<a class="cs-doc" href="${echapper(urlSure(c.bonLivraison))}" target="_blank" rel="noopener"><span data-ill="commandes" class="ill"></span>Bon de livraison</a>`
           : '',
@@ -451,12 +452,18 @@ function rendreCommandesSuivi(commandes) {
           : liensColissimo.length
             ? `<a class="cs-doc" href="${echapper(urlSure(liensColissimo[0]))}" target="_blank" rel="noopener"><span data-ill="stock" class="ill"></span>Suivi Colissimo</a>`
             : '',
+      ].join('');
+      const docsPaiement = [
         c.devisDisponible
           ? `<button type="button" class="cs-doc" data-document="${echapper(c.reference + '|devis')}"><span data-ill="facture" class="ill"></span>Devis</button>`
           : '',
         c.factureDisponible
           ? `<button type="button" class="cs-doc" data-document="${echapper(c.reference + '|facture')}"><span data-ill="facture" class="ill"></span>Facture</button>`
           : '',
+      ].join('');
+      const docs = [
+        // Commande annulée : pas de blocs, ses documents restent en bas.
+        estAnnulee ? docsLivraison + docsPaiement : '',
         estLivree
           ? `<a class="cs-doc" href="rapport-impact.html?ref=${encodeURIComponent(c.reference)}"><span data-ill="stats" class="ill"></span>Rapport d’impact</a>`
           : '',
@@ -470,13 +477,13 @@ function rendreCommandesSuivi(commandes) {
           <div class="cvdl-surtitre">${echapper(c.reference)} · ${echapper(c.date || '')}</div>
           <b class="cs-produits">${produitsTexte}</b>
         </div>
-        <span class="cs-etat">${urgente && !estLivree ? '<span class="cs-urgent">Urgent</span>' : ''}<span class="tag" data-forme="${formeEtat}">${echapper(libelleEtat)}</span></span>
+        <span class="cs-etat">${urgente && !estLivree ? '<span class="cs-urgent">Urgent</span>' : ''}${c.homogene && !estAnnulee ? '<span class="cs-homogene">Même modèle</span>' : ''}<span class="tag" data-forme="${formeEtat}">${echapper(libelleEtat)}</span></span>
       </div>
       ${
         estAnnulee
           ? `<div class="cs-motif">${c.commentaire ? 'Motif : ' + echapper(c.commentaire) : 'Commande annulée.'}</div>`
           : `<ol class="cs-frise">${etapesFrise}</ol>
-      ${blocInfosSuivi(c, { estLivree, moyenAffiche, boutonsPaiement })}`
+      ${blocInfosSuivi(c, { estLivree, moyenAffiche, boutonsPaiement, docsLivraison, docsPaiement })}`
       }
       ${
         docs || aDetails
@@ -504,7 +511,7 @@ async function chargerCommandesSuivi() {
   afficherMsg('retour-code', '', 'info');
 
   try {
-    const r = await jsonp({ action: 'commandes-par-code', code: code });
+    const r = await lireApi({ action: 'commandes-par-code', code: code });
     if (r.ok) {
       $('titre-structure').textContent = r.nomStructure ? `Commandes de ${r.nomStructure}` : 'Vos commandes';
       $('nb-commandes-texte').textContent =
@@ -542,9 +549,7 @@ $('code-structure').addEventListener('keydown', (e) => {
 });
 
 $('btn-deconnexion-suivi').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
@@ -571,7 +576,7 @@ async function rafraichirSuiviSilencieusement() {
   const code = $('code-structure').value.trim();
   if (!code) return;
   try {
-    const r = await jsonp({ action: 'commandes-par-code', code: code });
+    const r = await lireApi({ action: 'commandes-par-code', code: code });
     if (r.ok) {
       commandesChargeesSuivi = r.commandes;
       appliquerRechercheEtRendreSuivi();

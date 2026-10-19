@@ -14,7 +14,7 @@ async function verifierCode() {
   $('btn-verifier-code').disabled = true;
   $('retour-id-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code });
+    const r = await lireApi({ action: 'check', code });
     if (!r.ok) {
       $('retour-id-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
     } else if (!r.interne) {
@@ -40,9 +40,7 @@ $('id-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') verifierCode();
 });
 $('btn-deconnexion-stats').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 
@@ -58,7 +56,7 @@ function mini(valeurs) {
 }
 
 async function charger() {
-  const r = await jsonp({ action: 'partenaires-statistiques', code: codeValide }).catch(() => ({ ok: false }));
+  const r = await lireApi({ action: 'partenaires-statistiques', code: codeValide }).catch(() => ({ ok: false }));
   if (!r.ok) {
     $('sp-contenu').innerHTML =
       `<div class="msg msg-erreur">${echapper(r.erreur || 'Statistiques indisponibles pour le moment.')}</div>`;

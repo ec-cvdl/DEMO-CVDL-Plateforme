@@ -48,7 +48,7 @@ function phaseProgramme(p) {
   return 'cours';
 }
 async function rechargerDistributions() {
-  const r = await jsonp({ action: 'distributions', password: motDePasse });
+  const r = await lireApi({ action: 'distributions' });
   if (r && r.ok) {
     state.distributions = r.programmes || [];
     state.rattachements = r.rattachements || [];
@@ -100,57 +100,53 @@ function resumePerimetre(p) {
   return t.length ? t : ['Toutes les structures'];
 }
 
-/* ── Onglet Distribution ── */
-function vueDistribution() {
-  const liste = state.distributions || [];
-  const compte = (k) => liste.filter((p) => phaseProgramme(p) === k).length;
-  const regions = [...new Set(liste.flatMap((p) => (p.perimetre && p.perimetre.regions) || []))].sort((a, b) =>
-    a.localeCompare(b, 'fr'),
-  );
-  const visibles = liste.filter(
-    (p) =>
-      phaseProgramme(p) === state.distFiltre &&
-      (!state.distRegion || ((p.perimetre && p.perimetre.regions) || []).includes(state.distRegion)),
-  );
-  const filtre = (k, l) =>
-    `<button type="button" class="di-filtre${state.distFiltre === k ? ' on' : ''}" data-dist-filtre="${k}" aria-pressed="${state.distFiltre === k}">${l} (${compte(k)})</button>`;
-  return `
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-5)">
-      <div><h1 style="font-size:32px;margin-bottom:var(--space-2)">Distribution</h1><p style="opacity:0.65;margin:0;font-size:15px">Programmes de distribution : objectifs, livré, engagé et reste à distribuer.</p></div>
-      <button type="button" class="btn btn-primary" data-dist-nouveau>${icon('plus', 15)}Nouveau programme</button>
-    </div>
-    <div class="di-filtres">${filtre('cours', 'En cours')}${filtre('avenir', 'À venir')}${filtre('termines', 'Terminés')}${filtre('archives', 'Archivés')}
-      ${regions.length ? `<select class="input" id="dist-region" style="width:auto" aria-label="Filtrer par région"><option value="">Toutes les régions</option>${regions.map((r) => `<option ${state.distRegion === r ? 'selected' : ''}>${echapper(r)}</option>`).join('')}</select>` : ''}</div>
-    <div class="di-legende"><span><i class="liv"></i>Livré</span><span><i class="eng"></i>Engagé (validée, pas encore livrée)</span><span><i></i>Reste</span></div>
-    ${
-      visibles.length
-        ? `<div class="di-grille">${visibles
-            .map((p) => {
-              const av = p.avancement || {};
-              const tot = av.totalObjectif || 0,
-                liv = av.totalLivre || 0,
-                eng = av.totalEngage || 0;
-              const pct = tot ? Math.min(100, Math.round((liv / tot) * 100)) : 0;
-              const pctEng = tot ? Math.min(100 - pct, Math.round((eng / tot) * 100)) : 0;
-              const r = 26,
-                c = 2 * Math.PI * r;
-              const jours = av.joursRestants != null && av.joursRestants >= 0 ? av.joursRestants : null;
-              const perim = resumePerimetre(p);
-              const produits = (av.objectifs || []).filter((o) => o.objectif || o.livre || o.engage);
-              return `<article class="di-carte di2${av.enRetard && av.reste ? ' retard' : ''}${av.reste === 0 ? ' atteint' : ''}" data-dist-ouvrir="${echapper(p.id)}" role="button" tabindex="0" aria-label="Ouvrir ${echapper(p.nom)}">
+/* ── Onglet Distribution : programmes de l'admin et projets des Internes (portail) ── */
+const SOURCES_DIST = { tout: 'Tout', programmes: 'Programmes CVDL', internes: 'Projets des Internes' };
+/** Projets des Internes : chargés à la première ouverture de l'onglet, puis gardés. */
+function projetsInternes() {
+  if (state.projetsInternes === undefined) {
+    state.projetsInternes = null;
+    lireApi({ action: 'projets-internes' })
+      .then((r) => {
+        state.projetsInternes = r && r.ok ? r.projets : [];
+        if (state.activeTab === 'distribution') render();
+      })
+      .catch(() => (state.projetsInternes = []));
+  }
+  return state.projetsInternes;
+}
+const regionsDe = (p, interne) => (interne ? [p.structure.region] : (p.perimetre && p.perimetre.regions) || []);
+
+/** Carte d'un programme (admin) ou d'un projet d'Interne (`interne` : ouvre la fiche structure). */
+function carteDistribution(p, interne) {
+  const av = p.avancement || {};
+  const tot = av.totalObjectif || 0,
+    liv = av.totalLivre || 0,
+    eng = av.totalEngage || 0;
+  const pct = tot ? Math.min(100, Math.round((liv / tot) * 100)) : 0;
+  const pctEng = tot ? Math.min(100 - pct, Math.round((eng / tot) * 100)) : 0;
+  const r = 26,
+    c = 2 * Math.PI * r;
+  const jours = av.joursRestants != null && av.joursRestants >= 0 ? av.joursRestants : null;
+  const perim = interne ? [p.structure.region || 'Région non renseignée'] : resumePerimetre(p);
+  const produits = (av.objectifs || []).filter((o) => o.objectif || o.livre || o.engage);
+  const ouvrir = interne
+    ? `data-projet-interne="${p.id}" aria-label="Ouvrir ${echapper(p.nom)} (${echapper(p.structure.nom)})"`
+    : `data-dist-ouvrir="${echapper(p.id)}" aria-label="Ouvrir ${echapper(p.nom)}"`;
+  return `<article class="di-carte di2${interne ? ' di2-interne' : ''}${av.enRetard && av.reste ? ' retard' : ''}${av.reste === 0 ? ' atteint' : ''}" ${ouvrir} role="button" tabindex="0">
         <div class="di2-tete">
           <svg class="di2-anneau" viewBox="0 0 64 64" width="72" height="72" aria-hidden="true">
-            <circle cx="34" cy="34" r="${r + 5}" fill="color-mix(in srgb, #002743 12%, transparent)"/>
-            <circle cx="32" cy="32" r="${r + 5}" fill="#fff" stroke="#002743" stroke-width="1.4"/>
-            <circle cx="32" cy="32" r="${r}" fill="none" stroke="#EEF2F5" stroke-width="7"/>
-            ${pctEng ? `<circle cx="32" cy="32" r="${r}" fill="none" stroke="#9FE0E1" stroke-width="7" stroke-dasharray="${((pct + pctEng) / 100) * c} ${c}" transform="rotate(-90 32 32)"/>` : ''}
-            ${pct ? `<circle cx="32" cy="32" r="${r}" fill="none" stroke="#00ACB0" stroke-width="7" stroke-dasharray="${(pct / 100) * c} ${c}" transform="rotate(-90 32 32)"/>` : ''}
-            <text x="32" y="36.5" text-anchor="middle" font-size="12" font-weight="700" fill="#002743" font-family="Space Grotesk, system-ui">${pct}%</text>
+<circle cx="34" cy="34" r="${r + 5}" fill="color-mix(in srgb, #002743 12%, transparent)"/>
+<circle cx="32" cy="32" r="${r + 5}" fill="#fff" stroke="#002743" stroke-width="1.4"/>
+<circle cx="32" cy="32" r="${r}" fill="none" stroke="#EEF2F5" stroke-width="7"/>
+${pctEng ? `<circle cx="32" cy="32" r="${r}" fill="none" stroke="#9FE0E1" stroke-width="7" stroke-dasharray="${((pct + pctEng) / 100) * c} ${c}" transform="rotate(-90 32 32)"/>` : ''}
+${pct ? `<circle cx="32" cy="32" r="${r}" fill="none" stroke="#00ACB0" stroke-width="7" stroke-dasharray="${(pct / 100) * c} ${c}" transform="rotate(-90 32 32)"/>` : ''}
+<text x="32" y="36.5" text-anchor="middle" font-size="12" font-weight="700" fill="#002743" font-family="Space Grotesk, system-ui">${pct}%</text>
           </svg>
           <div class="di2-titre">
-            ${p.financeur ? `<div class="di-sur">${echapper(p.financeur)}</div>` : ''}
-            <h3>${echapper(p.nom)}</h3>
-            <div class="di2-periode">${icon('calendrier', 13)}${frDate(p.debut)} → <b>${frDate(p.butoir)}</b></div>
+${interne ? `<div class="di-sur">${echapper(p.structure.nom)}</div>` : p.financeur ? `<div class="di-sur">${echapper(p.financeur)}</div>` : ''}
+<h3>${echapper(p.nom)}</h3>
+<div class="di2-periode">${icon('calendrier', 13)}${frDate(p.debut)} → <b>${frDate(p.butoir)}</b></div>
           </div>
         </div>
         <div class="di2-chiffres">
@@ -174,17 +170,94 @@ function vueDistribution() {
         }
         <div class="di2-pied">
           <span class="di2-puce" title="Périmètre">${icon('pin', 12)}${echapper(perim.join(' · '))}</span>
-          <span class="di2-puce">${icon('arrow', 12)}${echapper(MODES_RATTACHEMENT[p.mode].libelle)}</span>
+          <span class="di2-puce">${interne ? `${icon('arrow', 12)}Appareils remis par l’Interne` : `${icon('arrow', 12)}${echapper(MODES_RATTACHEMENT[p.mode].libelle)}`}</span>
           <span class="di-esp"></span>
           ${jours != null ? `<span class="di-jours${jours < 60 && av.enRetard ? ' urg' : ''}">J-${jours}</span>` : ''}${tagRythme(av)}
         </div>
       </article>`;
-            })
-            .join('')}</div>`
-        : `<div class="pk-etat"><span data-ill="vide" class="ill"></span>${liste.length ? 'Aucun programme dans ce filtre.' : 'Aucun programme pour l’instant : créez le premier avec « Nouveau programme ».'}</div>`
-    }`;
+}
+
+function vueDistribution() {
+  const source = state.distSource || 'tout';
+  const internes = projetsInternes();
+  const tous = [
+    ...(state.distributions || []).map((p) => ({ p, interne: false })),
+    ...(internes || []).map((p) => ({ p, interne: true })),
+  ];
+  const dansSource = (x) => source === 'tout' || (source === 'internes') === x.interne;
+  const regions = [...new Set(tous.flatMap((x) => regionsDe(x.p, x.interne)).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'fr'),
+  );
+  const structuresInternes = [
+    ...new Map((internes || []).map((p) => [p.structure.id, p.structure.nom])).entries(),
+  ].sort((a, b) => a[1].localeCompare(b[1], 'fr'));
+  const filtrer = (x, phase = state.distFiltre) =>
+    dansSource(x) &&
+    phaseProgramme(x.p) === phase &&
+    (!state.distRegion || regionsDe(x.p, x.interne).includes(state.distRegion)) &&
+    (!state.distInterne || (x.interne && x.p.structure.id === state.distInterne));
+  const compte = (k) => tous.filter((x) => filtrer(x, k)).length;
+  const visibles = tous.filter((x) => filtrer(x));
+  const filtre = (k, l) =>
+    `<button type="button" class="di-filtre${state.distFiltre === k ? ' on' : ''}" data-dist-filtre="${k}" aria-pressed="${state.distFiltre === k}">${l} (${compte(k)})</button>`;
+  const grille = (liste) =>
+    `<div class="di-grille">${liste.map((x) => carteDistribution(x.p, x.interne)).join('')}</div>`;
+  const section = (titre, sous, liste, vide) =>
+    `<section class="di-section"><div class="di-section-tete"><h2>${titre} <span>${liste.length}</span></h2><p>${sous}</p></div>${
+      liste.length ? grille(liste) : `<p class="di-section-vide">${vide}</p>`
+    }</section>`;
+  const prog = visibles.filter((x) => !x.interne);
+  const int = visibles.filter((x) => x.interne);
+  const chargement = internes === null && source !== 'programmes';
+  let corps;
+  if (source === 'tout')
+    corps =
+      section(
+        'Programmes CVDL',
+        'Créés ici : périmètre, financeur, commandes rattachées.',
+        prog,
+        'Aucun programme dans ce filtre.',
+      ) +
+      section(
+        'Projets des Internes',
+        'Créés par les structures Internes dans leur espace : appareils remis aux personnes. Lecture seule.',
+        int,
+        chargement ? 'Chargement…' : 'Aucun projet d’Interne dans ce filtre.',
+      );
+  else if (visibles.length) corps = grille(visibles);
+  else
+    corps = `<div class="pk-etat"><span data-ill="vide" class="ill"></span>${
+      chargement
+        ? 'Chargement…'
+        : source === 'programmes' && !(state.distributions || []).length
+          ? 'Aucun programme pour l’instant : créez le premier avec « Nouveau programme ».'
+          : 'Rien dans ce filtre.'
+    }</div>`;
+  return `
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;margin-bottom:var(--space-5)">
+      <div><h1 style="font-size:32px;margin-bottom:var(--space-2)">Distribution</h1><p style="opacity:0.65;margin:0;font-size:15px">Programmes CVDL et projets des structures Internes : objectifs, livré, engagé et reste à distribuer.</p></div>
+      <button type="button" class="btn btn-primary" data-dist-nouveau>${icon('plus', 15)}Nouveau programme</button>
+    </div>
+    <div class="di-sources" role="group" aria-label="Afficher">${Object.entries(SOURCES_DIST)
+      .map(
+        ([k, l]) =>
+          `<button type="button" data-dist-source="${k}" class="${source === k ? 'on' : ''}" aria-pressed="${source === k}">${l}</button>`,
+      )
+      .join('')}</div>
+    <div class="di-filtres">${filtre('cours', 'En cours')}${filtre('avenir', 'À venir')}${filtre('termines', 'Terminés')}${filtre('archives', 'Archivés')}
+      ${regions.length ? `<select class="input" id="dist-region" style="width:auto" aria-label="Filtrer par région"><option value="">Toutes les régions</option>${regions.map((r) => `<option ${state.distRegion === r ? 'selected' : ''}>${echapper(r)}</option>`).join('')}</select>` : ''}
+      ${source !== 'programmes' && structuresInternes.length ? `<select class="input" id="dist-interne" style="width:auto" aria-label="Filtrer par structure Interne"><option value="">Toutes les Internes</option>${structuresInternes.map(([id, nom]) => `<option value="${id}" ${state.distInterne === id ? 'selected' : ''}>${echapper(nom)}</option>`).join('')}</select>` : ''}</div>
+    <div class="di-legende"><span><i class="liv"></i>Livré</span><span><i class="eng"></i>Engagé (validée, pas encore livrée)</span><span><i></i>Reste</span></div>
+    ${corps}`;
 }
 document.addEventListener('click', (e) => {
+  const src = e.target.closest('[data-dist-source]');
+  if (src) {
+    state.distSource = src.dataset.distSource;
+    if (state.distSource === 'programmes') state.distInterne = 0;
+    render();
+    return;
+  }
   const f = e.target.closest('[data-dist-filtre]');
   if (f) {
     state.distFiltre = f.dataset.distFiltre;
@@ -193,6 +266,16 @@ document.addEventListener('click', (e) => {
   }
   if (e.target.closest('[data-dist-nouveau]')) {
     state.modal = { kind: 'distribution-form', modalParent: modalParentPour('distribution-form') };
+    render();
+    return;
+  }
+  const pi = e.target.closest('[data-projet-interne]');
+  if (pi) {
+    state.modal = {
+      kind: 'projet-interne',
+      ref: Number(pi.dataset.projetInterne),
+      modalParent: modalParentPour('projet-interne'),
+    };
     render();
     return;
   }
@@ -214,11 +297,15 @@ document.addEventListener('click', (e) => {
   }
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-dist-ouvrir]')) e.target.click();
+  if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-dist-ouvrir], .di2-interne')) e.target.click();
 });
 document.addEventListener('change', (e) => {
   if (e.target.id === 'dist-region') {
     state.distRegion = e.target.value;
+    render();
+  }
+  if (e.target.id === 'dist-interne') {
+    state.distInterne = Number(e.target.value) || 0;
     render();
   }
 });
@@ -250,7 +337,7 @@ function vueDistributionForm() {
       <label class="field"><span>Date butoir *</span><input class="input" type="date" id="df-butoir" value="${p ? echapper(p.butoir) : ''}"></label>
     </div>
     <section class="di-sect"><h3>Périmètre : qui peut en bénéficier</h3><p class="di-aide">Critère vide = pas de restriction. Une liste de structures précise remplace les autres critères.</p>
-      <div><b>Régions analytiques</b><div class="di-puces">${REGIONS_ANALYTIQUE.map((r) => puce('regions', r, r, per.regions.includes(r))).join('')}</div></div>
+      <div><b>Régions analytiques</b><div class="di-puces">${state.regions.map((r) => puce('regions', r, r, per.regions.includes(r))).join('')}</div></div>
       <label class="field"><span>Départements <em style="font-weight:400">(numéros séparés par des virgules, d’après le code postal de la structure)</em></span><input class="input" id="df-departements" value="${echapper(per.departements.join(', '))}" placeholder="93, 94"></label>
       <div><b>Types de structure</b><div class="di-puces">${TYPES_PERIMETRE.map(([k, l]) => puce('types', k, l, per.types.includes(k))).join('')}</div></div>
       <details ${per.structures.length ? 'open' : ''}><summary><b>Structures précises</b> <span class="di-aide">(${per.structures.length || 'aucune'})</span></summary>
@@ -388,6 +475,7 @@ function vueDistributionDetail() {
         '',
       )}<span class="di-tag mode">${echapper(MODES_RATTACHEMENT[p.mode].libelle)}</span>${p.reference ? `<span class="di-tag">${echapper(p.reference)}</span>` : ''}${tagRythme(av)}</div>
     ${p.mode === 'lien' ? `<div class="msg msg-info" style="flex-wrap:wrap">Lien de commande dédié : <code style="user-select:all;word-break:break-all">${echapper(lien)}</code> <button type="button" class="btn btn-secondary btn-sm" data-copier-jeton="${echapper(lien)}">Copier</button></div>` : ''}
+    <section class="di-bloc di-repartition" data-repartition-programme="${p.id}"></section>
     <div class="di-detail">
       <section class="di-bloc"><h3>Avancement</h3>${barresProgramme(av) || '<p class="di-aide">Aucun objectif.</p>'}
         ${av.enRetard && av.rythmeNecessaire ? `<p class="di-aide">Rythme nécessaire : ~${av.rythmeNecessaire} / semaine jusqu’au ${frDate(p.butoir)} (rythme actuel ~${av.rythmeActuel}).${av.projection ? ` Au rythme actuel, objectif atteint vers le ${frDate(av.projection)}.` : ''}</p>` : ''}
@@ -542,7 +630,7 @@ async function enregistrerRattachement(c, valeur) {
     'Rattachement enregistré',
   );
   if (!(r && r.ok)) return;
-  const rc = await jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' });
+  const rc = await lireApi({ action: 'list', limite: -1, filtre: 'tout' });
   if (rc && rc.ok) state.commandes = rc.commandes || [];
   delete cacheEtatsCommandes[c.reference];
   rechargerDistributions().then(render);
@@ -575,3 +663,81 @@ document.addEventListener('click', (e) => {
     if (c) enregistrerRattachement(c, '');
   }
 });
+
+/* ── Projet d'une Interne : résumé et répartition entre ses partenaires ── */
+function vueProjetInterne() {
+  const p = (state.projetsInternes || []).find((x) => x.id === state.modal.ref);
+  if (!p) return '';
+  const av = p.avancement || { objectifs: [] };
+  return `<div class="dialog-backdrop"><div class="dialog dialog-large" role="dialog" aria-modal="true" aria-labelledby="pi-titre" style="width:min(1040px,100%)">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3)"><div><div class="rp-surtitre">${echapper([p.structure.nom, p.financeur, `${frDate(p.debut)} → ${frDate(p.butoir)}`].filter(Boolean).join(' · '))}</div><div class="dialog-title" id="pi-titre">${echapper(p.nom)}</div></div>
+      <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer aria-label="Fermer">${icon('x', 16)}</button></div>
+    <div class="dialog-corps"><div style="grid-column:1/-1;display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="di-tags">${p.reference ? `<span class="di-tag">${echapper(p.reference)}</span>` : ''}<span class="di-tag mode">Appareils remis par l’Interne</span>${tagRythme(av)}</div>
+      ${p.description ? `<p class="di-aide">${echapper(p.description)}</p>` : ''}
+      <section class="di-bloc di-repartition" data-repartition-interne="${p.id}"></section>
+      <section class="di-bloc"><h3>Avancement</h3>${barresProgramme(av) || '<p class="di-aide">Aucun objectif.</p>'}</section>
+    </div></div><div id="rp-retour-modale"></div>
+    <div class="dialog-actions"><button type="button" class="btn btn-secondary" data-structure-vue="${p.structure.id}">${icon('building', 14)}Fiche de ${echapper(p.structure.nom)}</button></div>
+  </div></div>`;
+}
+function monterRepartitionInterne(zone) {
+  const p = (state.projetsInternes || []).find((x) => String(x.id) === zone.dataset.repartitionInterne);
+  if (!p || !window.RepartitionCvdl) return;
+  zone.dataset.monte = '1';
+  const code = (state.structures.find((s) => s.id === p.structure.id) || {}).code;
+  window.RepartitionCvdl.monter(zone, {
+    lignes: p.repartition || [],
+    objectifGlobal: p.objectifGlobal,
+    objectifs: p.objectifs || [],
+    structures: state.structures
+      .filter((s) => code && s.structurePartenaireDe === code)
+      .map((s) => ({ id: s.id, nom: s.nom }))
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+    enregistrer: async (lignes) => {
+      const r = await poster({ action: 'projet-structure-repartition', id: p.id, repartition: lignes });
+      if (r && r.ok) p.repartition = r.repartition;
+      return r;
+    },
+  });
+}
+
+/* ── Répartition prévisionnelle (repartition.js) : montée dans la fiche programme à chaque rendu ── */
+const STATUTS_EN_COURS = ['Validée', 'Préparée', 'En cours de livraison'];
+function monterRepartition(zone) {
+  const p = state.distributions.find((x) => String(x.id) === zone.dataset.repartitionProgramme);
+  if (!p || !window.RepartitionCvdl) return;
+  zone.dataset.monte = '1';
+  const codeDe = (id) => (state.structures.find((s) => s.id === id) || {}).code;
+  window.RepartitionCvdl.monter(zone, {
+    lignes: p.repartition || [],
+    objectifGlobal: p.objectifGlobal,
+    objectifs: p.objectifs || [],
+    structures: state.structures
+      .map((s) => ({ id: s.id, nom: s.nom }))
+      .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')),
+    // Déjà commandé pour la structure dans ce programme : livré, ou en cours (validé à expédié).
+    realise: (l) => {
+      const code = l.structureId && codeDe(l.structureId);
+      if (!code) return null;
+      const r = { livre: 0, engage: 0 };
+      ((p.avancement && p.avancement.commandes) || [])
+        .filter((c) => c.code === code)
+        .forEach((c) => {
+          const q = Object.values(c.compte || {}).reduce((t, x) => t + x, 0);
+          if (c.statut === 'Livrée') r.livre += q;
+          else if (STATUTS_EN_COURS.includes(c.statut)) r.engage += q;
+        });
+      return r;
+    },
+    enregistrer: async (lignes) => {
+      const r = await poster({ action: 'distribution-repartition', id: p.id, repartition: lignes });
+      if (r && r.ok) p.repartition = r.repartition;
+      return r;
+    },
+  });
+}
+new MutationObserver(() => {
+  document.querySelectorAll('[data-repartition-programme]:not([data-monte])').forEach(monterRepartition);
+  document.querySelectorAll('[data-repartition-interne]:not([data-monte])').forEach(monterRepartitionInterne);
+}).observe(document.body, { childList: true, subtree: true });

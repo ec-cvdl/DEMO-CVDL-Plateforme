@@ -32,9 +32,7 @@ const finDate = (iso) => {
 async function finCharger() {
   if (fin.chargement) return;
   fin.chargement = true;
-  const r = await jsonp(Object.assign({ action: 'finance-tableau', password: motDePasse }, fin.filtres)).catch(
-    () => null,
-  );
+  const r = await lireApi(Object.assign({ action: 'finance-tableau' }, fin.filtres)).catch(() => null);
   fin.chargement = false;
   if (r && r.ok) {
     fin.d = r;

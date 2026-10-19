@@ -57,12 +57,24 @@ function vueReglages() {
     })}
 
     ${sectionReglages({
+      ic: 'mail',
+      teinte: 'vert',
+      titre: 'Adresse de contact',
+      desc: 'Reçoit les demandes du formulaire « Nous contacter » de la page d’accueil (répondre à l’e-mail écrit directement à la personne) ; affichée aussi sur l’accueil et dans le SAV. Vide : les demandes partent à l’adresse des alertes.',
+      corps: `<div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" id="rg-email-contact" type="email" placeholder="contact@exemple.org" value="${echapper(r.emailContactSav || '')}" style="flex:1;min-width:0"><button type="button" class="btn btn-primary" id="rg-email-contact-enregistrer">Enregistrer</button></div>`,
+    })}
+
+    ${sectionReglages({
       ic: 'truck',
       teinte: 'vert',
       titre: 'Logistique',
-      desc: 'Chaque nouvelle commande traitée par l’équipe envoie un e-mail à cette adresse, avec le lien qui ouvre la commande dans l’espace Logistique (vérifier les quantités, saisir les numéros de série).',
-      corps: `<div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" id="rg-email-logistique" type="email" placeholder="logistique@exemple.org" value="${echapper(r.emailLogistique || '')}" style="flex:1;min-width:0"><button type="button" class="btn btn-primary" id="rg-email-logistique-enregistrer">Enregistrer</button></div>
-        <p class="rta-aide">${r.emailLogistique ? 'Notifications actives.' : 'Aucune adresse : la logistique n’est pas prévenue (les commandes restent visibles dans son espace).'} Un changement est signalé par e-mail à l’adresse des alertes.</p>
+      desc: 'Qui vérifie les quantités et saisit les numéros de série des commandes : la logistique dans son espace, prévenue par e-mail, ou l’équipe elle-même dans l’admin.',
+      corps: `<div class="rg-tuiles" role="radiogroup" aria-label="Qui valide les commandes" style="margin-bottom:14px">
+          <label class="rg-tuile"><input type="radio" name="rg-logistique-mode" value="espace" ${r.logistiqueDansAdmin ? '' : 'checked'}><span class="rg-tuile-txt"><b>Logistique séparée</b><small>La logistique, prévenue par e-mail, vérifie les quantités, prépare et expédie dans son espace. L’admin suit et peut faire chaque étape à sa place.</small></span></label>
+          <label class="rg-tuile"><input type="radio" name="rg-logistique-mode" value="admin" ${r.logistiqueDansAdmin ? 'checked' : ''}><span class="rg-tuile-txt"><b>Une seule personne, tout dans l’admin</b><small>Quantités, numéros de série et préparation se valident depuis la fiche commande. Personne n’est prévenu par e-mail ; l’espace Logistique reste ouvert (SAV).</small></span></label>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="input" id="rg-email-logistique" type="email" placeholder="logistique@exemple.org" value="${echapper(r.emailLogistique || '')}" style="flex:1;min-width:0"><button type="button" class="btn btn-primary" id="rg-email-logistique-enregistrer">Enregistrer</button></div>
+        <p class="rta-aide">${r.logistiqueDansAdmin ? 'Pas de notification tant que l’équipe gère tout dans l’admin.' : r.emailLogistique ? 'Notifications actives : chaque nouvelle commande envoie un e-mail à cette adresse, avec le lien qui l’ouvre dans l’espace Logistique.' : 'Aucune adresse : la logistique n’est pas prévenue (les commandes restent visibles dans son espace).'} Un changement est signalé par e-mail à l’adresse des alertes.</p>
         <p class="rta-aide">Accès : <a href="support.html" target="_blank" rel="noopener">support.html</a>, avec un compte Google de l’onglet Équipe (rôle « Logistique ») ou le mot de passe admin.</p>`,
     })}
 
@@ -193,6 +205,14 @@ async function enregistrerAdresseSite() {
     etat('Adresse enregistrée', 'succes');
   } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
 }
+async function enregistrerEmailContact() {
+  const emailContactSav = $('rg-email-contact').value.trim();
+  const r = await poster({ action: 'reglages-set', emailContactSav });
+  if (r.ok) {
+    state.reglages.emailContactSav = emailContactSav;
+    etat('Adresse enregistrée', 'succes');
+  } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
+}
 async function enregistrerEmailLogistique() {
   const emailLogistique = $('rg-email-logistique').value.trim();
   if (emailLogistique && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLogistique)) {
@@ -205,6 +225,21 @@ async function enregistrerEmailLogistique() {
     etat('Adresse enregistrée', 'succes');
     render();
   } else etat(r.erreur || 'Enregistrement impossible', 'erreur');
+}
+async function enregistrerLogistiqueDansAdmin(choix) {
+  const logistiqueDansAdmin = choix.value === 'admin';
+  const r = await poster({ action: 'reglages-set', logistiqueDansAdmin });
+  if (r.ok) {
+    state.reglages.logistiqueDansAdmin = logistiqueDansAdmin;
+    etat(
+      logistiqueDansAdmin ? 'Les commandes se valident dans l’admin' : 'Les commandes passent par l’espace Logistique',
+      'succes',
+    );
+    render();
+  } else {
+    etat(r.erreur || 'Enregistrement impossible', 'erreur');
+    render();
+  }
 }
 async function enregistrerPerimetre() {
   const typesActifs = [...document.querySelectorAll('.rg-type-actif:checked')].map((c) => c.value).join(',');
@@ -321,7 +356,7 @@ async function testerConnexionTecTech() {
   bouton.disabled = true;
   retour.innerHTML = '<div class="msg msg-info">Vérification…</div>';
   try {
-    const r = await jsonp({ action: 'tectech-tester-connexion', password: motDePasse });
+    const r = await lireApi({ action: 'tectech-tester-connexion' });
     retour.innerHTML = r.ok
       ? `<div class="msg msg-succes">${echapper(r.message)}</div>`
       : `<div class="msg msg-erreur">${echapper(r.erreur || 'Connexion impossible.')}</div>`;
@@ -339,5 +374,9 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#rg-qte-enregistrer')) enregistrerQuantitesMax();
   if (e.target.closest('#rg-perimetre-enregistrer')) enregistrerPerimetre();
   if (e.target.closest('#rg-url-site-enregistrer')) enregistrerAdresseSite();
+  if (e.target.closest('#rg-email-contact-enregistrer')) enregistrerEmailContact();
   if (e.target.closest('#rg-email-logistique-enregistrer')) enregistrerEmailLogistique();
+});
+document.addEventListener('change', (e) => {
+  if (e.target.name === 'rg-logistique-mode') enregistrerLogistiqueDansAdmin(e.target);
 });

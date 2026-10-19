@@ -6,10 +6,12 @@
    · erreurs rencontrées, regroupées par message (affichées à l'écran, techniques, serveur) ;
    · abandons des formulaires sur 90 jours (où les gens s'arrêtent).
    Données anonymes, conservées 13 mois. Routes : src/routes/retours.js.
-   S'appuie sur les fonctions globales de l'admin (admin/*.js) (jsonp, posterEtat, echapper, icon, render…).
+   S'appuie sur les fonctions globales de l'admin (admin/*.js) (lireApi, posterEtat, echapper, icon, render…).
    ════════════════════════════════════════════════════════════════════════════════════ */
 const rta = { charge: false, chargement: false, donnees: null, filtre: 'a-lire', demo: false };
 
+/* Sujet choisi dans « Un bug, une idée ? » (retours.js). */
+const RTA_SUJETS = { bug: 'Bug', fonctionnalite: 'Fonctionnalité manquante', suggestion: 'Suggestion' };
 const RTA_PARCOURS = {
   commande: 'Passer une commande',
   sav: 'Déclarer une panne (structure)',
@@ -33,6 +35,8 @@ const RTA_PAGES = {
   'rapport-impact': 'Notre impact',
   'categories-materiel': 'Catégories de matériel',
   'projets-distribution': 'Projets de distribution',
+  'ventes-preparer': 'Ventes à préparer',
+  orientation: 'Bons d’orientation (structure qui oriente)',
   portail: 'Portail (connexion)',
   'portail-beneficiaire': 'Espace personne',
   'sav-beneficiaire': 'Panne (personne)',
@@ -69,7 +73,7 @@ async function rtaCharger(forcer) {
   if (rta.chargement || (rta.charge && !forcer)) return;
   rta.chargement = true;
   try {
-    const r = await jsonp({ action: 'retours-admin', password: motDePasse, demo: rta.demo ? '1' : '' });
+    const r = await lireApi({ action: 'retours-admin', demo: rta.demo ? '1' : '' });
     if (r && r.ok) {
       rta.donnees = r;
       rta.charge = true;
@@ -231,7 +235,7 @@ function vueRetours() {
                 (a) => `<article class="rta-a${a.traite ? ' traite' : ''}">
         ${a.note ? rtaVisage(a.note, 34) : `<span class="rta-sans-note">${icon('bulle', 16)}</span>`}
         <div class="rta-a-corps">
-          <div class="rta-a-meta"><b>${echapper(RTA_PARCOURS[a.parcours] || a.parcours || 'Général')}</b><span>${echapper(date(a.date))}</span>${a.code ? `<span>${echapper(nomStructure(a.code) || a.code)}</span>` : '<span>Anonyme</span>'}${a.reference ? `<span class="rta-ref">${echapper(a.reference)}</span>` : ''}</div>
+          <div class="rta-a-meta"><b>${echapper(RTA_PARCOURS[a.parcours] || a.parcours || 'Général')}</b><span>${echapper(date(a.date))}</span>${a.sujet ? `<span class="rta-sujet rta-sujet-${a.sujet}">${RTA_SUJETS[a.sujet] || ''}</span>` : ''}${a.code ? `<span>${echapper(nomStructure(a.code) || a.code)}</span>` : '<span>Anonyme</span>'}${a.reference ? `<span class="rta-ref">${echapper(a.reference)}</span>` : ''}</div>
           <p>${echapper(a.commentaire || '—')}</p>
         </div>
         <button type="button" class="btn btn-secondary rta-traiter" data-rta-traiter="${a.id}" data-rta-etat="${a.traite ? '1' : ''}">${a.traite ? 'Remettre à lire' : `${icon('check', 14)}Traité`}</button>

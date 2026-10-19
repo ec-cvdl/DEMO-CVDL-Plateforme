@@ -20,34 +20,94 @@ function tacheEtape(n, t) {
     ${t.contenu && t.etat !== 'ok' && t.etat !== 'avenir' ? `<div class="et-tache-c">${t.contenu}</div>` : ''}
   </li>`;
 }
-function editeurSeriesCommande(c, quantiteAttendue) {
-  const structure = state.structures.find((s) => s.code === c.code);
-  const avecNoms = !!(structure && structure.bo) || unitesSeriePersonnes(c).some((u) => u.nom);
-  const unitesAssoc = unitesSeriePersonnes(c);
-  const valeurs = (c.numerosSerie || '').split('\n').map((x) => x.trim());
-  const accessoires = (c.lignes || []).filter(
-    (l) => (state.produits.find((x) => x.nom === l.produit) || {}).sansNumeroSerie,
-  );
-  const illu = (nom) => illustrationProduitAdmin(nom, (state.produits.find((p) => p.nom === nom) || {}).icone, 28);
-  return `
-    <div class="ul-liste${avecNoms ? '' : ' sans-pers'}" role="list">
-      ${unitesAssoc
-        .map(
-          (u, i) => `<div class="ul-ligne${(valeurs[i] || '').trim() ? ' ok' : ''}" role="listitem">
-        <span class="ul-num">${i + 1}</span>
-        <span class="ul-app">${illu(u.produit)}<b title="${echapper(u.produit)}">${echapper(u.produit)}</b></span>
-        <label class="ul-champ"><span class="sr-only">${u.dematerialise ? 'Code' : 'Numéro de série'} de l’appareil ${i + 1} (${echapper(u.produit)})</span>
-          <input class="input" data-serie-index="${i}" value="${echapper(valeurs[i] || '')}" placeholder="${u.dematerialise ? 'Code de recharge…' : 'Scannez ou saisissez…'}" autocomplete="off" spellcheck="false"></label>
-        <span class="ul-pers">${avecNoms ? (u.nom ? `${icon('personne', 13)}${echapper(u.nom)}` : '<em>non nominatif</em>') : ''}</span>
-      </div>`,
-        )
-        .join('')}
-      ${accessoires.map((l) => `<div class="ul-ligne rien" role="listitem"><span class="ul-num">—</span><span class="ul-app">${illu(l.produit)}<b>${echapper(l.produit)}${parseInt(l.quantite, 10) > 1 ? ` ×${parseInt(l.quantite, 10)}` : ''}</b></span><span class="ul-rien">Rien à saisir</span><span></span></div>`).join('')}
-    </div>
-    <p class="ul-aide">Entrée = ligne suivante (douchette). Enregistré automatiquement dès que les ${quantiteAttendue} lignes sont remplies.</p>
-    <textarea id="pn-series" data-quantite-attendue="${quantiteAttendue}" data-ref="${echapper(c.reference)}" hidden aria-hidden="true">${echapper(c.numerosSerie || '')}</textarea>
-    <div id="pn-erreur-series"></div>`;
+/* ── Étapes communes avec l'espace Logistique (etapes-commande.js) ── */
+const illuEtape = (taille) => (nom) =>
+  illustrationProduitAdmin(nom, (state.produits.find((p) => p.nom === nom) || {}).icone, taille);
+const ficheProduit = (nom) => state.produits.find((p) => p.nom === nom);
+function editeurQuantitesCommande(c) {
+  return EtapesCommande.quantites(c, {
+    illu: illuEtape(28),
+    stock: (nom) => (ficheProduit(nom) ? parseInt(ficheProduit(nom).stock, 10) || 0 : null),
+  });
 }
+function editeurSeriesCommande(c) {
+  return EtapesCommande.numeros(c, {
+    unites: unitesSeriePersonnes(c),
+    sansNumero: (c.lignes || []).filter((l) => (ficheProduit(l.produit) || {}).sansNumeroSerie),
+    dematerialisee: c.dematerialisee,
+    illu: illuEtape(26),
+  });
+}
+/** Enregistrement des étapes communes par les routes de l'admin. */
+async function majCommande(ref, champ, valeur, succes) {
+  const c = state.commandes.find((x) => x.reference === ref);
+  if (!c) return { ok: false, erreur: 'Commande introuvable' };
+  const r = await poster({ action: 'update', id: c.id, champ, valeur });
+  if (r.ok) {
+    c[champ] = valeur;
+    if (succes) etat(succes, 'succes');
+  }
+  return r;
+}
+EtapesCommande.brancher({
+  async numeros(ref, valeurs) {
+    const c = state.commandes.find((x) => x.reference === ref);
+    if (!c) return { ok: false, erreur: 'Commande introuvable' };
+    const numeros = valeurs.map((x) => String(x).trim()).filter(Boolean);
+    const r = await majCommande(ref, 'numerosSerie', numeros);
+    if (!r.ok) return r;
+    const complet = valeurs.length > 0 && valeurs.every((x) => String(x).trim());
+    if (!complet) return r;
+    // Structure qui nomme les personnes équipées (bo) : chaque personne reçoit le numéro de son
+    // appareil (suivi, attestations, flotte).
+    const structure = state.structures.find((x) => x.code === c.code);
+    const unites = unitesSeriePersonnes(c);
+    if (structure && structure.bo) {
+      const personnes = unites
+        .map((u, i) =>
+          u.nom
+            ? {
+                nomComplet: u.nom,
+                dateNaissance: u.dateNaissance,
+                produit: u.produit,
+                numeroSerie: String(valeurs[i]).trim(),
+              }
+            : null,
+        )
+        .filter(Boolean);
+      const rp = await majCommande(ref, 'personnes', personnes);
+      if (!rp.ok) return rp;
+    }
+    (state.confirmSubEtapes[c.id] ||= {}).series = true;
+    etat(c.dematerialisee ? 'Codes enregistrés' : 'Numéros enregistrés', 'succes');
+    render();
+    return r;
+  },
+  async mode(ref, valeur) {
+    state.etRouvrirMode = null;
+    const r = await majCommande(ref, 'modeLivraison', valeur, 'Mode de livraison enregistré');
+    if (r.ok) render();
+    return r;
+  },
+  async colissimo(ref, valeur) {
+    const r = await majCommande(ref, 'colissimo', valeur, 'Suivi enregistré');
+    const c = state.commandes.find((x) => x.reference === ref);
+    if (r.ok && c) {
+      if (valeur) (state.confirmSubEtapes[c.id] ||= {}).colissimo = true;
+      render();
+    }
+    return r;
+  },
+  async date(ref, valeur) {
+    state.etRouvrirDate = null;
+    const r = await majCommande(ref, 'dateLivraisonCible', valeur, 'Date estimée enregistrée');
+    if (r.ok) render();
+    return r;
+  },
+  classer: (numeros) => poster({ action: 'tectech-classer-series', numeros }),
+  fiche: ficheProduit,
+  repeindre: () => render(),
+});
 function carteEtapeCommande(c, statuts, manquants, serveur) {
   const idx = statuts.indexOf(c.statutCommande);
   const exempte = structureExclueDevisFacture(c);
@@ -56,10 +116,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
     typeof c.quantiteAvecNumeroSerie === 'number'
       ? c.quantiteAvecNumeroSerie
       : (c.lignes || []).reduce((t, l) => t + (parseInt(l.quantite, 10) || 0), 0);
-  const nbSeries = String(c.numerosSerie || '')
-    .split('\n')
-    .map((x) => x.trim())
-    .filter(Boolean).length;
+  const nbSeries = (c.numerosSerie || []).length;
   const seriesOk = quantiteAttendue === 0 || nbSeries === quantiteAttendue;
   const conf = state.confirmSubEtapes[c.id] || {};
   const motSeries = c.dematerialisee ? 'Codes' : 'Numéros de série';
@@ -89,20 +146,29 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
               contenu: liensRaccourcis('commande', false) || undefined,
             },
       );
+    // Logistique séparée : elle est prévenue et valide dans son espace ; l'équipe peut aussi
+    // valider ici, avec les mêmes quantités + / − (etapes-commande.js).
+    if (!(state.reglages || {}).logistiqueDansAdmin)
+      t.push({
+        etat: 'info',
+        titre: 'La logistique est prévenue',
+        detail: 'Elle vérifie les quantités dans son espace ; vous pouvez aussi le faire ici.',
+        action: `<a class="et-lien" href="support.html#commande=${encodeURIComponent(c.reference)}" target="_blank" rel="noopener">Ouvrir dans l’espace Logistique ↗</a>`,
+      });
     t.push({
       etat: t.some((x) => x.etat === 'cours') ? 'avenir' : 'cours',
-      titre: 'Validation par la logistique',
-      detail: 'Prévenue par e-mail à l’arrivée de la commande, elle vérifie les quantités dans son espace.',
-      action: `<a class="et-lien" href="support.html#commande=${encodeURIComponent(c.reference)}" target="_blank" rel="noopener">Ouvrir dans l’espace Logistique ↗</a>`,
+      titre: 'Vérifier les quantités',
+      detail: 'Ajustez si le stock ne suit pas : le stock reprend ce qui n’est plus envoyé.',
+      contenu: editeurQuantitesCommande(c),
     });
-    bouton = `<button type="button" class="btn btn-primary et-principal" data-valider-logistique="${ref}">Valider (quantités inchangées)</button>`;
+    bouton = `<button type="button" class="btn btn-primary et-principal" data-valider-logistique="${ref}">Valider la commande</button>`;
   } else if (c.statutCommande === 'Validée') {
     titre = 'Préparer la commande';
     const noteLog = extraireNoteLogistique(c.commentaire);
     if (noteLog && noteLog.changements.length)
       t.push({
         etat: 'info',
-        titre: 'La logistique a ajusté les quantités',
+        titre: 'Quantités ajustées à la validation',
         detail:
           noteLog.changements
             .map((ch) => `${echapper(ch.produit)} : <s>${echapper(ch.ancienne)}</s> → <b>${echapper(ch.nouvelle)}</b>`)
@@ -115,11 +181,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
           ? {
               etat: 'cours',
               titre: motSeries,
-              detail: `${Math.min(nbSeries, quantiteAttendue)} / ${quantiteAttendue} saisi${quantiteAttendue > 1 ? 's' : ''}`,
-              action: c.dematerialisee
-                ? ''
-                : `<label class="et-lien">Importer un CSV tec.tech<input type="file" accept=".csv,text/csv" id="pn-series-csv" hidden></label>`,
-              contenu: editeurSeriesCommande(c, quantiteAttendue),
+              contenu: editeurSeriesCommande(c),
             }
           : {
               etat: 'ok',
@@ -157,7 +219,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
           contenu: liensRaccourcis('commande', false) || undefined,
         });
     }
-    bouton = `<button type="button" class="btn btn-primary et-principal" data-changer-statut="Préparée" data-ref="${ref}">Passer à « Préparée »</button>`;
+    bouton = `<button type="button" class="btn btn-primary et-principal" data-ec-suite data-changer-statut="Préparée" data-ref="${ref}">Passer à « Préparée »</button>`;
   } else if (c.statutCommande === 'Préparée' && c.dematerialisee) {
     titre = 'Remettre les codes';
     if (quantiteAttendue > 0) t.push({ etat: 'ok', titre: motSeries, detail: resumeSeries() });
@@ -185,7 +247,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
       titre: 'Mode de livraison',
       detail: mode ? echapper(mode === 'Livraison EC' ? 'Livraison Emmaüs Connect' : mode) : '',
       action: mode ? `<button type="button" class="et-lien" data-et-rouvrir="mode">Modifier</button>` : '',
-      contenu: cartesModeLivraison(mode, ref),
+      contenu: EtapesCommande.modes(c),
     });
     if (state.etRouvrirMode === c.reference && mode) t[t.length - 1].etat = 'cours';
     if (mode === 'Colissimo')
@@ -198,7 +260,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
         action: (c.colissimo || '').trim()
           ? `<button type="button" class="et-lien" data-modifier-colissimo="${ref}">Modifier</button>`
           : '',
-        contenu: `<textarea class="input" rows="2" id="pn-colissimo" data-auto-colissimo="${ref}" placeholder="https://www.laposte.fr/outils/suivre-vos-envois?code=…">${echapper(c.colissimo || '')}</textarea><div id="pn-erreur-colissimo"></div>`,
+        contenu: EtapesCommande.colissimo(c),
       });
     if (conf.colissimo === false && (c.colissimo || '').trim()) t[t.length - 1].etat = 'cours';
     if (!mode) t.push({ etat: 'avenir', titre: 'Suivi du colis ou date de livraison' });
@@ -211,7 +273,7 @@ function carteEtapeCommande(c, statuts, manquants, serveur) {
         action: c.dateLivraisonCible
           ? `<button type="button" class="et-lien" data-et-rouvrir="date">Modifier</button>`
           : '',
-        contenu: `<input type="date" class="input et-date" id="pn-date-cible" data-auto-date-cible="${ref}" value="${dateVersISO(c.dateLivraisonCible)}" aria-label="Date estimée">`,
+        contenu: EtapesCommande.dateCible(c),
       });
     if (state.etRouvrirDate === c.reference && c.dateLivraisonCible) t[t.length - 1].etat = 'cours';
     bouton = `<button type="button" class="btn btn-primary et-principal" data-valider-preparation="${ref}">Passer à « En livraison »</button>`;
@@ -314,7 +376,9 @@ function carteCommandeLivree(c, personnes, nbArticles) {
       t.push({
         etat: c.statutPaiement === 'Payé' ? 'ok' : 'cours',
         titre: 'Paiement',
-        detail: echapper(`${c.moyenPaiement} · ${c.statutPaiement || 'Non payé'}`),
+        detail: echapper(
+          `${c.moyenPaiement}${c.moyenPaiement === 'Chèque' && c.numeroCheque ? ` n° ${c.numeroCheque}` : ''} · ${c.statutPaiement || 'Non payé'}`,
+        ),
       });
     if (c.referenceFacture)
       t.push({
@@ -347,7 +411,7 @@ function panneauEtapePasseeCommande(c, statut) {
     return `
       <div class="field">
         <label>${c.dematerialisee ? 'Codes' : 'Numéros de série'}</label>
-        <textarea class="input" rows="3" id="pn-series-passee">${echapper(c.numerosSerie || '')}</textarea>
+        <textarea class="input" rows="3" id="pn-series-passee">${echapper((c.numerosSerie || []).join('\n'))}</textarea>
         <button type="button" class="btn btn-secondary btn-block" data-corriger-series="${echapper(c.reference)}">Enregistrer</button>
       </div>`;
   }
@@ -358,7 +422,7 @@ function panneauEtapePasseeCommande(c, statut) {
     return `
       <div class="field">
         <label>Mode de livraison</label>
-        ${cartesModeLivraison(c.modeLivraison, echapper(c.reference))}
+        ${EtapesCommande.modes(c)}
         ${c.bonLivraison ? `<button type="button" data-ouvrir-doc-genere="${echapper(c.bonLivraison)}" style="all:unset;box-sizing:border-box;cursor:pointer;font-size:12.5px;color:var(--color-accent-700);text-decoration:underline">Bon de livraison ↗</button>` : ''}
       </div>`;
   }
@@ -385,7 +449,10 @@ function dateVersISO(v) {
 async function corrigerSeriesCommande(ref) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;
-  const valeur = $('pn-series-passee').value;
+  const valeur = $('pn-series-passee')
+    .value.split('\n')
+    .map((x) => x.trim())
+    .filter(Boolean);
   const r = await posterEtat(
     { action: 'update', id: c.id, champ: 'numerosSerie', valeur },
     'Enregistrement…',
@@ -441,119 +508,28 @@ function extraireNoteLogistique(commentaire) {
   };
 }
 
-/** Valide la commande à la place de la logistique, sans changer les quantités (pour les
- *  ajuster : l'espace Logistique). */
+/** Reçue → Validée depuis la fiche, avec les quantités vérifiées (+ / −) et le message. */
 async function validerCommandeLogistique(ref) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;
+  // Quantités vérifiées dans la fiche (sinon celles commandées).
+  const brouillon = EtapesCommande.lire(ref);
+  const quantites = brouillon.quantites || (c.lignes || []).map((l) => parseInt(l.quantite, 10) || 0);
+  const message = brouillon.message || '';
   try {
     const r = await posterEtat(
-      { action: 'logistique-valider', id: c.id, quantites: (c.lignes || []).map((l) => l.quantite) },
+      { action: 'logistique-valider', id: c.id, quantites, message },
       'Validation…',
       'Commande validée',
     );
     if (r.ok) {
+      EtapesCommande.oublier(ref);
       c.statutCommande = 'Validée';
       render();
+      // Quantités ajustées : lignes et stock relus depuis le serveur.
+      if (quantites.some((q, i) => q !== (parseInt(c.lignes[i].quantite, 10) || 0))) chargerTout();
     }
   } catch (e) {}
-}
-async function confirmerColissimoPreparation(ref) {
-  const c = state.commandes.find((x) => x.reference === ref);
-  if (!c) return;
-  const valeur = $('pn-colissimo').value;
-  const liens = valeur
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
-  if (!liens.length) {
-    afficherErreurModale('Renseigne au moins un lien.', 'pn-erreur-colissimo');
-    return;
-  }
-  const invalide = liens.find((l) => !/^https?:\/\/.+/i.test(l));
-  if (invalide) {
-    afficherErreurModale(`« ${invalide} » n'est pas un lien http(s) valide.`, 'pn-erreur-colissimo');
-    return;
-  }
-  const r = await posterEtat(
-    { action: 'update', id: c.id, champ: 'colissimo', valeur },
-    'Enregistrement…',
-    'Lien(s) confirmé(s)',
-  );
-  if (r.ok) {
-    c.colissimo = valeur;
-    (state.confirmSubEtapes[c.id] ||= {}).colissimo = true;
-    render();
-  }
-}
-async function confirmerSeriesCommande(ref) {
-  const c = state.commandes.find((x) => x.reference === ref);
-  if (!c) return;
-  const champ = $('pn-series');
-  const valeur = champ.value;
-  const attendu = parseInt(champ.dataset.quantiteAttendue, 10) || 0;
-  const n = valeur
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean).length;
-  if (n !== attendu) {
-    afficherErreurModale(
-      `${n}/${attendu} numéro${attendu > 1 ? 's' : ''} saisi${n > 1 ? 's' : ''} — il en faut exactement ${attendu}.`,
-      'pn-erreur-series',
-    );
-    return;
-  }
-  etat('Enregistrement…', 'chargement');
-  try {
-    const r = await poster({ action: 'update', id: c.id, champ: 'numerosSerie', valeur });
-    if (r.ok) {
-      c.numerosSerie = valeur;
-      (state.confirmSubEtapes[c.id] ||= {}).series = true;
-      // BO : réécrit « personnes » pour associer chaque personne à son numéro de série, au format
-      // nom|dateNaissance|produit|numeroSerie (lu par le suivi, les attestations et la flotte)
-      const structure = state.structures.find((s) => s.code === c.code);
-      if (structure && structure.bo) {
-        const unitesAssoc = unitesSeriePersonnes(c);
-        const numeros = valeur
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean);
-        // Ré-association précise, unité par unité : l'ordre de unitesSeriePersonnes() correspond
-        // déjà exactement à l'ordre des lignes attendu dans le champ numérosSerie (voir la légende
-        // affichée juste au-dessus du champ de saisie).
-        const lignesFinales = [];
-        let curseurSerie = 0;
-        unitesAssoc.forEach((u) => {
-          const numeroDeCetteUnite = numeros[curseurSerie++] || '';
-          if (u.nom) lignesFinales.push(`${u.nom}|${u.dateNaissance}|${u.produit}|${numeroDeCetteUnite}`);
-        });
-        const valeurPersonnes = lignesFinales.join('\n');
-        const rp = await poster({ action: 'update', id: c.id, champ: 'personnes', valeur: valeurPersonnes });
-        if (rp.ok) c.personnes = valeurPersonnes;
-      }
-      etat('Numéros confirmés', 'succes');
-      render();
-      return;
-    }
-    if (r.conflits && r.conflits.length) {
-      const detail = r.conflits.map((x) => `${x.numeroSerie} (déjà sur ${x.referenceCommande})`).join(', ');
-      afficherErreurModale(
-        `Numéro${r.conflits.length > 1 ? 's' : ''} déjà utilisé${r.conflits.length > 1 ? 's' : ''} : ${detail}`,
-        'pn-erreur-series',
-      );
-      etat(
-        `Numéro${r.conflits.length > 1 ? 's' : ''} déjà utilisé${r.conflits.length > 1 ? 's' : ''} : ${detail}`,
-        'erreur',
-        15000,
-      );
-    } else {
-      afficherErreurModale(r.erreur || 'Enregistrement impossible', 'pn-erreur-series');
-      etat(r.erreur || 'Enregistrement impossible', 'erreur');
-    }
-  } catch (e) {
-    afficherErreurModale('Enregistrement impossible', 'pn-erreur-series');
-    etat('Enregistrement impossible', 'erreur');
-  }
 }
 async function genererDocumentCommande(ref, type) {
   const c = state.commandes.find((x) => x.reference === ref);
@@ -565,12 +541,15 @@ async function genererDocumentCommande(ref, type) {
     if (!numero) return;
     donnees.numeroFacture = numero;
   }
-  const r = await posterEtat(donnees, 'Génération…', type === 'devis' ? 'Devis généré' : 'Facture générée');
+  const r =
+    type === 'devis'
+      ? await posterDevis(donnees, 'Devis généré')
+      : await posterEtat(donnees, 'Génération…', 'Facture générée');
   if (r.ok) {
     const [rc, rd, rf] = await Promise.all([
-      jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }),
-      jsonp({ action: 'devis', password: motDePasse, limite: 0 }),
-      jsonp({ action: 'factures', password: motDePasse, limite: 0 }),
+      lireApi({ action: 'list', limite: -1, filtre: 'tout' }),
+      lireApi({ action: 'devis', limite: 0 }),
+      lireApi({ action: 'factures', limite: 0 }),
     ]);
     if (rc.ok) state.commandes = rc.commandes;
     if (rd.ok) state.devis = rd.devis;
@@ -578,45 +557,6 @@ async function genererDocumentCommande(ref, type) {
     render();
   }
 }
-async function choisirModeLivraison(ref, mode) {
-  const c = state.commandes.find((x) => x.reference === ref);
-  if (!c) return;
-  const r = await posterEtat(
-    { action: 'update', id: c.id, champ: 'modeLivraison', valeur: mode },
-    'Enregistrement…',
-    'Mode de livraison enregistré',
-  );
-  if (r.ok) {
-    c.modeLivraison = mode;
-    render();
-  }
-}
-async function enregistrerColissimoCommande(ref) {
-  const c = state.commandes.find((x) => x.reference === ref);
-  if (!c) return;
-  const valeur = $('pn-colissimo').value;
-  const liens = valeur
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const invalide = liens.find((l) => !/^https?:\/\/.+/i.test(l));
-  if (invalide) {
-    afficherErreurModale(`« ${invalide} » n'est pas un lien http(s) valide.`);
-    return;
-  }
-  const r = await posterEtat(
-    { action: 'update', id: c.id, champ: 'colissimo', valeur },
-    'Enregistrement…',
-    'Lien(s) enregistré(s)',
-  );
-  if (r.ok) {
-    c.colissimo = valeur;
-    render();
-  }
-}
-/** Valide l'étape "Préparée" : enregistre les numéros de série, génère le bon de livraison,
- *  l'envoie par mail à la structure, puis fait avancer le statut — même enchaînement que
- *  côté back (juste regroupé en un seul clic ici). */
 async function validerPreparationCommande(ref, btn) {
   const c = state.commandes.find((x) => x.reference === ref);
   if (!c) return;
@@ -667,8 +607,8 @@ async function genererFactureDepuisLivree(ref) {
   );
   if (r.ok) {
     const [rc, rf] = await Promise.all([
-      jsonp({ action: 'list', password: motDePasse, limite: -1, filtre: 'tout' }),
-      jsonp({ action: 'factures', password: motDePasse, limite: 0 }),
+      lireApi({ action: 'list', limite: -1, filtre: 'tout' }),
+      lireApi({ action: 'factures', limite: 0 }),
     ]);
     if (rc.ok) state.commandes = rc.commandes;
     if (rf.ok) state.factures = rf.factures;
@@ -740,23 +680,6 @@ async function enregistrerDateLivraisonCommande(ref) {
   );
   if (r.ok) {
     c.dateLivraison = valeur;
-    render();
-  }
-}
-async function enregistrerDateCibleCommande(ref) {
-  const c = state.commandes.find((x) => x.reference === ref);
-  if (!c) return;
-  const iso = $('pn-date-cible').value;
-  if (!iso) return;
-  const [y, mo, d] = iso.split('-');
-  const valeur = `${d}/${mo}/${y}`;
-  const r = await posterEtat(
-    { action: 'update', id: c.id, champ: 'dateLivraisonCible', valeur },
-    'Enregistrement…',
-    'Date estimée enregistrée',
-  );
-  if (r.ok) {
-    c.dateLivraisonCible = valeur;
     render();
   }
 }

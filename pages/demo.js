@@ -1,10 +1,7 @@
 (function () {
-  const PROD = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api';
-  const API_DEMO = PROD + '-demo';
-  const DUREE = 8 * 3600 * 1000;
+  const API_DEMO = API.replace(/-demo$/, '') + '-demo';
   const CLES_SESSION = [
     'cvdl-admin-jeton',
-    'cvdl-admin-password',
     'cvdl-code-structure',
     'cvdl-support-jeton',
     'cvdl-support-compte',
@@ -14,12 +11,6 @@
     'cvdl-numero-serie-sav',
     'cvdl-numero-serie-suivi',
   ];
-  const $ = (id) => document.getElementById(id);
-  const echapper = (s) => {
-    const d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  };
   const viderSession = () =>
     CLES_SESSION.forEach((k) => {
       try {
@@ -34,12 +25,7 @@
       return '';
     }
   };
-  const appel = (donnees) =>
-    fetch(API_DEMO, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ cle: lireCle() }, donnees)),
-    }).then((r) => r.json());
+  const appel = (donnees) => appelApi(Object.assign({ cle: lireCle() }, donnees), { methode: 'POST', base: API_DEMO });
   const message = (texte, type) => {
     $('msg').innerHTML = texte ? `<div class="msg msg-${type || 'erreur'}">${echapper(texte)}</div>` : '';
   };
@@ -47,59 +33,48 @@
     if (window.portailIllustrations) window.portailIllustrations(el);
   };
 
-  // Site de démo dédié (dossier « …demo… ») : on y reste, pas de « Quitter ».
+  // La démo vit sous /demo/ (nginx.conf) : ses pages parlent à la fonction de démonstration
+  // (api.js). Ouverte depuis la racine du site, on y bascule.
   const dossier = location.pathname.split('/')[1] || '';
-  const siteDemo = /demo/i.test(dossier) && !/\.html$/i.test(dossier);
-  if (siteDemo) {
-    $('btn-quitter').hidden = true;
-    $('sep-quitter').hidden = true;
-  }
-  if (new URLSearchParams(location.search).get('quitter') && !siteDemo) {
-    try {
-      localStorage.removeItem('cvdl-mode-demo');
-    } catch (e) {}
-    viderSession();
-    location.replace('portail.html');
+  if (!(/demo/i.test(dossier) && !/\.html$/i.test(dossier))) {
+    location.replace('demo/demo.html' + location.search + location.hash);
     return;
   }
-  // Les structures entrent par un code d'essai (accueil.html, « Essayer la plateforme ») : un
-  // ancien lien ?vue=… y renvoie. L'équipe garde ?cle=… / ?pour=equipe.
-  {
-    const p = new URLSearchParams(location.search);
-    if (p.get('vue') && !p.get('cle') && p.get('pour') !== 'equipe') {
-      location.replace('accueil.html#essayer');
-      return;
-    }
+  // Quitter : les sessions de la démo sont oubliées dans cet onglet, retour au vrai site.
+  if (new URLSearchParams(location.search).get('quitter')) {
+    viderSession();
+    location.replace('../accueil.html');
+    return;
   }
-  // Toutes les pages du site parlent à la fonction de démo tant que ce repère est valable (8 h).
-  try {
-    localStorage.setItem('cvdl-mode-demo', JSON.stringify({ jusqua: Date.now() + DUREE }));
-  } catch (e) {
-    message('Le stockage du navigateur est bloqué : impossible d’activer le mode démo (navigation privée stricte ?).');
-  }
-
   /* Démo présentée aux structures (lien ?pour=structures, mémorisé pour « Changer de profil ») :
      seulement les vues structure du lancement, sur l'Association Le Tremplin. */
   const params = new URLSearchParams(location.search);
-  // Code d'essai d'une structure (posé par accueil.html) : la démo reste sur cette vue, sans
-  // changement de profil, pour l'onglet ; ?cle=… ou ?pour=equipe le lève.
+  // Vue choisie à l'accueil (type de structure ou code d'essai) : la démo reste sur cette vue,
+  // sans changement de profil, pour l'onglet ; ?cle=… ou ?pour=equipe le lève.
   let vueVerrouillee = '';
   try {
     if (params.get('cle') || params.get('pour') === 'equipe') sessionStorage.removeItem('cvdl-demo-vue');
     vueVerrouillee = sessionStorage.getItem('cvdl-demo-vue') || '';
   } catch (e) {}
-  // Code d'essai (accueil.html) : entrée directe dans l'espace de la structure (sa présentation
-  // de bienvenue s'ouvre alors), derrière un écran de préparation — la démo peut mettre un
-  // moment à démarrer quand personne ne l'a ouverte depuis un moment.
+  // Cette page de choix des vues est réservée à l'équipe (clé ?cle=…, lien ?pour=equipe ou
+  // ?pour=structures, mémorisés dans le navigateur). Le public entre par l'accueil (« Essayer la
+  // démo ») et va directement dans l'espace choisi, sans la voir.
+  let accesChoix = !!params.get('cle') || !!params.get('pour') || !!lireCle();
+  try {
+    accesChoix = accesChoix || !!localStorage.getItem('cvdl-demo-pour');
+  } catch (e) {}
+  if (!accesChoix && !vueVerrouillee) {
+    location.replace('../accueil.html#essayer');
+    return;
+  }
+  // Entrée directe dans l'espace de la structure (sa présentation de bienvenue s'ouvre alors),
+  // derrière un écran de préparation : la démo peut mettre un moment à démarrer quand personne
+  // ne l'a ouverte depuis un moment.
   let prep = null;
   try {
-    if (vueVerrouillee && sessionStorage.getItem('cvdl-demo-auto') === '1') prep = preparation();
+    if (vueVerrouillee && (!accesChoix || sessionStorage.getItem('cvdl-demo-auto') === '1')) prep = preparation();
     sessionStorage.removeItem('cvdl-demo-auto');
   } catch (e) {}
-  if (vueVerrouillee) {
-    $('btn-quitter').hidden = true;
-    $('sep-quitter').hidden = true;
-  }
   if (params.get('cle')) {
     try {
       localStorage.setItem('cvdl-demo-cle', params.get('cle'));
@@ -109,8 +84,7 @@
   }
   if (params.get('pour')) {
     try {
-      if (params.get('pour') === 'structures') localStorage.setItem('cvdl-demo-pour', 'structures');
-      else localStorage.removeItem('cvdl-demo-pour');
+      localStorage.setItem('cvdl-demo-pour', params.get('pour') === 'structures' ? 'structures' : 'equipe');
     } catch (e) {}
   }
   let pourStructures = !!vueVerrouillee || params.get('pour') === 'structures';
@@ -163,13 +137,28 @@
       profil: 'admin',
       ill: 'tableau',
       titre: 'Administration',
-      role: 'Chargé·e de distribution',
+      role: 'Admin national',
       texte:
-        'Le poste de pilotage : toutes les commandes, de la réception à la livraison, les structures, le stock, les programmes de distribution et les statistiques.',
+        'Le poste de pilotage : toutes les commandes, de la réception à la livraison, les structures, le stock, les programmes de distribution, les statistiques et l’équipe (rôles et régions).',
       points: [
         'Valider, préparer et livrer une commande',
         'Suivre un programme de distribution et son financeur',
         'Ouvrir la fiche 360° d’une structure',
+      ],
+    },
+    {
+      groupe: 'Équipe CVDL',
+      id: 'distribution',
+      profil: 'distribution',
+      ill: 'tableau',
+      titre: 'Administration régionale',
+      role: 'Chargé·e de distribution',
+      texte:
+        'L’admin limité à sa région : ses structures, leurs commandes et SAV, ses programmes et les projets des Internes de la région.',
+      points: [
+        'Ne voir que les structures de sa région',
+        'Créer un programme de distribution régional',
+        'Répartir l’objectif entre les structures pressenties',
       ],
     },
     {
@@ -376,6 +365,8 @@
     const v = choisie;
     let detail = '';
     if (v.id === 'admin' && profils.admin && profils.admin.nom) detail = `Vous êtes ${profils.admin.nom}.`;
+    if (v.id === 'distribution' && profils.distribution && profils.distribution.nom)
+      detail = `Vous êtes ${profils.distribution.nom}.`;
     if (v.id === 'compta' && profils.compta && profils.compta.nom) detail = `Vous êtes ${profils.compta.nom}.`;
     if (v.id === 'support' && profils.support && profils.support.nom) detail = `Vous êtes ${profils.support.nom}.`;
     if (v.id === 'interne' && profils.interne)
@@ -434,7 +425,10 @@
           sessionStorage.setItem(k, val);
         } catch (e) {}
       });
-      location.href = r.page;
+      // Entrée directe : la page de préparation ne reste pas dans l'historique (le retour
+      // arrière ramène à l'accueil, pas ici).
+      if (prep) location.replace(r.page);
+      else location.href = r.page;
     } catch (e) {
       if (prep) {
         prep.arreter();
@@ -468,8 +462,8 @@
       titre: 'Vente solidaire',
       role: 'Association Le Tremplin',
       texte:
-        'Votre structure oriente des personnes vers un achat à prix solidaire : une personne nommée par appareil, le moyen de paiement choisi pour votre structure, et le suivi jusqu’à la remise.',
-      points: ['Commander pour une personne', 'Suivre la commande', 'Retrouver les appareils remis'],
+        'Votre structure propose du matériel à prix solidaire, confié en dépôt-vente : vous commandez sans rien payer, déclarez chaque vente et suivez votre stock.',
+      points: ['Mettre du matériel en dépôt', 'Déclarer une vente', 'Suivre le stock et les ventes'],
     },
     interne: {
       titre: 'Structure Interne',
@@ -510,6 +504,7 @@
     $('btn-reinit').hidden = true;
     const sep = $('btn-reinit').previousElementSibling;
     if (sep && sep.classList.contains('sep')) sep.hidden = true;
+    document.querySelectorAll('[data-equipe]').forEach((x) => (x.hidden = true)); // recette : équipe seulement
     // Fonctionnalités : seulement celles de la vue verrouillée, sinon celles des 4 vues structure.
     const vueLien = ALIAS_VUES[vueVerrouillee];
     document.querySelectorAll('ul.demo-cartes > li.demo-carte').forEach((li) => {

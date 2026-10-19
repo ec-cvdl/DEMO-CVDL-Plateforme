@@ -50,7 +50,7 @@ function vueReglagesStatutsSav() {
     </div>`;
 }
 async function rechargerStatutsSav() {
-  const r = await jsonp({ action: 'sav-statuts-list', password: motDePasse });
+  const r = await lireApi({ action: 'sav-statuts-list' });
   if (r.ok) state.statutsSav = r.statuts;
 }
 async function modifierStatutSav(id, champ, valeur) {
@@ -90,8 +90,83 @@ async function ajouterStatutSav() {
   } else $('rp-retour-modale').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur)}</div>`;
 }
 
-/* Modèle de bon de livraison : HTML téléversé, prioritaire sur le modèle
-   Google Sheets. */
+/* Modèle PDF à champs, commun aux quatre documents : rempli par le serveur, prioritaire sur le
+   HTML et sur Google Sheets. Un modèle de base est fourni dans modeles/<fichier>.pdf. */
+const MODELES_PDF = {
+  'bon-livraison': {
+    fichier: 'bon-livraison',
+    info: () => infoModeleBon,
+    charger: () => chargerInfoModeleBon(),
+  },
+  devis: { fichier: 'devis', info: () => infosModeleDoc.devis, charger: () => chargerInfoModeleDoc('devis') },
+  facture: { fichier: 'facture', info: () => infosModeleDoc.facture, charger: () => chargerInfoModeleDoc('facture') },
+  attestation: {
+    fichier: 'attestation-paiement',
+    info: () => infoModeleAttestation,
+    charger: () => chargerInfoModeleAttestation(),
+  },
+};
+function blocModelePdf(type) {
+  const { fichier, info: lireInfo } = MODELES_PDF[type];
+  const info = lireInfo();
+  return `
+        <div class="card elev-sm" style="padding:var(--space-5);gap:10px">
+          <div style="font-weight:600;font-size:13.5px">Modèle PDF (formulaire) — recommandé</div>
+          <p style="font-size:12.5px;opacity:0.7;margin:0">Un PDF dont les champs de formulaire portent le nom des jetons, sans accolades (champ <code>STRUCTURE</code> pour <code>{{STRUCTURE}}</code>). Le serveur le remplit et produit directement un vrai PDF, sans Google ni autre service.</p>
+          <p style="font-size:12.5px;margin:0"><a href="modeles/${fichier}.pdf" download="modele-${fichier}.pdf" style="color:var(--color-accent-700);font-weight:600">${icon('file', 14)} Télécharger le modèle de base</a> <span style="opacity:0.7">— à téléverser tel quel, ou à retoucher (LibreOffice, éditeur PDF à formulaires) en gardant le nom des champs.</span></p>
+          ${
+            info
+              ? info.presentPdf
+                ? `<div class="card elev-sm" style="padding:var(--space-3) var(--space-4);background:var(--color-accent-2-100);color:var(--color-accent-2-700);font-size:12.5px">${icon('check', 14)} Modèle actif (${Math.round(info.taillePdf / 1024).toLocaleString('fr-FR')} ko).</div>`
+                : `<div style="font-size:12.5px;opacity:0.55">Aucun modèle PDF téléversé.</div>`
+              : `<div style="font-size:12.5px;opacity:0.5">Chargement…</div>`
+          }
+          <input type="file" class="input" id="mp-fichier" accept=".pdf,application/pdf">
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn btn-primary" data-modele-pdf-televerser="${type}">Téléverser</button>
+            ${info && info.presentPdf ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-modele-pdf-supprimer="${type}">Retirer</button>` : ''}
+          </div>
+        </div>`;
+}
+/** Rappel quand aucun modèle n'est téléversé : la génération passe par Google Sheets. */
+function etatSansModele(info) {
+  return info && !info.present && !info.presentPdf
+    ? `<div class="card elev-sm" style="padding:var(--space-3) var(--space-4);background:var(--color-neutral-100);font-size:12.5px;opacity:0.7">Aucun modèle téléversé — génération sur l'ancien modèle Google Sheets (Réglages), si configuré.</div>`
+    : '';
+}
+async function enregistrerModelePdf(type, bouton) {
+  const fichier = $('mp-fichier').files[0];
+  if (!fichier) {
+    $('rp-retour-modale').innerHTML = '<div class="msg msg-erreur">Choisis un fichier .pdf.</div>';
+    return;
+  }
+  bouton.disabled = true;
+  try {
+    const buffer = await fichier.arrayBuffer();
+    const base64 = btoa(new Uint8Array(buffer).reduce((s, o) => s + String.fromCharCode(o), ''));
+    const r = await posterEtat(
+      { action: `modele-${type}-pdf-televerser`, pdfBase64: base64 },
+      'Envoi…',
+      'Modèle enregistré',
+    );
+    if (r.ok) await MODELES_PDF[type].charger();
+    else {
+      $('rp-retour-modale').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur)}</div>`;
+      bouton.disabled = false;
+    }
+  } catch (e) {
+    $('rp-retour-modale').innerHTML = '<div class="msg msg-erreur">Lecture du fichier impossible.</div>';
+    bouton.disabled = false;
+  }
+}
+async function supprimerModelePdf(type) {
+  if (!(await confirmerCvdl('Retirer le modèle PDF téléversé ?'))) return;
+  const r = await posterEtat({ action: `modele-${type}-pdf-supprimer` }, 'Suppression…', 'Modèle retiré');
+  if (r.ok) await MODELES_PDF[type].charger();
+}
+
+/* Modèle de bon de livraison : PDF à champs (blocModelePdf) ou HTML téléversé, prioritaires
+   sur le modèle Google Sheets. */
 const JETONS_MODELE_BON = [
   'STRUCTURE',
   'ADRESSE',
@@ -115,7 +190,7 @@ const JETONS_MODELE_BON = [
 let infoModeleBon = null;
 async function chargerInfoModeleBon() {
   infoModeleBon = null;
-  const r = await jsonp({ action: 'modele-bon-livraison-info', password: motDePasse });
+  const r = await lireApi({ action: 'modele-bon-livraison-info' });
   if (r.ok) infoModeleBon = r;
   if (state.modal && state.modal.kind === 'modele-bon') render();
 }
@@ -127,18 +202,24 @@ function vueModeleBon() {
           <div class="dialog-title">Modèle de bon de livraison</div>
           <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer>${icon('x', 16)}</button>
         </div>
-        <p style="font-size:13px;opacity:0.7;margin:0">Fichier HTML avec des jetons à remplacer (ex. <code>{{STRUCTURE}}</code>). Une fois téléversé, il remplace le modèle Google Sheets pour toutes les prochaines générations — rien à ouvrir ni gérer côté Google.</p>
-        ${
-          infoModeleBon
-            ? infoModeleBon.present
-              ? `<div class="card elev-sm" style="padding:var(--space-4);background:var(--color-accent-2-100);color:var(--color-accent-2-700);font-size:13px">${icon('check', 14)} Modèle actif (${infoModeleBon.taille.toLocaleString('fr-FR')} caractères).</div>`
-              : `<div class="card elev-sm" style="padding:var(--space-4);background:var(--color-neutral-100);font-size:13px;opacity:0.7">Aucun modèle téléversé — génération sur l'ancien modèle Google Sheets (Réglages), si configuré.</div>`
-            : `<div style="font-size:13px;opacity:0.5">Chargement…</div>`
-        }
-        <div class="field">
-          <label>Nouveau modèle (.html)</label>
-          <input type="file" class="input" id="mb-fichier" accept=".html,text/html">
-        </div>
+        ${blocModelePdf('bon-livraison')}
+        <details style="margin-top:4px">
+          <summary style="cursor:pointer;font-size:12.5px;font-weight:600;opacity:0.7">Autre option : modèle HTML (si pas de modèle PDF)</summary>
+          <div class="card elev-sm" style="padding:var(--space-5);gap:10px;margin-top:8px">
+            <p style="font-size:12px;opacity:0.7;margin:0">Fichier HTML avec des jetons à remplacer (ex. <code>{{STRUCTURE}}</code>). Le bon produit est une page web, à imprimer en PDF depuis le navigateur.</p>
+            ${
+              infoModeleBon && infoModeleBon.present
+                ? `<div class="card elev-sm" style="padding:var(--space-3) var(--space-4);background:var(--color-accent-2-100);color:var(--color-accent-2-700);font-size:12px">${icon('check', 14)} Modèle actif (${infoModeleBon.taille.toLocaleString('fr-FR')} caractères).</div>`
+                : ''
+            }
+            <input type="file" class="input" id="mb-fichier" accept=".html,text/html">
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn btn-secondary" id="mb-enregistrer">Téléverser</button>
+              ${infoModeleBon && infoModeleBon.present ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-supprimer-modele-bon>Retirer</button>` : ''}
+            </div>
+          </div>
+        </details>
+        ${etatSansModele(infoModeleBon)}
         <details style="font-size:12.5px;opacity:0.7">
           <summary style="cursor:pointer;font-weight:600">Jetons disponibles</summary>
           <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
@@ -150,10 +231,6 @@ function vueModeleBon() {
           </div>
         </details>
         <div id="rp-retour-modale"></div>
-        <div class="dialog-actions" style="justify-content:${infoModeleBon && infoModeleBon.present ? 'space-between' : 'flex-end'}">
-          ${infoModeleBon && infoModeleBon.present ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-supprimer-modele-bon>Retirer le modèle</button>` : ''}
-          <button type="button" class="btn btn-primary" id="mb-enregistrer">Téléverser</button>
-        </div>
       </div>
     </div>`;
 }
@@ -181,7 +258,7 @@ async function enregistrerModeleBon() {
 async function supprimerModeleBon() {
   if (
     !(await confirmerCvdl(
-      'Retirer le modèle téléversé ? La génération repassera sur le modèle Google Sheets historique.',
+      'Retirer le modèle HTML téléversé ? Sans modèle PDF, la génération repassera sur le modèle Google Sheets historique.',
     ))
   )
     return;
@@ -191,9 +268,8 @@ async function supprimerModeleBon() {
 
 /* ============================================================
    Modèle de devis / facture — même principe que le bon de
-   livraison : HTML téléversé, aucun appel Drive donc jamais
-   concerné par un souci de quota ou de partage. Devis et facture
-   sont deux documents différents : un modèle distinct pour chacun.
+   livraison (PDF à champs ou HTML téléversé, sans Drive). Devis
+   et facture ont chacun leur modèle.
    ============================================================ */
 const JETONS_MODELE_FACTURATION = [
   'STRUCTURE',
@@ -216,7 +292,7 @@ const JETONS_MODELE_FACTURATION = [
 const infosModeleDoc = { devis: null, facture: null };
 async function chargerInfoModeleDoc(type) {
   infosModeleDoc[type] = null;
-  const r = await jsonp({ action: `modele-${type}-info`, password: motDePasse });
+  const r = await lireApi({ action: `modele-${type}-info` });
   if (r.ok) infosModeleDoc[type] = r;
   if (state.modal && state.modal.kind === 'modele-doc' && state.modal.type === type) render();
 }
@@ -230,18 +306,24 @@ function vueModeleDoc() {
           <div class="dialog-title">Modèle de ${type}</div>
           <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer>${icon('x', 16)}</button>
         </div>
-        <p style="font-size:13px;opacity:0.7;margin:0">Fichier HTML avec des jetons à remplacer (ex. <code>{{STRUCTURE}}</code>). Une fois téléversé, il remplace le modèle Google Sheets pour toutes les prochaines générations de ${type === 'devis' ? 'devis' : 'factures'} — rien à ouvrir ni gérer côté Google, donc aucun risque de quota Drive.</p>
-        ${
-          info
-            ? info.present
-              ? `<div class="card elev-sm" style="padding:var(--space-4);background:var(--color-accent-2-100);color:var(--color-accent-2-700);font-size:13px">${icon('check', 14)} Modèle actif (${info.taille.toLocaleString('fr-FR')} caractères).</div>`
-              : `<div class="card elev-sm" style="padding:var(--space-4);background:var(--color-neutral-100);font-size:13px;opacity:0.7">Aucun modèle téléversé — génération sur l'ancien modèle Google Sheets (Réglages), si configuré.</div>`
-            : `<div style="font-size:13px;opacity:0.5">Chargement…</div>`
-        }
-        <div class="field">
-          <label>Nouveau modèle (.html)</label>
-          <input type="file" class="input" id="md-fichier" accept=".html,text/html">
-        </div>
+        ${blocModelePdf(type)}
+        <details style="margin-top:4px">
+          <summary style="cursor:pointer;font-size:12.5px;font-weight:600;opacity:0.7">Autre option : modèle HTML (si pas de modèle PDF)</summary>
+          <div class="card elev-sm" style="padding:var(--space-5);gap:10px;margin-top:8px">
+            <p style="font-size:12px;opacity:0.7;margin:0">Fichier HTML avec des jetons à remplacer (ex. <code>{{STRUCTURE}}</code>). Le document produit est une page web, à imprimer en PDF depuis le navigateur.</p>
+            ${
+              info && info.present
+                ? `<div class="card elev-sm" style="padding:var(--space-3) var(--space-4);background:var(--color-accent-2-100);color:var(--color-accent-2-700);font-size:12px">${icon('check', 14)} Modèle actif (${info.taille.toLocaleString('fr-FR')} caractères).</div>`
+                : ''
+            }
+            <input type="file" class="input" id="md-fichier" accept=".html,text/html">
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn btn-secondary" id="md-enregistrer">Téléverser</button>
+              ${info && info.present ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-supprimer-modele-doc="${type}">Retirer</button>` : ''}
+            </div>
+          </div>
+        </details>
+        ${etatSansModele(info)}
         <details style="font-size:12.5px;opacity:0.7">
           <summary style="cursor:pointer;font-weight:600">Jetons disponibles</summary>
           <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
@@ -253,10 +335,6 @@ function vueModeleDoc() {
           </div>
         </details>
         <div id="rp-retour-modale"></div>
-        <div class="dialog-actions" style="justify-content:${info && info.present ? 'space-between' : 'flex-end'}">
-          ${info && info.present ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-supprimer-modele-doc="${type}">Retirer le modèle</button>` : ''}
-          <button type="button" class="btn btn-primary" id="md-enregistrer">Téléverser</button>
-        </div>
       </div>
     </div>`;
 }
@@ -285,7 +363,7 @@ async function enregistrerModeleDoc() {
 async function supprimerModeleDoc(type) {
   if (
     !(await confirmerCvdl(
-      'Retirer le modèle téléversé ? La génération repassera sur le modèle Google Sheets historique.',
+      'Retirer le modèle HTML téléversé ? Sans modèle PDF, la génération repassera sur le modèle Google Sheets historique.',
     ))
   )
     return;
@@ -295,7 +373,7 @@ async function supprimerModeleDoc(type) {
 
 /* ============================================================
    Modèle d'attestation de paiement — même principe que le modèle de bon de livraison
-   ci-dessus (HTML téléversé, hors Google Workspace).
+   ci-dessus, avec en plus un repli .xlsx.
    ============================================================ */
 const JETONS_MODELE_ATTESTATION = [
   'NOM_COMPLET',
@@ -306,6 +384,8 @@ const JETONS_MODELE_ATTESTATION = [
   'PRODUIT',
   'MARQUE_MODELE',
   'DATE_VENTE',
+  'TYPE_PAIEMENT',
+  'DATE',
   'NUMERO_SERIE',
   'RESPONSABLE_NOM',
   'RESPONSABLE_TELEPHONE',
@@ -314,7 +394,7 @@ const JETONS_MODELE_ATTESTATION = [
 let infoModeleAttestation = null;
 async function chargerInfoModeleAttestation() {
   infoModeleAttestation = null;
-  const r = await jsonp({ action: 'modele-attestation-info', password: motDePasse });
+  const r = await lireApi({ action: 'modele-attestation-info' });
   if (r.ok) infoModeleAttestation = r;
   if (state.modal && state.modal.kind === 'modele-attestation') render();
 }
@@ -327,22 +407,7 @@ function vueModeleAttestation() {
           <button type="button" class="btn btn-ghost btn-icon" style="width:32px;height:32px" data-modal-fermer>${icon('x', 16)}</button>
         </div>
 
-        <div class="card elev-sm" style="padding:var(--space-5);gap:10px">
-          <div style="font-weight:600;font-size:13.5px">Modèle PDF (formulaire) — recommandé</div>
-          <p style="font-size:12.5px;opacity:0.7;margin:0">Un PDF avec de vrais champs de formulaire, nommés comme les jetons (ex. un champ <code>NOM_COMPLET</code>). Rempli directement en mémoire — aucun service externe, la solution la plus simple et la plus fiable. À créer une fois avec LibreOffice Writer ou un éditeur PDF qui gère les formulaires.</p>
-          ${
-            infoModeleAttestation
-              ? infoModeleAttestation.presentPdf
-                ? `<div class="card elev-sm" style="padding:var(--space-3) var(--space-4);background:var(--color-accent-2-100);color:var(--color-accent-2-700);font-size:12.5px">${icon('check', 14)} Modèle actif (${Math.round(infoModeleAttestation.taillePdf / 1024).toLocaleString('fr-FR')} ko).</div>`
-                : `<div style="font-size:12.5px;opacity:0.55">Aucun modèle PDF téléversé.</div>`
-              : ''
-          }
-          <input type="file" class="input" id="ma-fichier-pdf" accept=".pdf">
-          <div style="display:flex;gap:8px">
-            <button type="button" class="btn btn-primary" id="ma-pdf-enregistrer">Téléverser</button>
-            ${infoModeleAttestation && infoModeleAttestation.presentPdf ? `<button type="button" class="btn btn-ghost" style="color:var(--color-accent-700)" data-supprimer-modele-attestation-pdf>Retirer</button>` : ''}
-          </div>
-        </div>
+        ${blocModelePdf('attestation')}
 
         <details style="margin-top:4px">
           <summary style="cursor:pointer;font-size:12.5px;font-weight:600;opacity:0.7">Autres options (repli, si pas de modèle PDF)</summary>
@@ -387,37 +452,6 @@ function vueModeleAttestation() {
         <div id="rp-retour-modale"></div>
       </div>
     </div>`;
-}
-async function enregistrerModeleAttestationPdf() {
-  const fichier = $('ma-fichier-pdf').files[0];
-  if (!fichier) {
-    $('rp-retour-modale').innerHTML = '<div class="msg msg-erreur">Choisis un fichier .pdf.</div>';
-    return;
-  }
-  $('ma-pdf-enregistrer').disabled = true;
-  try {
-    const buffer = await fichier.arrayBuffer();
-    const base64 = btoa(new Uint8Array(buffer).reduce((s, o) => s + String.fromCharCode(o), ''));
-    const r = await posterEtat(
-      { action: 'modele-attestation-pdf-televerser', pdfBase64: base64 },
-      'Envoi…',
-      'Modèle enregistré',
-    );
-    if (r.ok) {
-      await chargerInfoModeleAttestation();
-    } else {
-      $('rp-retour-modale').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur)}</div>`;
-      $('ma-pdf-enregistrer').disabled = false;
-    }
-  } catch (e) {
-    $('rp-retour-modale').innerHTML = '<div class="msg msg-erreur">Lecture du fichier impossible.</div>';
-    $('ma-pdf-enregistrer').disabled = false;
-  }
-}
-async function supprimerModeleAttestationPdf() {
-  if (!(await confirmerCvdl('Retirer le modèle PDF téléversé ?'))) return;
-  const r = await posterEtat({ action: 'modele-attestation-pdf-supprimer' }, 'Suppression…', 'Modèle retiré');
-  if (r.ok) await chargerInfoModeleAttestation();
 }
 async function enregistrerModeleAttestationXlsx() {
   const fichier = $('ma-fichier-xlsx').files[0];
@@ -474,7 +508,7 @@ async function enregistrerModeleAttestation() {
 async function supprimerModeleAttestation() {
   if (
     !(await confirmerCvdl(
-      'Retirer le modèle téléversé ? La génération repassera sur le modèle Google Sheets historique.',
+      'Retirer le modèle HTML téléversé ? Sans modèle PDF, la génération repassera sur le modèle Google Sheets historique.',
     ))
   )
     return;

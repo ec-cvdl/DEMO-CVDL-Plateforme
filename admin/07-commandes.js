@@ -18,6 +18,15 @@ function badgeUrgentCommande(c) {
   const livree = c.statutCommande === 'Livrée';
   return `<span class="rp-badge-urgent${livree ? ' ok' : ''}" title="${livree ? 'Commande urgente — bien livrée' : 'Commande urgente (dès que possible)'}">Urgent${livree ? ' · livrée' : ''}</span>`;
 }
+/** Commande d'une Interne : « même modèle » (turquoise), et résumé raison · structure concernée. */
+function badgeHomogeneCommande(c) {
+  return c.homogene && c.statutCommande !== 'Annulée'
+    ? `<span class="rp-badge-homogene" title="Commande homogène : même modèle pour tous les ordinateurs${c.homogenePrecision ? ` — ${echapper(c.homogenePrecision)}` : ''}">Même modèle</span>`
+    : '';
+}
+function resumeDestinationCommande(c) {
+  return [c.raisonLibelle || '', c.destination ? `pour ${c.destination}` : ''].filter(Boolean).join(' · ');
+}
 /** Produit le plus nombreux d'une commande (illustration en tête de ligne). */
 function produitPrincipalCommande(c) {
   const lignes = (c.lignes || [])
@@ -36,6 +45,7 @@ function detailArticlesCommande(c) {
 function indicateursCommande(c, opts = {}) {
   return (
     (opts.urgent ? ' ' + badgeUrgentCommande(c) : '') +
+    badgeHomogeneCommande(c) +
     (commentaireReel(c) ? `<span class="rp-ind" title="Commentaire de la structure">${icon('bulle', 12)}</span>` : '') +
     badgesCommandeListe(c)
   );
@@ -315,7 +325,12 @@ document.addEventListener('drop', (e) => {
   const idxCible = ORDER_STATUSES.indexOf(zone.dataset.kanbanColonne);
   if (idxCible === idxActuel) return; // déposée dans sa colonne d'origine, rien à faire
   if (zone.dataset.kanbanColonne === 'Validée') {
-    etat('Le passage à « Validée » se fait par la logistique, ou depuis la fiche de la commande.', 'erreur');
+    etat(
+      (state.reglages || {}).logistiqueDansAdmin
+        ? 'Le passage à « Validée » se fait depuis la fiche de la commande (vérification des quantités).'
+        : 'Le passage à « Validée » se fait par la logistique, ou depuis la fiche de la commande.',
+      'erreur',
+    );
     return;
   }
   if (idxCible !== idxActuel + 1) {

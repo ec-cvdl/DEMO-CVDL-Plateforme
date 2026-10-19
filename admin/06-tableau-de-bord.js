@@ -350,6 +350,7 @@ function construireFeedPriorites(limite) {
       date: dateItem(c.date),
       attrs: `data-commande-ouvrir="${echapper(c.reference)}"`,
     })),
+    ...feedTransfertsStock(),
     ...commandesNouvelles().map((c) => {
       const j = joursDepuis(c.date);
       return {
@@ -438,22 +439,11 @@ function construireFeedPriorites(limite) {
 }
 /** Rendu HTML d'une ligne de fil des priorités — partagé entre le tableau de bord et la cloche. */
 function ligneFeedPriorite(f) {
-  if (estUnifie())
-    return `<div class="rp-fil-ligne${f.urgent ? ' urgent' : ''}" ${f.attrs} role="button" tabindex="0">
+  return `<div class="rp-fil-ligne${f.urgent ? ' urgent' : ''}" ${f.attrs} role="button" tabindex="0">
     <span class="rp-fil-ic" style="--fb:${f.badgeBg};--ff:${f.badgeFg}">${f.icon}</span>
     <span class="rp-fil-txt"><b>${echapper(f.id)}</b><small>${echapper(f.type)} · ${echapper(f.structure)}</small></span>
     <span class="rp-fil-statut"><span class="tag ${f.tagCls || ''}" style="${f.tagStyle || ''}">${echapper(f.statut)}</span>${f.urgent ? '<span class="rp-fil-urgent">Urgent</span>' : ''}</span>
     <span class="rp-fil-fleche">${icon('arrow', 15)}</span>
-  </div>`;
-  // une colonne flexible sous l'icône ; le statut, parfois long, a sa propre ligne dans le
-  // panneau étroit (340 px)
-  return `<div ${f.attrs} style="display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3);cursor:pointer;${f.urgent ? `background:color-mix(in srgb, ${f.badgeBg} 45%, var(--color-surface))` : ''}">
-    <span style="width:34px;height:34px;border-radius:11px;flex:none;display:flex;align-items:center;justify-content:center;background:${f.badgeBg};color:${f.badgeFg}">${f.icon}</span>
-    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
-      <div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${echapper(f.id)}${f.urgent ? ` <span style="color:${f.badgeFg};font-size:11px;font-weight:800;letter-spacing:0.04em">· URGENT</span>` : ''}</div>
-      <div style="font-size:11.5px;opacity:0.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${echapper(f.type)} · ${echapper(f.structure)}</div>
-      <span class="tag ${f.tagCls || ''}" style="align-self:flex-start;margin-top:2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;${f.tagStyle || ''}">${echapper(f.statut)}</span>
-    </div>
   </div>`;
 }
 /** Cloche de notifications (sidebar) — mêmes données que le fil des priorités du tableau de
@@ -513,7 +503,7 @@ function rendreClocheNotifications() {
     panneau.style.top = Math.round(rect.top) + 'px';
     panneau.style.left = Math.round(rect.right + 8) + 'px';
     panneau.innerHTML = `
-      ${estUnifie() ? `<div class="rp-cloche-tete"><span data-ill="tableau" class="ill s"></span><div><div class="rp-surtitre">Fil des priorités</div><b>Notifications</b></div><span class="rp-cloche-nb">${feed.length}</span></div>${legendeFormes()}` : '<div style="padding:var(--space-4) var(--space-4) var(--space-3);border-bottom:1px solid var(--color-divider);font-weight:700;font-size:14px">Notifications</div>'}
+      <div class="rp-cloche-tete"><span data-ill="tableau" class="ill s"></span><div><div class="rp-surtitre">Fil des priorités</div><b>Notifications</b></div><span class="rp-cloche-nb">${feed.length}</span></div>${legendeFormes()}
       <div style="max-height:70vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding:var(--space-2)">
         ${feed.length ? feed.map((f) => `<div class="notif-ligne">${ligneFeedPriorite(f)}<button type="button" class="notif-x" data-masquer-notif="${echapper(cleNotif(f))}" aria-label="Supprimer cette notification" title="Supprimer">✕</button></div>`).join('') : '<p style="opacity:0.5;font-size:13px;padding:var(--space-3)">Rien à traiter — tout est à jour.</p>'}
       </div>
@@ -636,21 +626,8 @@ function vueDashboard() {
         )
         .join('')}
     </div>
-    ${
-      estUnifie()
-        ? blocFilEtCalendrierUnifie(feed)
-        : `<div class="card elev-sm" style="padding:var(--space-6);min-width:0;display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:var(--space-6)">
-      <div style="min-width:0">
-      <div class="card-title" style="font-size:18px;margin-bottom:var(--space-3)">Fil des priorités</div>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        ${feed.length ? feed.map(ligneFeedPriorite).join('') : '<p style="opacity:0.5;font-size:13px;padding:var(--space-3)">Rien à traiter — tout est à jour.</p>'}
-      </div>
-      </div>
-      <div style="border-left:1px solid var(--color-divider);padding-left:var(--space-6);margin:calc(var(--space-6) * -1) 0;padding-top:var(--space-6);padding-bottom:var(--space-6)">
-        ${carteCalendrierLivraisonsContenu()}
-      </div>
-    </div>`
-    }`;
+    ${blocTendance()}
+    ${blocFilEtCalendrierUnifie(feed)}`;
 }
 /** Tableau de bord, style unifié : fil des priorités en liste de cartes (urgent / à suivre) +
  *  calendrier dans sa propre carte à droite. */

@@ -58,79 +58,12 @@ function vuePasseportMateriel() {
                   ]
                 : null,
             ].filter(Boolean);
-            if (estUnifie()) return passeportUnifie(r, lignes);
-            return `
-      <div class="card elev-sm" style="padding:var(--space-6);gap:var(--space-4)">
-        ${r.sourceTecTechUniquement ? `<div style="padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);background:var(--color-warn-100);color:var(--color-warn-800);font-size:13px">Aucune commande CVDL associée à cet appareil — informations issues uniquement de tec.tech.</div>` : ''}
-        <div style="display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap">
-          <span style="width:52px;height:52px;border-radius:999px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--color-accent-2-100);color:var(--color-accent-2-700)">${icon('passeport', 24)}</span>
-          <div style="flex:1;min-width:180px">
-            <div class="card-title" style="font-size:19px">${echapper(r.caracteristiques || r.numeroSerie)}</div>
-          </div>
-          ${badgeGarantie(r.dateLivraison)}
-          ${!r.sourceTecTechUniquement ? `<a href="passeport.html?sn=${encodeURIComponent(r.numeroSerie)}&admin=1" target="_blank" class="btn btn-secondary">${icon('lien_externe', 14)}Passeport public</a>` : ''}
-        </div>
-        <div style="display:grid;gap:0;padding-top:var(--space-3);border-top:1px solid var(--color-divider)">
-          ${lignes
-            .map(
-              ([cle, valeur]) => `
-            <div class="rp-ligne-info">
-              <span class="cle">${cle}</span>
-              <span class="valeur">${valeur}</span>
-            </div>`,
-            )
-            .join('')}
-        </div>
-
-        ${
-          r.ticketsSav && r.ticketsSav.length
-            ? `
-        <div style="padding-top:var(--space-4);border-top:1px solid var(--color-divider)">
-          <div class="card-kicker" style="margin-bottom:var(--space-3)">Tickets SAV (${r.ticketsSav.length})</div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            ${r.ticketsSav
-              .map(
-                (t) => `
-              <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-md);background:var(--color-neutral-100);cursor:pointer" data-sav-ouvrir="${echapper(t.reference)}">
-                <span style="font-size:12.5px;font-weight:700">${echapper(t.reference)}</span>
-                <span style="font-size:12px;opacity:0.6;flex:1">${echapper(t.date)}${t.reconditionneur ? ` · ${echapper(t.reconditionneur)}` : ''}</span>
-                <span class="tag tag-neutral">${echapper(t.statut)}</span>
-              </div>`,
-              )
-              .join('')}
-          </div>
-        </div>`
-            : ''
-        }
-
-        ${
-          !r.sourceTecTechUniquement && r.historique && r.historique.length
-            ? `
-        <div style="padding-top:var(--space-4);border-top:1px solid var(--color-divider)">
-          <div class="card-kicker" style="margin-bottom:var(--space-3)">Historique de l'appareil</div>
-          <div style="display:grid;gap:var(--space-3)">
-            ${r.historique
-              .map(
-                (h) => `
-              <div class="rp-ligne-historique">
-                <span class="icone" style="background:var(--color-accent-2-100);color:var(--color-accent-2-700)">${icon('check', 16)}</span>
-                <div style="flex:1;min-width:0">
-                  <div style="font-size:14px;font-weight:700">${echapper(h.label)}</div>
-                </div>
-                <span style="font-size:12px;opacity:0.5;flex:none">${echapper(h.date)}</span>
-              </div>`,
-              )
-              .join('')}
-          </div>
-        </div>`
-            : ''
-        }
-      </div>`;
+            return passeportUnifie(r, lignes);
           })()
         : ''
     }`;
 }
-/** Passeport matériel, style unifié — même composition que passeport.html (en-tête illustré,
+/** Passeport matériel — même composition que passeport.html (en-tête illustré,
  *  caractéristiques + historique côte à côte), plus les tickets SAV propres à l'admin. */
 function passeportUnifie(r, lignes) {
   const histo = !r.sourceTecTechUniquement && r.historique ? r.historique : [];

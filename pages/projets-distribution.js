@@ -113,7 +113,7 @@ async function charger() {
   $('retour-projets').innerHTML =
     '<div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div>';
   try {
-    const r = await jsonp({ action: 'projets-structure', code: codeValide });
+    const r = await lireApi({ action: 'projets-structure', code: codeValide });
     if (!r.ok) {
       $('retour-projets').innerHTML =
         `<div class="msg msg-erreur">${echapper(r.erreur || 'Chargement impossible.')}</div>`;
@@ -186,12 +186,14 @@ function ouvrirDetail(id) {
         <p class="pd-aide">${pluriel(av.totalLivre || 0, 'appareil distribué', 'appareils distribués')}, ${pluriel(av.totalLivre || 0, 'personne équipée', 'personnes équipées')}${av.joursRestants != null && av.joursRestants >= 0 ? ` · ${pluriel(av.joursRestants, 'jour restant', 'jours restants')}` : ''}.</p>
       </section>
     </div>
+    <section class="pd-bloc" data-role="responsable" data-repartition-projet></section>
     <div class="pd-actions">
       <button type="button" class="btn btn-ghost" data-role="responsable" data-archiver="${echapper(p.id)}" data-etat="${p.statut === 'archive' ? '0' : '1'}">${p.statut === 'archive' ? 'Désarchiver' : 'Archiver'}</button>
       <span style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-secondary" data-exporter="${echapper(p.id)}">Exporter (CSV)</button><button type="button" class="btn btn-primary" data-role="responsable" data-modifier="${echapper(p.id)}">Modifier</button></span>
     </div></div>`;
   document.body.appendChild(v);
   if (window.portailIllustrations) window.portailIllustrations(v);
+  monterRepartitionProjet(v.querySelector('[data-repartition-projet]'), p);
   document.addEventListener('keydown', escDetail);
   v.addEventListener('click', async (e) => {
     if (e.target === v || e.target.closest('[data-fermer-detail]')) {
@@ -227,6 +229,29 @@ function ouvrirDetail(id) {
         alert((r && r.erreur) || 'Enregistrement impossible.');
       }
     }
+  });
+}
+/** Répartition prévisionnelle entre les structures partenaires (repartition.js). */
+function monterRepartitionProjet(zone, p) {
+  if (!zone || !window.RepartitionCvdl || p.statut === 'archive') {
+    if (zone) zone.remove();
+    return;
+  }
+  window.RepartitionCvdl.monter(zone, {
+    lignes: p.repartition || [],
+    objectifGlobal: p.objectifGlobal,
+    objectifs: p.objectifs || [],
+    structures: donnees.partenaires || [],
+    enregistrer: async (lignes) => {
+      const r = await poster({
+        action: 'projet-structure-repartition',
+        code: codeValide,
+        id: p.id,
+        repartition: lignes,
+      });
+      if (r && r.ok) p.repartition = r.repartition;
+      return r;
+    },
   });
 }
 function exporterCsv(p) {
@@ -505,7 +530,7 @@ async function verifierCode() {
   $('btn-verifier-code').innerHTML = '<span class="spinner-inline"></span>Vérification…';
   $('retour-id-code').innerHTML = '';
   try {
-    const r = await jsonp({ action: 'check', code });
+    const r = await lireApi({ action: 'check', code });
     if (!r.ok)
       $('retour-id-code').innerHTML = `<div class="msg msg-erreur">${echapper(r.erreur || 'Code invalide.')}</div>`;
     else if (!r.interne)
@@ -532,9 +557,7 @@ $('id-code').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') verifierCode();
 });
 $('btn-deconnexion').addEventListener('click', () => {
-  try {
-    sessionStorage.removeItem('cvdl-code-structure');
-  } catch (e) {}
+  oublierCodeStructure();
   location.reload();
 });
 try {

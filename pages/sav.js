@@ -56,7 +56,7 @@ function envoyerAnalytique(termine) {
   };
   try {
     if (termine) poster(donnees).catch(function () {});
-    else navigator.sendBeacon(API, new Blob([JSON.stringify(donnees)], { type: 'text/plain;charset=utf-8' }));
+    else baliseApi(donnees);
   } catch (e) {}
 }
 window.addEventListener('beforeunload', function () {
@@ -279,7 +279,7 @@ $$('[data-retour]').forEach(function (b) {
 /* Étape 1 : identification (code structure uniquement) */
 let symptomesPrecharges = null;
 function prechargerSymptomesEnArrierePlan() {
-  jsonp({ action: 'sav-symptomes' })
+  lireApi({ action: 'sav-symptomes' })
     .then((r) => {
       if (r.ok) symptomesPrecharges = r.symptomes;
     })
@@ -288,7 +288,7 @@ function prechargerSymptomesEnArrierePlan() {
 
 let appareilsFlottePrecharges = [];
 function prechargerFlotteEnArrierePlan(code) {
-  jsonp({ action: 'flotte-lister', code })
+  lireApi({ action: 'flotte-lister', code })
     .then((r) => {
       if (r.ok) {
         appareilsFlottePrecharges = r.appareils;
@@ -310,7 +310,7 @@ async function verifierCodeSav() {
   prechargerSymptomesEnArrierePlan();
   let succes = false;
   try {
-    const r = await jsonp({ action: 'check', code: code });
+    const r = await lireApi({ action: 'check', code: code });
     if (r.ok) {
       etat.code = code;
       try {
@@ -320,7 +320,7 @@ async function verifierCodeSav() {
       etat.email = r.email || '';
       if (r.responsableHabituel) remplirResponsableSav(r.responsableHabituel);
       prechargerFlotteEnArrierePlan(code);
-      suivant();
+      if (!reprendreDepuisDepannage()) suivant();
       succes = true;
     } else {
       afficherMsg('retour-id-code', r.erreur || 'Code invalide.', 'erreur');
@@ -357,6 +357,21 @@ try {
   }
 } catch (e) {}
 
+/* Arrivée depuis le dépannage du portail (« ce n'est pas réglé ») : symptôme et parcours déjà
+   connus, on passe directement au choix de l'appareil. */
+function reprendreDepuisDepannage() {
+  let d = null;
+  try {
+    d = JSON.parse(sessionStorage.getItem('cvdl-sav-depuis-depannage') || 'null');
+    sessionStorage.removeItem('cvdl-sav-depuis-depannage');
+  } catch (e) {}
+  if (!d || !d.symptome) return false;
+  etat.symptome = d.symptome;
+  parcoursDepannage = d.parcours || null;
+  allerA('materiel');
+  return true;
+}
+
 /* Étape 2 : symptôme + numéro de série */
 async function chargerSymptomes() {
   if (symptomesPrecharges) {
@@ -364,7 +379,7 @@ async function chargerSymptomes() {
     return;
   }
   try {
-    const r = await jsonp({ action: 'sav-symptomes' });
+    const r = await lireApi({ action: 'sav-symptomes' });
     if (r.ok) afficherSymptomes(r.symptomes);
   } catch (e) {
     afficherMsg('retour-symptome', 'Impossible de charger les symptômes.', 'erreur');
@@ -522,7 +537,7 @@ $('btn-materiel-suivant').addEventListener('click', async function () {
   const texteOriginal = bouton.textContent;
   bouton.innerHTML = '<span class="spinner-inline"></span>Vérification…';
   try {
-    const r = await jsonp({ action: 'sav-verifier-numero-serie', numeroSerie: numeroSerieChamp });
+    const r = await lireApi({ action: 'sav-verifier-numero-serie', numeroSerie: numeroSerieChamp, code: etat.code });
     if (r.ok && r.trouve) {
       essaisNumeroSerieInfructueux = 0;
       etat.numeroSerie = numeroSerieChamp;
@@ -567,38 +582,8 @@ function lireFichier(f) {
 }
 
 /* Étape 5 : récap + envoi */
-// Même calcul que côté admin (statutGarantiePourDate()/badgeGarantie() dans admin/) —
-// dupliqué ici, pas de module JS partagé entre l'admin et les pages publiques dans ce projet.
-function statutGarantiePublic(dateAchatFormatee) {
-  const [j, m, a] = String(dateAchatFormatee || '')
-    .split('/')
-    .map(function (n) {
-      return parseInt(n, 10);
-    });
-  if (!j || !m || !a) return { statut: null };
-  const dateMiGarantie = new Date(a + 1, m - 1, j);
-  const dateFinGarantie = new Date(a + 2, m - 1, j);
-  const maintenant = new Date();
-  return { statut: maintenant >= dateFinGarantie ? 'expiree' : maintenant >= dateMiGarantie ? 'bientot' : 'en_cours' };
-}
-function badgeGarantiePublicSav(dateAchatFormatee) {
-  const statut = statutGarantiePublic(dateAchatFormatee).statut;
-  const cfg = {
-    en_cours: { bg: '#1F9D55', texte: 'Garantie en cours' },
-    bientot: { bg: '#7A5A00', texte: 'Garantie bientôt expirée' },
-    expiree: { bg: '#E5484D', texte: 'Hors garantie' },
-  }[statut];
-  if (!cfg) return '';
-  return (
-    '<span style="display:inline-flex;align-items:center;gap:6px;background:' +
-    cfg.bg +
-    ';color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;flex:none;white-space:nowrap">' +
-    cfg.texte +
-    '</span>'
-  );
-}
 function majRecapSav() {
-  const badgeGarantieHtml = etat.dateAchat ? badgeGarantiePublicSav(etat.dateAchat) : '';
+  const badgeGarantieHtml = etat.dateAchat ? window.badgeGarantieCvdl(etat.dateAchat) : '';
   $('recap-sav').innerHTML =
     '<div><strong>' +
     echapper(etat.nomStructure) +
