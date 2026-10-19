@@ -14,11 +14,7 @@
    }, immediat)
    ════════════════════════════════════════════════════════════════════════════════════ */
 (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const lire = (k) => {
     try {
       return localStorage.getItem(k);

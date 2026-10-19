@@ -1,0 +1,73 @@
+/* Transfert de stock (transfert-stock.js) : fenêtre de l'espace structure. */
+.ts-modale .modale-qr-entete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ts-modale .modale-qr-entete h3 {
+  flex: 1;
+  margin: 0;
+}
+.ts-modale .modale-qr-entete .pk-modale-ill {
+  margin: 0;
+}
+.ts-modale .ts-aide {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--navy) 75%, transparent);
+}
+.ts-modale .ts-aide .pk-lien {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.ts-modale textarea.input {
+  resize: vertical;
+  min-height: 70px;
+}
+.ts-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+.ts-envois {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: var(--pointille);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ts-envoi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: var(--trait-doux);
+  border-radius: var(--r-m);
+  font-size: 13px;
+}
+.ts-envoi > span:first-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ts-envoi b {
+  overflow-wrap: anywhere;
+}
+.ts-envoi small {
+  color: color-mix(in srgb, var(--navy) 65%, transparent);
+}
+.ts-etat {
+  flex: none;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--orange);
+  text-align: right;
+  max-width: 50%;
+}
+.ts-envoi.fait .ts-etat {
+  color: var(--vert);
+}

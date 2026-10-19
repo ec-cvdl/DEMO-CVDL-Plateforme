@@ -7,17 +7,24 @@
 <!-- La connexion Google exige que l'origine soit transmise (pas de « no-referrer » ici). -->
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <script src="anti-cadre.js?v=1"></script>
-<script src="api.js?v=3"></script>
+<script src="base.js?v=1"></script>
+<script src="api.js?v=5"></script>
 <title>Logistique — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
-<link rel="stylesheet" href="sav-fil.css?v=1">
-<link rel="stylesheet" href="support.css?v=4">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="sav-fil.css?v=2">
+<link rel="stylesheet" href="etapes-commande.css?v=1">
+<link rel="stylesheet" href="support.css?v=8">
 <link rel="stylesheet" href="import-appareils.css?v=1">
-<script src="portail-ui.js?v=36" defer></script>
+<link rel="stylesheet" href="embarquement-equipe.css?v=2">
+<script src="portail-ui.js?v=45" defer></script>
 <script src="tectech-csv.js?v=1" defer></script>
-<script src="support-commandes.js?v=1" defer></script>
-<script src="import-appareils.js?v=1" defer></script>
-<script src="support.js?v=7" defer></script>
+<script src="etapes-commande.js?v=3" defer></script>
+<script src="support-commandes.js?v=6" defer></script>
+<script src="import-appareils.js?v=3" defer></script>
+<script src="embarquement-equipe.js?v=2" defer></script>
+<script src="support.js?v=14" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="sav" data-vue="chargement">
 <main>
@@ -42,6 +49,7 @@
     <header class="sp-barre">
       <img src="logo.png" alt="" class="sp-barre-logo">
       <span class="sp-titre">Logistique</span>
+      <div class="sp-espaces" id="sp-espaces" role="tablist" aria-label="Commandes, SAV ou flotte"></div>
       <label class="sp-sr" for="sp-recherche">Rechercher</label>
       <input class="input sp-recherche" id="sp-recherche" type="search" placeholder="Rechercher : CVDL-…, SAV-…, n° de série, structure">
       <button type="button" class="sp-moi" id="sp-moi" aria-haspopup="true"></button>

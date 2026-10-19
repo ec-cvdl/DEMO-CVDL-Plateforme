@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="api.js?v=3"></script>
-<script src="commun.js?v=1"></script>
+<script src="api.js?v=5"></script>
+<script src="commun.js?v=5"></script>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Suivi de mes commandes — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
 <style>
+/* Documents rangés dans leur bloc (Livraison, Paiement) */
+.cs-info-docs{ display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:auto; padding-top:8px; }
+/* Liens alignés sur le texte du bloc (pas de cadre), en bas du bloc pour être sur la même ligne d'un bloc à l'autre */
+html body[data-famille] .cs-info-docs .cs-doc{ padding:0 !important; border:0 !important; background:none !important; box-shadow:none !important; min-height:0; gap:6px; font-size:13.5px; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+.cs-info-docs .cs-doc .ill{ width:18px; height:18px; }
+.cs-homogene{ margin-right:6px; padding:3px 9px; border:1.5px solid var(--navy); border-radius:999px; background:color-mix(in srgb, var(--tur) 28%, #fff); color:var(--navy); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .ml-liste{ display:grid; gap:8px; margin-top:14px; }
 .ml-ligne{ display:flex; align-items:center; gap:12px; padding:10px 12px; border:var(--trait-doux); border-radius:14px; background:#fff; }
 .ml-ligne .ill{ width:34px; height:34px; }
@@ -77,10 +84,12 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
 main{ padding:var(--space-6) var(--space-4); }
 }
 </style>
-<script src="portail-ui.js?v=36" defer></script>
-<script src="cvdl-ui.js?v=13" defer></script>
-<link rel="stylesheet" href="retours.css?v=2">
-<script src="retours.js?v=2" defer></script>
+<script src="portail-ui.js?v=45" defer></script>
+<script src="cvdl-ui.js?v=18" defer></script>
+<link rel="stylesheet" href="retours.css?v=3">
+<script src="retours.js?v=5" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="commandes">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -102,6 +111,7 @@ main{ padding:var(--space-6) var(--space-4); }
       <span data-ill="cle" class="pk-titre-ill"></span>
       <h1 style="margin:0">Quel est votre <em>code structure</em> ?</h1>
       <p style="opacity:0.6;margin:0">Ce code vous a été communiqué par mail — le même que pour commander du matériel ou signaler une panne. Vous voulez plutôt <a href="commande.html">commander du matériel</a> ou <a href="sav.html">signaler une panne</a> ?</p>
+          <p class="msg" style="margin:0">Vous avez un accès personnel ? <a href="portail-structure.html">Connectez-vous avec votre e-mail</a> : plus besoin du code.</p>
       <div class="field">
         <label for="code-structure" class="sr-only">Code structure</label>
         <input type="text" class="input" id="code-structure" autocomplete="off" spellcheck="false" placeholder="Votre code structure">
@@ -132,10 +142,9 @@ main{ padding:var(--space-6) var(--space-4); }
   </section>
 </main>
 
-<script src="deja-identifie.js?v=1"></script>
 <link rel="stylesheet" href="notifications-portail.css?v=1">
-<script src="notifications-portail.js?v=1"></script>
-<script src="pages/suivi.js?v=3"></script>
+<script src="notifications-portail.js?v=4"></script>
+<script src="pages/suivi.js?v=8"></script>
 <div class="voile-modale-qr" id="modale-liens" role="dialog" aria-modal="true" aria-labelledby="modale-liens-titre">
   <div class="modale-qr">
     <h3 id="modale-liens-titre">Liens</h3>

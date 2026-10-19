@@ -222,6 +222,7 @@ html body[data-famille] :is(#vue-boite, #vue-connexion, .sp-voile) .input:focus 
 }
 .sp-moi {
   all: unset;
+  margin-left: auto;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1348,11 +1349,28 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
   }
 }
 @media (max-width: 1060px) {
+  /* Files de l'onglet en bandeau horizontal au-dessus de la liste. */
   .sp-cols {
     grid-template-columns: 330px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .sp-nav {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    gap: 6px;
+    padding: 8px 12px;
+    border-right: 0;
+    border-bottom: 1.5px solid var(--sp-line);
+    overflow-x: auto;
+  }
+  .sp-nav .sp-grp {
     display: none;
+  }
+  .sp-nav-l,
+  .sp-nav-l.petit {
+    flex: none;
+    min-height: 36px;
+    border: 1.5px solid var(--sp-line);
   }
 }
 @media (max-width: 900px) {
@@ -1369,13 +1387,22 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
     flex-basis: 100%;
     max-width: none;
   }
+  .sp-espaces {
+    order: 2;
+    flex-basis: 100%;
+  }
+  .sp-esp {
+    flex: 1;
+    justify-content: center;
+  }
   .sp-moi-t small {
     display: none;
   }
   .sp-moi {
     margin-left: auto;
   }
-  body.sp-ticket-ouvert .sp-liste {
+  body.sp-ticket-ouvert .sp-liste,
+  body.sp-ticket-ouvert .sp-nav {
     display: none;
   }
   body:not(.sp-ticket-ouvert) .sp-detail {
@@ -1421,6 +1448,9 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
   }
 }
 @media (max-width: 520px) {
+  .sp-moi-t {
+    display: none;
+  }
   .sp-avance-l {
     display: none;
   }
@@ -1435,38 +1465,87 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
   }
 }
 
-/* ── Commandes (support-commandes.js) ── */
-.lc-bascule {
-  display: none;
-  gap: 6px;
-  margin: 0 0 12px;
+/* ── Onglets Commandes / SAV / Flotte (barre du haut) ── */
+.sp-espaces {
+  display: flex;
+  gap: 4px;
   padding: 4px;
-  background: #fff;
-  border: 1.5px solid var(--sp-line);
+  background: var(--sp-bg);
   border-radius: 12px;
+  flex: none;
 }
-.lc-bascule button {
+.sp-esp {
   all: unset;
   box-sizing: border-box;
   cursor: pointer;
-  flex: 1;
-  text-align: center;
-  padding: 9px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
   border-radius: 9px;
   font-weight: 700;
+  font-size: 14.5px;
+  color: var(--sp-txt);
 }
-.lc-bascule button[aria-selected='true'] {
+.sp-esp:hover {
+  background: #fff;
+}
+.sp-esp:focus-visible {
+  outline: 2px solid var(--sp-tur);
+  outline-offset: 2px;
+}
+.sp-esp[aria-selected='true'] {
   background: var(--sp-navy);
   color: #fff;
 }
-.lc-bascule b {
-  margin-left: 4px;
-  padding: 0 7px;
+.sp-esp b {
+  min-width: 22px;
+  padding: 1px 7px;
   border-radius: 999px;
   background: var(--sp-acc);
   color: #fff;
   font-size: 12px;
+  text-align: center;
+  box-sizing: border-box;
 }
+.sp-ailleurs {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--sp-line);
+  border-radius: 12px;
+  font-weight: 600;
+  color: var(--sp-navy);
+  text-align: center;
+}
+.sp-ailleurs:hover {
+  background: #fff;
+  border-color: var(--sp-tur);
+}
+/* Flotte : un seul panneau, sans files ni liste. */
+body[data-onglet='flotte'] .sp-cols {
+  grid-template-columns: minmax(0, 1fr);
+}
+body[data-onglet='flotte'] .sp-nav,
+body[data-onglet='flotte'] .sp-liste {
+  display: none;
+}
+body[data-onglet='flotte'] .sp-detail {
+  display: block;
+}
+.sp-flotte p {
+  max-width: 460px;
+}
+.sp-flotte .btn {
+  margin-top: 14px;
+}
+
+/* ── Commandes (support-commandes.js) ── */
 .lc-prog {
   margin-left: auto;
   padding: 2px 9px;
@@ -1543,67 +1622,6 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
   border-color: #1f9d55;
   color: #fff;
 }
-.lc-q {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px dashed var(--sp-line);
-}
-.lc-p {
-  font-weight: 600;
-}
-.lc-cmd {
-  color: var(--sp-mute);
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-.lc-pas {
-  display: inline-flex;
-  align-items: center;
-  border: 1.5px solid var(--sp-navy);
-  border-radius: 999px;
-  overflow: hidden;
-  background: #fff;
-}
-.lc-pas button {
-  all: unset;
-  cursor: pointer;
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  font: 700 18px var(--police, Inter, sans-serif);
-}
-.lc-pas button.plus {
-  background: var(--sp-tur);
-  color: #fff;
-}
-.lc-pas button:focus-visible,
-.lc-pas input:focus-visible {
-  outline: 2px solid var(--sp-tur);
-  outline-offset: -2px;
-}
-.lc-pas input {
-  width: 52px;
-  border: 0;
-  text-align: center;
-  font: 700 15px var(--police, Inter, sans-serif);
-  color: var(--sp-txt);
-  background: transparent;
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-.lc-pas input::-webkit-inner-spin-button {
-  display: none;
-}
-.lc-pas.change input {
-  color: var(--sp-acc);
-}
-.lc-message {
-  margin-top: 4px;
-}
 .lc-pied {
   display: flex;
   flex-wrap: wrap;
@@ -1612,8 +1630,7 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
   gap: 10px 16px;
   margin-top: 4px;
 }
-.lc-aide,
-.lc-acc {
+.lc-aide {
   margin: 0;
   color: var(--sp-mute);
   font-size: 12.5px;
@@ -1624,43 +1641,6 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
   border-radius: 10px;
   background: var(--sp-jaune-bg);
   font-size: 13px;
-}
-.lc-csv {
-  margin-left: auto;
-}
-.lc-groupe {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px 0;
-  border-bottom: 1px dashed var(--sp-line);
-}
-.lc-gt {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.lc-sns {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 8px;
-}
-.lc-sn input {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: var(--mono, ui-monospace, monospace);
-  font-size: 13px;
-}
-.lc-sn.ok input {
-  border-color: #1f9d55;
-  background: #f1faf4;
-}
-.lc-sn-lu {
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: #ede8fc;
-  color: #553a9e;
-  font: 600 12.5px var(--mono, ui-monospace, monospace);
 }
 .lc-pre {
   list-style: none;
@@ -1689,51 +1669,68 @@ html body[data-famille] #vue-boite .sp-compo.note .sp-envoyer {
 .lc-pre small {
   color: var(--sp-faint);
 }
-.lc-retour:empty {
-  display: none;
-}
-.lc-retour {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.lc-ok,
-.lc-err,
-.lc-warn {
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-}
-.lc-ok {
-  background: #e3f5ea;
-  color: #16703d;
-}
-.lc-err {
-  background: color-mix(in srgb, var(--sp-urg) 10%, #fff);
-  color: var(--sp-urg);
-}
-.lc-warn {
-  background: var(--sp-jaune-bg);
-  color: var(--sp-jaune);
-}
 .btn[disabled] {
   opacity: 0.5;
   cursor: not-allowed;
 }
-@media (max-width: 1060px) {
-  .lc-bascule {
-    display: flex;
-  }
+/* Sous-étapes de l'expédition (mode, suivi, date) */
+.lc-sous {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--sp-line);
 }
-@media (max-width: 600px) {
-  .lc-q {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
-  }
-  .lc-cmd {
-    grid-column: 2;
-  }
-  .lc-pas {
-    grid-column: 3;
-    grid-row: 1 / span 2;
-  }
+.lc-sous small {
+  color: var(--sp-mute);
+  font-size: 12.5px;
+}
+/* Dernière étape : question du programme de distribution */
+.lc-programmes {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px dashed var(--sp-line);
+  padding: 10px 0;
+}
+.lc-programmes legend {
+  padding: 0;
+}
+.lc-choix {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--sp-line);
+  border-radius: 12px;
+  cursor: pointer;
+}
+.lc-choix:has(input:checked) {
+  border-color: var(--sp-navy);
+  background: color-mix(in srgb, var(--sp-tur) 10%, #fff);
+}
+.lc-choix span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Commande d'une Interne : même modèle (turquoise), raison et structure concernée */
+.sp-sla.sp-homogene {
+  background: color-mix(in srgb, #00acb0 22%, #fff);
+  color: #002743;
+}
+.lc-destination {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border: 1.5px solid color-mix(in srgb, #002743 25%, transparent);
+  border-radius: 14px;
+  background: #f4f7f9;
+}
+.lc-destination.lc-homogene {
+  border-color: #002743;
+  background: color-mix(in srgb, #00acb0 12%, #fff);
+  box-shadow: 4px 4px 0 color-mix(in srgb, #00acb0 55%, transparent);
 }

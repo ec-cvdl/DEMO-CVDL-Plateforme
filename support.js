@@ -4,7 +4,10 @@
    · Connexion « Se connecter avec Google » (compte Workspace ajouté dans l'admin, onglet
      « Équipe », rôle « Logistique »), ou accès de secours par mot de passe admin. Le serveur
      n'ouvre à ce rôle que les actions SAV et commandes logistique (securite.js).
-   · Files : à traiter, sans réponse 3 j +, en attente de réponse, mes tickets, ouverts, par étape, colis, clos.
+   · Trois onglets en haut : Commandes, SAV, Flotte. Chacun a ses files à gauche ; la recherche
+     porte sur l'onglet ouvert et signale ce qu'elle trouve dans l'autre. Onglet retenu pour la
+     session ; à la connexion, celui qui a du travail (les commandes d'abord).
+   · Files SAV : à traiter, sans réponse 3 j +, en attente de réponse, mes tickets, ouverts, par étape, colis, clos.
    · Ticket (refonte « A », 04/10/2026) : en-tête avec frise d'avancement, bandeau « Prochaine action »,
      réponses toutes faites (pré-remplissage seulement), envoi du colis en 3 étapes.
    · Ticket : échanges (réponse prévenue par e-mail, notes internes), statut, assignation,
@@ -13,12 +16,7 @@
    stockage local hormis le jeton de session (sessionStorage, 12 h).
    ════════════════════════════════════════════════════════════════════════════════════ */
 (function () {
-  const $ = (id) => document.getElementById(id);
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const urlSure = (u) => (/^https?:\/\//i.test(String(u || '')) ? u : '#');
   const lireSession = (k) => {
     try {
@@ -39,7 +37,11 @@
     tickets: [],
     statuts: [],
     membres: [],
+    espace: ['cmd', 'sav', 'flotte'].includes(lireSession('cvdl-support-onglet'))
+      ? lireSession('cvdl-support-onglet')
+      : 'sav',
     file: 'a-traiter',
+    files: { cmd: 'cmd:recue', sav: 'a-traiter' }, // dernière file ouverte de chaque onglet
     recherche: '',
     ouvert: null,
     fils: {},
@@ -51,15 +53,12 @@
   };
 
   /* ── API ── */
+  // Mot de passe ou jeton : en-tête X-CVDL-Admin, jamais dans le corps ni l'URL.
+  const entetes = (identifiant) => (identifiant ? { 'X-CVDL-Admin': encodeURIComponent(identifiant) } : {});
   async function api(action, donnees, silencieux) {
     let r;
     try {
-      const rep = await fetch(API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(Object.assign({ action, password: S.jeton }, donnees || {})),
-      });
-      r = await rep.json();
+      r = await appelApi(Object.assign({ action }, donnees || {}), { methode: 'POST', entetes: entetes(S.jeton) });
     } catch (e) {
       r = { ok: false, erreur: 'Connexion au serveur impossible.' };
     }
@@ -121,13 +120,7 @@
   let googlePret = false;
   async function preparerGoogle() {
     if (googlePret) return;
-    const c = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'auth-config' }),
-    })
-      .then((r) => r.json())
-      .catch(() => ({}));
+    const c = await appelApi({ action: 'auth-config' }, { methode: 'POST' }).catch(() => ({}));
     if (c.domaine)
       document.querySelectorAll('[data-sp-domaine]').forEach((b) => {
         b.textContent = '@' + c.domaine;
@@ -148,13 +141,9 @@
         ux_mode: 'popup',
         callback: async (rep) => {
           $('sp-login-msg').textContent = '';
-          const r = await fetch(API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'auth-google', credential: rep.credential }),
-          })
-            .then((x) => x.json())
-            .catch(() => ({ ok: false, erreur: 'Connexion au serveur impossible.' }));
+          const r = await appelApi({ action: 'auth-google', credential: rep.credential }, { methode: 'POST' }).catch(
+            () => ({ ok: false, erreur: 'Connexion au serveur impossible.' }),
+          );
           if (r.ok) connecte(r.jeton, r.compte);
           else $('sp-login-msg').textContent = r.erreur || 'Connexion refusée.';
         },
@@ -176,13 +165,9 @@
   $('sp-form-mdp').addEventListener('submit', async (e) => {
     e.preventDefault();
     const mdp = $('sp-mdp').value;
-    const r = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'login', password: mdp }),
-    })
-      .then((x) => x.json())
-      .catch(() => ({ ok: false }));
+    const r = await appelApi({ action: 'login' }, { methode: 'POST', entetes: entetes(mdp) }).catch(() => ({
+      ok: false,
+    }));
     if (r.ok && r.jeton) {
       $('sp-mdp').value = '';
       connecte(r.jeton, { nom: 'Admin (secours)', email: '', role: 'admin' });
@@ -297,6 +282,17 @@
         `Bonjour,\n\nUn petit point sur votre demande : l’appareil est actuellement à l’étape « ${t.statut} ». Nous vous tiendrons au courant de la suite.\n\nBonne journée,`,
     },
   ];
+  /** Tickets qui contiennent le texte cherché (référence, n° de série, structure, symptôme, appareil). */
+  function ticketsTrouves(texte) {
+    const q = String(texte || '')
+      .trim()
+      .toLowerCase();
+    return S.tickets.filter((t) =>
+      `${t.reference} ${t.numeroSerie} ${t.structureNom} ${t.nom} ${t.symptome} ${t.marque} ${t.modele}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }
   function filtre() {
     const tout = [
       ...FILES,
@@ -304,16 +300,12 @@
       { k: 'clos', f: (t) => estClos(t) && joursDepuis(derniereActivite(t)) <= 30 },
     ];
     const f = tout.find((x) => x.k === S.file);
-    let l = f
-      ? S.tickets.filter(f.f)
-      : S.tickets.filter((t) => !estClos(t) && t.statut === S.file.replace(/^etape:/, ''));
-    const q = S.recherche.trim().toLowerCase();
-    if (q)
-      l = S.tickets.filter((t) =>
-        `${t.reference} ${t.numeroSerie} ${t.structureNom} ${t.nom} ${t.symptome} ${t.marque} ${t.modele}`
-          .toLowerCase()
-          .includes(q),
-      );
+    const q = S.recherche.trim();
+    const l = q
+      ? ticketsTrouves(q)
+      : f
+        ? S.tickets.filter(f.f)
+        : S.tickets.filter((t) => !estClos(t) && t.statut === S.file.replace(/^etape:/, ''));
     // Le plus ancien d'abord pour ce qui attend l'équipe ; le plus récent ailleurs.
     const ancien = ['a-traiter', 'retard', 'bon'].includes(S.file) && !q;
     return l.sort((a, b) =>
@@ -344,9 +336,56 @@
     const c = S.compte || {};
     $('sp-moi').innerHTML =
       `<span class="sp-av">${esc(initiales(c.nom))}</span><span class="sp-moi-t"><b>${esc(c.nom || '')}</b><small>${c.role === 'admin' ? 'Admin' : 'Logistique'} · Se déconnecter</small></span>`;
+    document.body.dataset.onglet = S.espace;
+    peindreEspaces();
     peindreNav();
     peindreListe();
     peindreDetail();
+  }
+
+  /* ── Onglets Commandes / SAV / Flotte ── */
+  const ESPACES = [
+    { k: 'cmd', l: 'Commandes', recherche: 'Rechercher une commande : CVDL-…, structure, n° de série' },
+    { k: 'sav', l: 'SAV', recherche: 'Rechercher un ticket : SAV-…, n° de série, structure' },
+    { k: 'flotte', l: 'Flotte' },
+  ];
+  /** Ce qui attend l'équipe dans chaque onglet (pastille). */
+  const enAttente = (k) =>
+    k === 'cmd'
+      ? CMD.compte('cmd:recue') + CMD.compte('cmd:validee') + CMD.compte('cmd:preparee') + CMD.compte('cmd:livraison')
+      : k === 'sav'
+        ? S.tickets.filter(FILES[0].f).length
+        : 0;
+  function peindreEspaces() {
+    $('sp-espaces').innerHTML = ESPACES.map((e) => {
+      const n = enAttente(e.k);
+      const on = S.espace === e.k;
+      return `<button type="button" role="tab" class="sp-esp" data-espace="${e.k}" aria-selected="${on}">${esc(e.l)}${n ? `<b>${n}</b>` : ''}</button>`;
+    }).join('');
+    const e = ESPACES.find((x) => x.k === S.espace);
+    const r = $('sp-recherche');
+    r.hidden = !e.recherche;
+    if (e.recherche) r.placeholder = e.recherche;
+  }
+  /** Ouvre un onglet sur sa dernière file (ou sur `file`). */
+  function ouvrirEspace(k, file) {
+    if (k !== S.espace) {
+      S.ouvert = null;
+      document.body.classList.remove('sp-ticket-ouvert');
+    }
+    S.espace = k;
+    ecrireSession('cvdl-support-onglet', k);
+    if (file) S.files[k] = file;
+    if (k !== 'flotte') S.file = S.files[k];
+  }
+  /** Recherche : résultats aussi présents dans l'autre onglet. */
+  function ailleurs() {
+    const q = S.recherche.trim();
+    if (!q) return '';
+    const autre = S.espace === 'cmd' ? 'sav' : 'cmd';
+    const n = autre === 'cmd' ? CMD.trouvees(q) : ticketsTrouves(q).length;
+    if (!n) return '';
+    return `<button type="button" class="sp-ailleurs" data-espace="${autre}" data-garder-recherche>+ ${n} résultat${n > 1 ? 's' : ''} dans ${autre === 'cmd' ? 'Commandes' : 'SAV'} →</button>`;
   }
   function lienNav(k, l, n, opts) {
     const o = opts || {};
@@ -358,9 +397,16 @@
   function peindreNav() {
     const etapes = S.statuts.filter((s) => !s.terminal);
     const clos = S.tickets.filter((t) => estClos(t) && joursDepuis(derniereActivite(t)) <= 30).length;
+    if (S.espace === 'flotte') {
+      $('sp-nav').innerHTML = '';
+      return;
+    }
+    if (S.espace === 'cmd') {
+      $('sp-nav').innerHTML = `<span class="sp-grp">Commandes</span>` + CMD.nav(lienNav);
+      return;
+    }
     $('sp-nav').innerHTML =
-      CMD.nav(lienNav) +
-      `<span class="sp-grp">SAV</span>` +
+      `<span class="sp-grp">Tickets</span>` +
       FILES.map((f) =>
         lienNav(f.k, f.l, S.tickets.filter(f.f).length, {
           icone: ICONES[f.k],
@@ -380,8 +426,7 @@
       `<span class="sp-grp">Colis</span>` +
       FILES_COLIS.map((f) => lienNav(f.k, f.l, S.tickets.filter(f.f).length, { petit: true })).join('') +
       `<span class="sp-grp">Archives</span>` +
-      lienNav('clos', 'Clos (30 j)', clos, { petit: true }) +
-      `<span class="sp-grp">Flotte des structures</span><button type="button" class="sp-nav-l petit" data-import-appareils><span class="sp-nav-txt">Appareils déjà sur place</span><b>＋</b></button>`;
+      lienNav('clos', 'Clos (30 j)', clos, { petit: true });
   }
   function tags(t) {
     const r = [];
@@ -405,15 +450,13 @@
         : 'Particulier'
       : t.structureNom || t.nom || '';
   }
-  /** Bascule Commandes / SAV en haut de la liste (petits écrans, sans la colonne de gauche). */
-  function bascule() {
-    const cmd = CMD.estFile(S.file);
-    const n = CMD.compte('cmd:recue') + CMD.compte('cmd:validee');
-    return `<div class="lc-bascule" role="tablist"><button type="button" role="tab" aria-selected="${cmd}" data-file="${cmd ? esc(S.file) : 'cmd:recue'}">Commandes${n ? ` <b>${n}</b>` : ''}</button><button type="button" role="tab" aria-selected="${!cmd}" data-file="${cmd ? 'a-traiter' : esc(S.file)}">SAV${S.tickets.filter(FILES[0].f).length ? ` <b>${S.tickets.filter(FILES[0].f).length}</b>` : ''}</button></div>`;
-  }
   function peindreListe() {
-    if (CMD.estFile(S.file)) {
-      $('sp-liste').innerHTML = bascule() + CMD.liste(!!S.recherche);
+    if (S.espace === 'flotte') {
+      $('sp-liste').innerHTML = '';
+      return;
+    }
+    if (S.espace === 'cmd') {
+      $('sp-liste').innerHTML = CMD.liste(!!S.recherche) + ailleurs();
       return;
     }
     const l = filtre();
@@ -426,7 +469,6 @@
         ).l;
     const ancien = ['a-traiter', 'retard', 'bon'].includes(S.file) && !S.recherche;
     $('sp-liste').innerHTML =
-      bascule() +
       `<div class="sp-lt"><h2>${esc(nom)} <span>${l.length}</span></h2><small>${ancien ? 'Plus anciens d’abord' : 'Plus récents d’abord'}</small></div>` +
       (l.length
         ? l
@@ -446,7 +488,8 @@
         <span class="sp-tk-b"><span class="sp-tk-app">${esc(appareil)}</span>${tags(t)}${avatar(t)}</span></button>`;
             })
             .join('')
-        : `<p class="sp-vide">${S.charge ? 'Rien ici pour le moment.' : S.erreur ? esc(S.erreur) : 'Chargement…'}</p>`);
+        : `<p class="sp-vide">${S.charge ? (S.recherche.trim() ? 'Aucun ticket ne correspond.' : 'Rien ici pour le moment.') : S.erreur ? esc(S.erreur) : 'Chargement…'}</p>`) +
+      ailleurs();
   }
 
   function ticketOuvert() {
@@ -528,7 +571,19 @@
 
   function peindreDetail() {
     const d = $('sp-detail');
-    if (CMD.estFile(S.file)) {
+    if (S.espace === 'flotte') {
+      document.body.classList.remove('sp-ticket-ouvert');
+      d.innerHTML = `<div class="sp-accueil sp-flotte">
+        <span data-ill="flotte" class="ill"></span>
+        <b>Appareils déjà sur place</b>
+        <p>Une structure avait du matériel avant la plateforme ? Ajoutez-le à sa flotte : importez la liste des numéros de série (CSV) ou saisissez-les un par un.</p>
+        <p class="sp-gris">Un numéro déjà connu (dans une flotte ou sur une commande) n’est jamais modifié ni ajouté en double.</p>
+        <button type="button" class="btn btn-primary" data-import-appareils>＋ Ajouter des appareils</button>
+      </div>`;
+      illustrer(d);
+      return;
+    }
+    if (S.espace === 'cmd') {
       CMD.detail(d);
       return;
     }
@@ -711,9 +766,19 @@
     if (CMD.clic(e)) return;
     if (e.target.closest('[data-import-appareils]'))
       return window.ImportAppareils.ouvrir({ poster: (action, donnees) => api(action, donnees, true) });
+    const es = e.target.closest('[data-espace]');
+    if (es) {
+      if (!es.hasAttribute('data-garder-recherche')) {
+        S.recherche = '';
+        $('sp-recherche').value = '';
+      }
+      ouvrirEspace(es.dataset.espace);
+      peindre();
+      return;
+    }
     const f = e.target.closest('[data-file]');
     if (f) {
-      S.file = f.dataset.file;
+      ouvrirEspace(CMD.estFile(f.dataset.file) ? 'cmd' : 'sav', f.dataset.file);
       S.recherche = '';
       $('sp-recherche').value = '';
       peindre();
@@ -810,13 +875,12 @@
       }
     }
   });
-  document.addEventListener('keydown', (e) => CMD.touche(e));
   document.addEventListener('input', (e) => {
-    if (CMD.saisie(e)) return;
     if (e.target.id === 'sp-recherche') {
       S.recherche = e.target.value;
       peindreNav();
       peindreListe();
+      peindreDetail();
       return;
     }
     const c = e.target.closest('[data-sp-compo]');
@@ -826,7 +890,6 @@
     }
   });
   document.addEventListener('change', async (e) => {
-    if (CMD.changement(e)) return;
     const t = ticketOuvert();
     if (!t) return;
     if (e.target.matches('[data-sp-statut]')) {
@@ -917,18 +980,23 @@
   /* ── Démarrage ── */
   let minuteur;
   async function demarrer() {
+    // Compte à jour (rôle, territoire, profil à compléter) avant tout chargement.
+    const moi = await api('auth-moi', {}, true);
+    if (moi.ok && moi.compte) S.compte = Object.assign({}, S.compte, moi.compte);
+    // Première connexion d'un compte : profil et rappel du rôle (embarquement-equipe.js).
+    if (S.compte && S.compte.aEmbarquer)
+      S.compte = await window.EmbarquementEquipe.ouvrir(S.compte, (action, d) => api(action, d));
+    ecrireSession('cvdl-support-compte', JSON.stringify(S.compte));
     vue('boite');
     peindre();
     await charger();
-    // Lien d'une notification (#commande=…), sinon les commandes à traiter d'abord.
-    if (!CMD.ouvrirDepuisAdresse() && S.file === 'a-traiter' && CMD.fileDeDepart()) S.file = CMD.fileDeDepart();
+    // Lien d'une notification (#commande=…), sinon l'onglet retenu pour la session, sinon celui
+    // qui a du travail (les commandes d'abord).
+    if (CMD.ouvrirDepuisAdresse()) ouvrirEspace('cmd', S.file);
+    else if (lireSession('cvdl-support-onglet')) ouvrirEspace(S.espace);
+    else if (CMD.fileDeDepart()) ouvrirEspace('cmd', CMD.fileDeDepart());
+    else ouvrirEspace('sav');
     peindre();
-    const r = await api('auth-moi', {}, true);
-    if (r.ok && r.compte) {
-      S.compte = Object.assign({}, S.compte, r.compte);
-      ecrireSession('cvdl-support-compte', JSON.stringify(S.compte));
-      peindre();
-    }
     clearInterval(minuteur);
     minuteur = setInterval(() => {
       if (!document.hidden && !enSaisie() && document.body.dataset.vue === 'boite') {
@@ -940,7 +1008,10 @@
   }
   // Lien d'une notification ouvert alors que l'espace est déjà affiché dans cet onglet.
   window.addEventListener('hashchange', () => {
-    if (document.body.dataset.vue === 'boite' && CMD.ouvrirDepuisAdresse()) peindre();
+    if (document.body.dataset.vue === 'boite' && CMD.ouvrirDepuisAdresse()) {
+      ouvrirEspace('cmd', S.file);
+      peindre();
+    }
   });
   if (S.jeton) demarrer();
   else deconnecter();
