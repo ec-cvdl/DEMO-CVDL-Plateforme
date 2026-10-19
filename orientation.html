@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<script src="api.js?v=5"></script>
+<script src="commun.js?v=5"></script>
+<meta charset="utf-8">
+<script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Bons d’orientation — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="orientation.css?v=4">
+<script src="portail-ui.js?v=45" defer></script>
+<script src="cvdl-ui.js?v=18" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
+</head>
+<body data-famille="commandes">
+
+<main id="contenu-principal">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+
+  <div id="etape-code" style="max-width:480px;margin:0 auto">
+    <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
+      <span data-ill="cle" class="pk-titre-ill"></span>
+      <h1 style="margin:0">Bons <em>d’orientation</em></h1>
+      <p style="opacity:0.7;margin:0">Vous orientez des personnes vers une vente solidaire d’ordinateurs ? Saisissez le code d’accès reçu par mail.</p>
+      <div class="field">
+        <label for="acces-code">Code d’accès</label>
+        <input type="text" class="input" id="acces-code" autocomplete="off" spellcheck="false" placeholder="ABCD-EFGH" maxlength="200" style="text-transform:uppercase;letter-spacing:.08em">
+      </div>
+      <div id="retour-acces" aria-live="polite"></div>
+      <button type="button" class="btn btn-primary btn-block" id="btn-acces">Continuer</button>
+    </div>
+  </div>
+
+  <div id="etape-bons" class="ob-page" hidden>
+    <div class="cm-grille">
+      <div class="cm-principal">
+        <div class="cvdl-titre">
+          <span data-ill="personne" class="pk-titre-ill xl"></span>
+          <div class="cvdl-titre-txt">
+            <div class="cvdl-surtitre" id="ob-surtitre">Bons d’orientation</div>
+            <h1>Vos <em>bons d’orientation</em></h1>
+            <p>Une ligne par personne, avec l’ordinateur qui lui correspond. Le jour de la vente, l’équipe aura préparé son appareil et son attestation de paiement.</p>
+          </div>
+        </div>
+        <div id="ob-consigne"></div>
+
+        <section class="card elev-lg ob-catalogue" aria-labelledby="ob-catalogue-titre">
+          <div class="ob-section-tete">
+            <div class="card-kicker" id="ob-catalogue-titre">Les ordinateurs proposés</div>
+            <button type="button" class="ob-lien" id="ob-replier" aria-expanded="true" aria-controls="ob-catalogue">Masquer</button>
+          </div>
+          <button type="button" class="ob-aide" id="ob-aide">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5" r="2.3"/><path d="M6 7.3V13"/><path d="M6 13a4 4 0 0 0 4 4h1"/><circle cx="17" cy="19" r="2.3"/><path d="M6 13a4 4 0 0 1 4-4h1"/><circle cx="17" cy="7" r="2.3"/></svg>
+            <span><b>Besoin d’aide pour choisir ?</b><small>Quelques questions à poser avec la personne pour trouver l’appareil qui lui convient.</small></span>
+            <em>Ouvrir l’aide au choix →</em>
+          </button>
+          <div class="grille-produits-commande" id="ob-catalogue"></div>
+        </section>
+
+        <section class="card elev-lg ob-bons" aria-labelledby="ob-bons-titre">
+          <div class="ob-section-tete">
+            <div class="card-kicker" id="ob-bons-titre">Personnes orientées</div>
+            <span class="ob-compteur" id="ob-compteur"></span>
+          </div>
+          <div class="ob-lignes" id="ob-lignes"></div>
+          <button type="button" class="ob-ajout" id="ob-ajouter"><span class="pc-av" aria-hidden="true">+</span>Ajouter une personne</button>
+          <div class="ob-envoi" id="ob-envoi">
+            <div class="field"><label for="ob-referent">Orienté par (vous)</label><input class="input" id="ob-referent" autocomplete="name" maxlength="120" placeholder="Votre nom, pour vous joindre"></div>
+            <fieldset class="bo-attestations" id="ob-attestations">
+              <legend>Attestations</legend>
+              <label class="bo-attestation"><input type="checkbox" class="ob-case"><span>J'atteste avoir réalisé un diagnostic social de la situation de la personne orientée.</span></label>
+              <label class="bo-attestation"><input type="checkbox" class="ob-case"><span>J'atteste m'être assuré que la situation de la personne orientée relevait bien des conditions de ventes solidaires proposées par Emmaüs Connect.</span></label>
+              <label class="bo-attestation"><input type="checkbox" class="ob-case"><span>J'atteste que la personne orientée n'a pas fait l'acquisition d'équipement(s) solidaire(s) vendu(s) par Emmaüs Connect selon les conditions d'accès fixées par la convention (2 ans pour un ordinateur fixe ou portable, 1 an pour une tablette ou un Smartphone).</span></label>
+            </fieldset>
+          </div>
+          <div id="ob-retour" aria-live="polite"></div>
+        </section>
+
+        <div class="cm-pied" id="ob-pied">
+          <button type="button" class="btn btn-primary" style="margin-left:auto" id="ob-enregistrer">Enregistrer</button>
+        </div>
+      </div>
+
+      <aside class="cm-recap ob-recap" aria-live="polite">
+        <div class="cvdl-surtitre">Vente solidaire</div>
+        <div class="cm-recap-structure" id="ob-structure"></div>
+        <div class="ob-vente" id="ob-vente"></div>
+        <div class="cm-recap-lignes" id="ob-repartition"></div>
+        <div id="ob-places"></div>
+        <div class="cm-recap-total" id="ob-delai"></div>
+        <div class="ob-recap-actions">
+          <button type="button" class="btn btn-secondary btn-block" id="btn-imprimer">Imprimer la liste</button>
+          <button type="button" class="ob-lien" id="btn-quitter">Quitter</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<div class="voile-modale-qr" id="voile-integre">
+  <div class="modale-qr modale-integre" role="dialog" aria-modal="true" aria-labelledby="titre-integre">
+    <div class="modale-integre-tete"><h2 id="titre-integre">Aide au choix du matériel</h2><button type="button" class="modale-fermer-rond-qr" id="integre-fermer" aria-label="Fermer">✕</button></div>
+    <iframe id="iframe-integre" title="Aide au choix du matériel" loading="lazy"></iframe>
+  </div>
+</div>
+
+<script src="pages/orientation.js?v=4"></script>
+</body>
+</html>

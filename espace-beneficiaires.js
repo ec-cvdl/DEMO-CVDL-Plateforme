@@ -7,10 +7,7 @@
   };
   racine.style.visibility = 'hidden';
   setTimeout(montrer, 3000);
-  fetch(API + '?action=perimetre')
-    .then(function (r) {
-      return r.json();
-    })
+  appelApi({ action: 'perimetre' })
     .then(function (p) {
       if (p && p.ok && !p.beneficiaires) location.replace('portail-structure.html');
       else montrer();

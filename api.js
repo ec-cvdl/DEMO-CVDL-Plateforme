@@ -1,15 +1,53 @@
-/* Adresse de l'API. Démo : site publié dans un dossier « …demo… » (ex. /cvdl-demo/), ou repère
-   posé par demo.html → cvdl-api-demo. */
+/* Adresse de l'API. Les pages servies sous /demo/ (même site, voir nginx.conf) parlent toujours
+   à la fonction de démonstration, toutes les autres à la production : aucun repère dans le
+   navigateur, la barre d'adresse dit où l'on est. */
 const API = (function () {
   var prod = 'https://europe-west1-cvdl-plateforme.cloudfunctions.net/cvdl-api';
   try {
     var dossier = location.pathname.split('/')[1] || '';
     if (/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return prod + '-demo';
-    var d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null');
-    if (d && d.jusqua > Date.now()) return prod + '-demo';
   } catch (e) {}
   return prod;
 })();
+
+/* Une route de l'API par chemin : `urlApi('suivi', { code })` → `${API}/suivi?code=…`. `base` :
+   une autre adresse d'API que celle de la page (accueil, démo). */
+function urlApi(route, params, base) {
+  var q = params ? new URLSearchParams(params).toString() : '';
+  return (base || API) + '/' + encodeURIComponent(route) + (q ? '?' + q : '');
+}
+/* Appel d'une route : `{ action, …données }` → GET `${API}/${action}?données`, ou POST JSON avec
+   `{ methode: 'POST' }`. opts : { methode, entetes, base, keepalive }. Renvoie la réponse JSON
+   ({ ok, erreur… }), y compris pour une erreur (statut 4xx). */
+function appelApi(donnees, opts) {
+  var o = opts || {};
+  var reste = Object.assign({}, donnees);
+  var route = reste.action;
+  delete reste.action;
+  var requete =
+    o.methode === 'POST'
+      ? fetch(urlApi(route, null, o.base), {
+          method: 'POST',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, o.entetes),
+          body: JSON.stringify(reste),
+          keepalive: !!o.keepalive,
+        })
+      : fetch(urlApi(route, reste, o.base), { headers: o.entetes || {} });
+  return requete.then(function (r) {
+    return r.json();
+  });
+}
+/* Envoi à la fermeture de la page (navigator.sendBeacon) : en text/plain, seul type envoyé sans
+   requête CORS préalable ; le serveur lit le corps en JSON quel que soit son type. */
+function baliseApi(donnees, base) {
+  var reste = Object.assign({}, donnees);
+  var route = reste.action;
+  delete reste.action;
+  return navigator.sendBeacon(
+    urlApi(route, null, base),
+    new Blob([JSON.stringify(reste)], { type: 'text/plain;charset=utf-8' }),
+  );
+}
 
 /* Démo : la plateforme de démonstration s'endort quand personne ne l'utilise. Une requête vers
    elle qui tarde affiche « La démo démarre… » au lieu d'une page qui semble figée (posé ici,
@@ -56,10 +94,7 @@ var adresseSiteConnue = '';
 function urlPublique(page) {
   adresseSitePromesse =
     adresseSitePromesse ||
-    fetch(API + '?action=site-public')
-      .then(function (r) {
-        return r.json();
-      })
+    appelApi({ action: 'site-public' })
       .then(function (r) {
         adresseSiteConnue = (r && r.ok && r.url) || '';
         return adresseSiteConnue;

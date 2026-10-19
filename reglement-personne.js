@@ -5,11 +5,7 @@
    puis, au clic sur « Enregistrer » de la fiche : await ReglementPersonne.enregistrer() →
    { ok } ou { erreur } (rien à faire si rien n'a changé). */
 window.ReglementPersonne = (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const MODES = [
     ['', 'Payé à la vente'],
     ['plus-tard', 'Plus tard'],

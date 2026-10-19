@@ -3,13 +3,24 @@
 <head>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net https://accounts.google.com/gsi/; frame-src 'self' https://ec-cvdl.github.io https://accounts.google.com/gsi/; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CVDL — Espace structure</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
-<link rel="stylesheet" href="pense-bete.css?v=1">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="pense-bete.css?v=4">
 <link rel="stylesheet" href="notifications-portail.css?v=1">
+<link rel="stylesheet" href="transfert-stock.css?v=1">
+<link rel="stylesheet" href="personnes-structure.css?v=1">
+<link rel="stylesheet" href="depannage.css?v=2">
 <style>
+/* Connexion Google : seulement pour une adresse de l'équipe Emmaüs Connect */
+#pg-google-bouton{ display:flex; justify-content:center; min-height:44px; margin:var(--space-2) 0; }
+.pg-rester{ display:grid; gap:4px; margin:var(--space-3) 0; }
+.pg-rester label{ display:flex; align-items:center; gap:8px; font-weight:600; font-size:14.5px; cursor:pointer; }
+.pg-rester input{ width:18px; height:18px; accent-color:var(--navy); flex:none; }
+.pg-rester p{ margin:0 0 0 26px; font-size:13px; opacity:.7; }
+.pg-equipe-lien{ background:none; border:0; padding:2px 0; font:inherit; font-weight:600; color:var(--navy); text-decoration:underline; cursor:pointer; }
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
 main{ max-width:1240px; margin:0 auto; padding:var(--space-8) var(--space-6) 64px; }
@@ -23,6 +34,52 @@ main{ padding:var(--space-6) var(--space-4); }
 .bandeau-accueil{ padding:var(--space-6) var(--space-5); }
 }
 html.deja-identifie #etape-code{ display:none!important; }
+/* Tableau de bord : cartes qui arrivent en cascade, date du jour, personne connectée */
+.ps-date{ display:inline-block; margin-right:8px; padding:2px 10px; border-radius:999px; background:color-mix(in srgb, var(--tur) 16%, #fff); font-weight:700; font-size:13px; }
+.ps-qui{ display:inline-flex; align-items:center; gap:6px; margin-left:10px; font-size:13.5px; opacity:.75; }
+.ps-qui::before{ content:''; width:8px; height:8px; border-radius:50%; background:#1f9d55; }
+@media (prefers-reduced-motion: no-preference){
+  #etape-portail .ps-titre{ animation:cx-monte .5s cubic-bezier(.2,.7,.2,1) both; }
+  #etape-portail .ps-choix-carte, #etape-portail .pv-carte{ animation:cx-monte .5s cubic-bezier(.2,.7,.2,1) both; }
+  #etape-portail .ps-choix-carte:nth-child(2){ animation-delay:.06s; } #etape-portail .ps-choix-carte:nth-child(3){ animation-delay:.12s; } #etape-portail .ps-choix-carte:nth-child(4){ animation-delay:.18s; } #etape-portail .ps-choix-carte:nth-child(n+5){ animation-delay:.24s; }
+  #etape-portail .pv-carte:nth-child(2){ animation-delay:.05s; } #etape-portail .pv-carte:nth-child(3){ animation-delay:.1s; } #etape-portail .pv-carte:nth-child(n+4){ animation-delay:.15s; }
+}
+/* Première arrivée de la session (pages/portail-structure.js, preparerEntreePortail) */
+@media (prefers-reduced-motion: no-preference){
+  #etape-portail.ps-attente .ps-choix-carte{ opacity:0; }
+  #etape-portail.ps-entree .ps-choix-carte{ animation:ps-domino .6s cubic-bezier(.3,1.35,.5,1) backwards; transform-origin:0 100%; }
+  #etape-portail.ps-entree .ps-choix-carte:nth-child(1){ animation:ps-pop .55s cubic-bezier(.3,1.6,.5,1) backwards; transform-origin:50% 50%; }
+  #etape-portail.ps-entree .ps-choix-carte:nth-child(2){ animation-delay:.35s; } #etape-portail.ps-entree .ps-choix-carte:nth-child(3){ animation-delay:.45s; } #etape-portail.ps-entree .ps-choix-carte:nth-child(4){ animation-delay:.55s; } #etape-portail.ps-entree .ps-choix-carte:nth-child(n+5){ animation-delay:.65s; }
+  #etape-portail.ps-entree .pv-carte{ animation-delay:.8s; }
+}
+@keyframes ps-pop{ 0%{ opacity:0; transform:scale(.5); } 60%{ opacity:1; transform:scale(1.08); } }
+@keyframes ps-domino{ 0%{ opacity:0; transform:translateX(-28px) rotate(-14deg); } 55%{ opacity:1; transform:rotate(3deg); } 80%{ transform:rotate(-1deg); } }
+.cx-page{ max-width:1000px; margin:0 auto; }
+.cx-grille{ display:grid; grid-template-columns:minmax(0,460px) minmax(0,1fr); gap:28px; align-items:stretch; }
+.cx-code-structure[open]{ display:grid; gap:var(--space-2); }
+.cx-code-structure .field{ margin:0; }
+.cx-carte{ animation:cx-monte .5s cubic-bezier(.2,.7,.2,1) both; }
+.cx-cote{ position:relative; overflow:hidden; display:flex; flex-direction:column; gap:14px; padding:34px 32px; border-radius:22px; background:var(--navy); color:#fff; box-shadow:6px 6px 0 color-mix(in srgb, var(--mag) 70%, transparent); animation:cx-monte .5s cubic-bezier(.2,.7,.2,1) .12s both; }
+.cx-cote-sur{ font:700 11.5px var(--police-titre); letter-spacing:.14em; text-transform:uppercase; color:var(--jaune); }
+.cx-cote-titre{ margin:0; font:700 24px/1.2 var(--police-titre); max-width:20ch; }
+.cx-atouts{ list-style:none; margin:6px 0 0; padding:0; display:grid; gap:12px; position:relative; }
+.cx-atouts li{ display:flex; gap:12px; align-items:center; padding:10px 12px; border:1.5px solid color-mix(in srgb, #fff 18%, transparent); border-radius:14px; background:color-mix(in srgb, #fff 6%, transparent); font-size:14px; color:color-mix(in srgb, #fff 82%, transparent); }
+.cx-atouts b{ display:block; color:#fff; font-family:var(--police-titre); }
+.cx-atouts .ill{ flex:none; width:38px; height:38px; padding:5px; border-radius:12px; background:#fff; }
+.cx-cote-pied{ margin:auto 0 0; font-size:13.5px; color:color-mix(in srgb, #fff 70%, transparent); }
+.cx-forme{ position:absolute; border:2px solid; border-radius:50%; opacity:.28; pointer-events:none; }
+.cx-forme.f1{ width:220px; height:220px; right:-80px; top:-90px; border-color:var(--tur); }
+.cx-forme.f2{ width:90px; height:90px; right:30px; bottom:-40px; border-color:var(--mag); }
+.cx-forme.f3{ width:30px; height:30px; right:120px; top:40px; border-color:var(--jaune); border-radius:4px; transform:rotate(18deg); }
+@keyframes cx-monte{ from{ opacity:0; transform:translateY(16px); } }
+@media (prefers-reduced-motion: reduce){ .cx-carte, .cx-cote{ animation:none; } }
+@media (max-width:860px){ .cx-grille{ grid-template-columns:1fr; } .cx-cote{ display:none; } .cx-page{ max-width:460px; } }
+.cx-code{ font-size:24px; letter-spacing:.3em; text-align:center; font-weight:700; }
+.cx-liens{ margin:var(--space-3) 0 0; text-align:center; font-size:14px; opacity:.8; }
+.cx-structures{ display:grid; gap:8px; }
+.cx-code-structure{ border-top:1px dashed color-mix(in srgb, var(--navy, #002743) 20%, transparent); padding-top:var(--space-3); }
+.cx-code-structure summary{ cursor:pointer; font-weight:700; font-size:14px; opacity:.75; }
+.cx-code-structure[open] summary{ margin-bottom:var(--space-3); }
 html.deja-identifie #voile-verification-precoce{ display:flex; }
 #voile-verification-precoce{ display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
 .spinner-precoce{ width:34px; height:34px; animation:tourner-spinner-precoce .8s linear infinite; }
@@ -152,7 +209,24 @@ html body[data-famille] .ps-chiffres-large .ps-stat-valeur{ grid-column:2; font-
 html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 /* Sans activité récente : « Aller plus loin » occupe toute la largeur (pas de colonne vide) */
 .ps-bas:has(#pv-liste-commandes[hidden]){ grid-template-columns:1fr; }
-.ps-bas:has(#pv-liste-commandes[hidden]) > .ps-colonne:first-child:not(:has(#panneau-aide-decision:not([hidden]))){ display:none; }
+.ps-bas:has(#pv-liste-commandes[hidden]) > .ps-colonne:first-child{ display:none; }
+/* Personnes, accès de l'équipe, aide à la décision : fenêtres par-dessus la page */
+.pv-panneau:not([open]){ display:none !important; }
+.pv-panneau{ width:min(760px, calc(100vw - 32px)); max-height:calc(100dvh - 48px); overflow-y:auto; padding:var(--space-5) var(--space-6); border:0; }
+/* Dépannage : plus large ; plein écran sur téléphone */
+.pv-panneau .modale-fermer-rond-qr{ flex:none; }
+.pv-panneau-large{ width:min(860px, calc(100vw - 32px)); }
+.dpp-grille{ display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:10px; }
+.dpp-symptome{ display:flex; align-items:center; gap:12px; min-height:64px; padding:10px 14px; border:1.5px solid color-mix(in srgb, var(--navy) 22%, transparent); border-radius:16px; background:#fff; color:var(--navy); font:inherit; font-weight:600; text-align:left; cursor:pointer; }
+.dpp-symptome:hover, .dpp-symptome:focus-visible{ border-color:var(--navy); box-shadow:3px 3px 0 var(--tur); }
+.dpp-symptome .ill, .dpp-symptome svg{ width:40px; height:40px; flex:none; }
+.dpp-autre{ margin:var(--space-4) 0 0; font-size:14px; opacity:.85; }
+.dpp-merci{ display:grid; gap:12px; justify-items:start; }
+@media (max-width:640px){
+  .pv-panneau{ width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; margin:0; border-radius:0 !important; padding:16px !important; }
+  .dpp-grille{ grid-template-columns:1fr; }
+}
+.pv-panneau::backdrop{ background:rgba(0,39,67,.45); backdrop-filter:blur(3px); }
 .ps-bas:has(#pv-liste-commandes[hidden]) .ps-plus-liste{ display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); }
 /* « Besoin d'aide ? » sur toute la largeur, sous les deux colonnes */
 .bloc-aide-large{ margin-top:22px; }
@@ -161,14 +235,16 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 .ps-choix-carte[style*="--tur"] .ill .ill-fond{ fill:color-mix(in srgb, var(--tur) 45%, #fff); }
 .ps-choix-carte[style*="--mag"] .ill .ill-fond{ fill:color-mix(in srgb, var(--mag) 35%, #fff); }
 </style>
-<script src="portail-ui.js?v=36" defer></script>
-<script src="cvdl-ui.js?v=13" defer></script>
-<link rel="stylesheet" href="retours.css?v=2">
-<script src="retours.js?v=2" defer></script>
+<script src="portail-ui.js?v=45" defer></script>
+<script src="cvdl-ui.js?v=18" defer></script>
+<link rel="stylesheet" href="retours.css?v=3">
+<script src="retours.js?v=5" defer></script>
 <link rel="stylesheet" href="visite-guidee.css?v=1">
-<script src="visite-guidee.js?v=2" defer></script>
+<script src="visite-guidee.js?v=3" defer></script>
 <link rel="stylesheet" href="embarquement.css?v=2">
-<script src="embarquement.js?v=5" defer></script>
+<script src="embarquement.js?v=10" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="accueil">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -180,21 +256,67 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
 
 <main id="contenu-principal">
   <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
-  <div id="etape-code" style="max-width:460px;margin:0 auto">
+  <div id="etape-code" class="cx-page">
     <button type="button" class="btn-retour" id="retour-portail" hidden style="margin-bottom:var(--space-4)" data-aller="portail.html">
     <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
       Retour
     </button>
-    <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
+    <div class="cx-grille">
+    <div class="card elev-lg cx-carte" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
       <span data-ill="cle" class="pk-titre-ill"></span>
-      <h1 style="margin:0">Quel est votre <em>code structure</em> ?</h1>
-      <p style="opacity:0.6;margin:0">Ce code vous a été communiqué par mail — le même que pour commander du matériel ou signaler une panne.</p>
+      <h1 style="margin:0">Connexion à votre <em>espace structure</em></h1>
+      <div id="cx-etape-email">
+        <p style="opacity:0.6;margin:0 0 var(--space-3)">Saisissez votre adresse e-mail : vous recevez un code à 6 chiffres, puis vous restez connecté 90 jours sur cet appareil.</p>
+        <div class="field">
+          <label for="cx-email">Adresse e-mail</label>
+          <input class="input" type="email" id="cx-email" autocomplete="email" spellcheck="false" placeholder="prenom.nom@structure.fr">
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="cx-envoyer">Recevoir un code</button>
+      </div>
+      <div id="cx-etape-code" hidden>
+        <p style="opacity:0.7;margin:0 0 var(--space-3)">Code envoyé à <b id="cx-adresse"></b>. Il est valable 10 minutes (pensez aux indésirables).</p>
+        <div class="field">
+          <label for="cx-code">Code reçu</label>
+          <input class="input cx-code" type="text" id="cx-code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123456">
+        </div>
+        <button type="button" class="btn btn-primary btn-block" id="cx-valider">Se connecter</button>
+        <p class="cx-liens"><button type="button" class="pg-equipe-lien" id="cx-renvoyer">Renvoyer un code</button> · <button type="button" class="pg-equipe-lien" data-cx-changer>Changer d’adresse</button></p>
+      </div>
+      <div id="cx-etape-google" hidden>
+        <p style="opacity:0.7;margin:0 0 var(--space-3)">Adresse Emmaüs Connect : connectez-vous avec votre compte Google <b id="cx-adresse-google"></b>.</p>
+        <div id="pg-google-bouton"></div>
+        <p class="cx-liens"><button type="button" class="pg-equipe-lien" data-cx-changer>Changer d’adresse</button></p>
+      </div>
+      <div id="cx-etape-choix" hidden>
+        <p style="opacity:0.7;margin:0 0 var(--space-3)">Votre adresse a accès à plusieurs structures : laquelle ouvrir ?</p>
+        <div id="cx-structures" class="cx-structures"></div>
+      </div>
+      <details class="cx-code-structure" id="cx-code-structure">
+        <summary>J’ai un code structure</summary>
       <div class="field">
         <label for="code-portail">Code structure</label>
         <input class="input" type="text" id="code-portail" autocomplete="off" spellcheck="false" placeholder="Saisissez votre code">
       </div>
-      <button type="button" class="btn btn-primary btn-block" id="btn-verifier-code-portail">Continuer</button>
+      <div class="pg-rester">
+        <label><input type="checkbox" id="rester-connecte"> Rester connecté 30 jours sur cet appareil</label>
+        <p>Sans cette case, le code est redemandé à chaque nouvel onglet et à la fermeture du navigateur. Ne la cochez pas sur un ordinateur partagé.</p>
+      </div>
+      <button type="button" class="btn btn-secondary btn-block" id="btn-verifier-code-portail">Continuer</button>
+      </details>
       <div id="retour-code-portail"></div>
+    </div>
+    <aside class="cx-cote" aria-label="Dans votre espace">
+      <span class="cx-forme f1" aria-hidden="true"></span><span class="cx-forme f2" aria-hidden="true"></span><span class="cx-forme f3" aria-hidden="true"></span>
+      <div class="cx-cote-sur">Dans votre espace</div>
+      <p class="cx-cote-titre">Tout le parcours d’un appareil, au même endroit.</p>
+      <ul class="cx-atouts">
+        <li><span data-ill="commander" class="ill s" aria-hidden="true"></span><span><b>Commander</b>le matériel disponible, en quelques étapes</span></li>
+        <li><span data-ill="commandes" class="ill s" aria-hidden="true"></span><span><b>Suivre</b>chaque commande et ses documents</span></li>
+        <li><span data-ill="tableur" class="ill s" aria-hidden="true"></span><span><b>Gérer la flotte</b>qui a reçu quel appareil, attestations</span></li>
+        <li><span data-ill="panne" class="ill s" aria-hidden="true"></span><span><b>Dépanner</b>un diagnostic guidé, puis le SAV</span></li>
+      </ul>
+      <p class="cx-cote-pied">Une personne, une adresse : chacun se connecte avec son e-mail, sans mot de passe à retenir.</p>
+    </aside>
     </div>
   </div>
 
@@ -204,7 +326,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
       <div>
         <div class="cvdl-surtitre">Espace structure</div>
         <h1 id="titre-structure-identifiee">Espace structure</h1>
-        <p>Que souhaitez-vous faire aujourd’hui ?</p>
+        <p><span id="ps-date" class="ps-date"></span>Que souhaitez-vous faire aujourd’hui ?<span id="ps-qui" class="ps-qui" hidden></span></p>
       </div>
     </div>
     <div class="pb-rangee">
@@ -212,7 +334,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
       <span data-ill="cloche" class="ill message-contexte-ill"></span>
       <span class="message-contexte-txt"><span class="message-contexte-k">À traiter</span><span id="texte-message-contexte"></span></span><svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </a>
-    <div class="pb-carte" id="pb-carte" data-role="responsable" hidden>
+    <div class="pb-carte" id="pb-carte" hidden>
       <span class="pb-carte-txt"><span class="pb-carte-k">Pense-bête</span><b id="pb-carte-texte"></b></span>
       <button type="button" class="pb-plus" id="pb-ouvrir" aria-haspopup="dialog" aria-controls="modale-pense-bete" aria-label="Noter des besoins dans le pense-bête"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
@@ -252,7 +374,7 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <span class="ps-impact-txt"><b>Ma flotte</b><span>Le matériel déjà livré à votre structure : qui l’a, son état, son passeport.</span></span>
         <span class="ps-impact-go">Ouvrir →</span>
       </a>
-      <a class="ps-impact ps-impact-court" href="calendrier.html" data-role="responsable">
+      <a class="ps-impact ps-impact-court" href="calendrier.html">
         <span data-ill="calendrier" class="ill"></span>
         <span class="ps-impact-txt"><b>Calendrier</b><span>Livraisons et paiements</span></span>
         <span class="ps-impact-go">Ouvrir →</span>
@@ -275,27 +397,6 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
           <div class="ps-lignes" id="pv-lignes-commandes"></div>
           <a class="pk-lien ps-toutes" href="suivi.html" id="pv-toutes-commandes">Voir toutes mes commandes <svg class="ps-fleche" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         </section>
-    <div class="card elev-sm" id="panneau-aide-decision" hidden style="padding:var(--space-5) var(--space-6);margin-top:var(--space-5)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
-        <h2 style="margin:0">Aide à la décision — redirection du matériel</h2>
-        <button type="button" class="btn btn-ghost" data-fermer="panneau-aide-decision">Fermer</button>
-      </div>
-      <iframe src="https://ec-cvdl.github.io/decision-tree/" title="Arbre de décision — redirection du matériel" style="width:100%;height:600px" loading="lazy"></iframe>
-    </div>
-    <div class="card elev-sm" id="panneau-equipe" hidden style="padding:var(--space-5) var(--space-6);margin-top:var(--space-5)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
-        <h2 style="margin:0">Accès de l’équipe</h2>
-        <button type="button" class="btn btn-ghost" data-fermer="panneau-equipe">Fermer</button>
-      </div>
-      <p style="opacity:.7;margin:0 0 var(--space-3);font-size:14px">Ces personnes ouvrent l’espace <strong>sans code</strong>, avec leur compte Google <span id="eq-domaine"></span>. <b>Responsable de territoire</b> : tout. <b>Conseiller numérique</b> : flotte et ventes, attestations, projets et rapport d’impact (consultation).</p>
-      <div id="eq-liste" style="display:flex;flex-direction:column;gap:8px"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--space-4)">
-        <input class="input" type="email" id="eq-email" placeholder="prenom.nom@emmaus-connect.org" style="flex:1;min-width:220px">
-        <select class="input" id="eq-role" style="width:auto"><option value="conseiller">Conseiller numérique</option><option value="responsable">Responsable de territoire</option></select>
-        <button type="button" class="btn btn-primary" id="eq-ajouter">Ajouter</button>
-      </div>
-      <div id="eq-retour" style="margin-top:var(--space-3)"></div>
-    </div>
       </div>
       <aside class="ps-colonne">
         <section class="ps-plus">
@@ -309,6 +410,10 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M9 20 21 14l12 6v13l-12 6-12-6z"/></g><g class="pv-illu-trait"><path d="M7 18 19 12l12 6v13l-12 6-12-6z"/><path d="M7 18l12 6 12-6M19 24v13"/><path d="M34 14h9M39 10l4 4-4 4"/><path d="M34 24h6M37 21l3 3-3 3"/></g></svg></span>
         <span class="pv-txt"><b>Projets de distribution</b><small>Suivez vos projets financés : objectifs, appareils remis, rythme à tenir.</small></span>
       </a>
+            <a class="pv-carte" href="ventes-preparer.html" data-gate="interne" hidden>
+        <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><rect x="9" y="12" width="30" height="28" rx="3"/></g><g class="pv-illu-trait"><rect x="7" y="10" width="30" height="28" rx="3"/><path d="M7 18h30M14 6v8M30 6v8"/><path d="M13 25h6M13 31h10"/><circle cx="36" cy="34" r="7" fill="var(--pv-fond)"/><path d="m33 34 2.2 2.2L39.5 32"/></g></svg></span>
+        <span class="pv-txt"><b>Ventes à préparer</b><small>Bons d’orientation des structures, appareils et attestations prêts avant la vente.</small></span>
+      </a>
             <a class="pv-carte" href="structures-partenaires.html" data-gate="partenaires" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><rect x="9" y="16" width="14" height="24" rx="2"/><rect x="27" y="10" width="14" height="30" rx="2"/></g><g class="pv-illu-trait"><rect x="7" y="14" width="14" height="24" rx="2"/><rect x="25" y="8" width="14" height="30" rx="2"/><path d="M11 20h2M16 20h2M11 26h2M16 26h2M29 14h2M34 14h2M29 20h2M34 20h2M29 26h2M34 26h2"/><path d="M12 38v-5h4v5M30 38v-5h4v5"/><path d="M3 38h40"/></g></svg></span>
         <span class="pv-txt"><b>Mes structures partenaires</b><small>Créez des structures que vous accompagnez, pour qu’elles puissent commander.</small></span><span class="pv-badge neutre" data-badge="structures-partenaires" hidden></span>
@@ -317,11 +422,23 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
         <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M26 8h14v14L22 40 8 26z"/></g><g class="pv-illu-trait"><path d="M24 6h14v14L20 38 6 24z"/><circle cx="31.5" cy="12.5" r="2.5"/><path d="M24.5 22.5a5 5 0 1 0 0 6.5M16 24.2h7M16.5 27.2h6"/></g></svg></span>
         <span class="pv-txt"><b>Tarifs partenaires</b><small>Prix personnalisés du catalogue pour vos structures partenaires.</small></span>
       </a>
+            <button class="pv-carte" type="button" id="carte-personnes" data-gate="externe" data-role="responsable" hidden>
+        <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><circle cx="18" cy="18" r="8"/><rect x="28" y="24" width="14" height="12" rx="2"/></g><g class="pv-illu-trait"><circle cx="18" cy="17" r="6"/><path d="M7 38c1-7 6-11 11-11 3 0 6 1.5 8 4"/><rect x="26" y="22" width="16" height="13" rx="2"/><path d="m26 24 8 6 8-6"/></g></svg></span>
+        <span class="pv-txt"><b>Personnes de la structure</b><small>Qui peut se connecter avec son e-mail, et commander en son nom.</small></span>
+      </button>
             <button class="pv-carte" type="button" id="carte-equipe" data-gate="interne" data-role="responsable" hidden>
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><circle cx="18" cy="18" r="8"/><circle cx="33" cy="21" r="6"/></g><g class="pv-illu-trait"><circle cx="18" cy="17" r="6"/><path d="M7 38c1-7 6-11 11-11s10 4 11 11"/><circle cx="33" cy="20" r="5"/><path d="M31 29c5 0 9 3 10 9"/></g></svg></span>
         <span class="pv-txt"><b>Accès de l’équipe</b><small>Conseillers numériques et responsables qui entrent avec leur compte Google.</small></span>
       </button>
-            <button class="pv-carte" type="button" id="carte-aide-decision" data-basculer="panneau-aide-decision">
+            <button class="pv-carte" type="button" id="carte-transfert-stock" data-role="responsable">
+        <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><rect x="8" y="20" width="26" height="18" rx="3"/></g><g class="pv-illu-trait"><rect x="6" y="18" width="26" height="18" rx="3"/><path d="M6 24h26M14 30h4M22 30h4"/><path d="M38 34V10M32 16l6-6 6 6"/></g></svg></span>
+        <span class="pv-txt"><b>Transférer mon stock</b><small>Vous aviez déjà des appareils ? Envoyez-nous votre tableur, on les ajoute à votre flotte.</small></span>
+      </button>
+            <button class="pv-carte" type="button" id="carte-depannage">
+        <span class="pv-illu pv-illu-m"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><rect x="8" y="12" width="28" height="20" rx="3"/></g><g class="pv-illu-trait"><rect x="6" y="10" width="28" height="20" rx="3"/><path d="M14 38h12M20 30v8"/><path d="m38 22 6-6a3 3 0 0 0-4-4l-6 6m4 4-8 8-4 1 1-4 8-8"/></g></svg></span>
+        <span class="pv-txt"><b>Dépannage et résolution des problèmes</b><small>Un appareil a un souci ? Des vérifications guidées, pas à pas, avant de déclarer une panne.</small></span>
+      </button>
+            <button class="pv-carte" type="button" id="carte-aide-decision">
         <span class="pv-illu pv-illu-t"><svg viewBox="0 0 48 48" aria-hidden="true"><g class="pv-illu-fond"><path d="M12 12h22l5 5-5 5H12z"/></g><g class="pv-illu-trait"><path d="M22 4v38"/><path d="M10 10h22l5 5-5 5H10z"/><path d="M34 24H14l-5 5 5 5h20z" fill="var(--pv-fond)"/><path d="M16 42h12"/></g></svg></span>
         <span class="pv-txt"><b>Aide à la décision</b><small>Un arbre de décision pas à pas pour orienter vers le bon équipement.</small></span>
       </button>
@@ -360,18 +477,60 @@ html body[data-famille] .ps-chiffres-large .ps-stat-label{ grid-column:2; }
     </div>
     <p class="pb-sous">Vos besoins avant de commander, partagés avec toute votre structure. Chaque clic est enregistré.</p>
     <div class="pb-liste" id="pb-liste"></div>
+    <div class="pb-commentaire" data-sans-garde>
+      <label for="pb-commentaire">Commentaire pour l’équipe</label>
+      <textarea id="pb-commentaire" class="input" rows="3" maxlength="2000" placeholder="Ex. : prévoir 2 chargeurs USB-C, besoin d’un PC pour l’atelier du jeudi…"></textarea>
+      <small id="pb-commentaire-info" aria-live="polite"></small>
+    </div>
     <div id="pb-retour" aria-live="polite"></div>
     <div class="pb-pied"><b id="pb-total"></b><button type="button" class="btn btn-secondary" id="pb-vider">Tout effacer</button></div>
   </div>
 </div>
 
 </main>
+<dialog class="card elev-sm pv-panneau" id="panneau-aide-decision" aria-labelledby="panneau-aide-decision-titre">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
+    <h2 style="margin:0" id="panneau-aide-decision-titre">Aide à la décision — redirection du matériel</h2>
+    <button type="button" class="modale-fermer-rond-qr" data-fermer-panneau aria-label="Fermer"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <iframe src="https://ec-cvdl.github.io/decision-tree/" title="Arbre de décision — redirection du matériel" style="width:100%;height:600px" loading="lazy"></iframe>
+</dialog>
+<dialog class="card elev-sm pv-panneau pv-panneau-large" id="panneau-depannage" aria-labelledby="panneau-depannage-titre">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:var(--space-3)">
+    <h2 style="margin:0" id="panneau-depannage-titre">Dépannage</h2>
+    <button type="button" class="modale-fermer-rond-qr" data-fermer-panneau aria-label="Fermer"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div id="dp-portail"></div>
+</dialog>
+<dialog class="card elev-sm pv-panneau" id="panneau-personnes" aria-labelledby="panneau-personnes-titre">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
+    <h2 style="margin:0" id="panneau-personnes-titre">Personnes de la structure</h2>
+    <button type="button" class="modale-fermer-rond-qr" data-fermer-panneau aria-label="Fermer"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <div id="pst-zone"></div>
+</dialog>
+<dialog class="card elev-sm pv-panneau" id="panneau-equipe" aria-labelledby="panneau-equipe-titre">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
+    <h2 style="margin:0" id="panneau-equipe-titre">Accès de l’équipe</h2>
+    <button type="button" class="modale-fermer-rond-qr" data-fermer-panneau aria-label="Fermer"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  </div>
+  <p style="opacity:.7;margin:0 0 var(--space-3);font-size:14px">Ces personnes ouvrent l’espace <strong>sans code</strong>, avec leur compte Google <span id="eq-domaine"></span>. <b>Responsable de territoire</b> : tout. <b>Conseiller numérique</b> : flotte et ventes, attestations, projets et rapport d’impact (consultation).</p>
+  <div id="eq-liste" style="display:flex;flex-direction:column;gap:8px"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--space-4)">
+    <input class="input" type="email" id="eq-email" placeholder="prenom.nom@emmaus-connect.org" style="flex:1;min-width:220px">
+    <select class="input" id="eq-role" style="width:auto"><option value="conseiller">Conseiller numérique</option><option value="responsable">Responsable de territoire</option></select>
+    <button type="button" class="btn btn-primary" id="eq-ajouter">Ajouter</button>
+  </div>
+  <div id="eq-retour" style="margin-top:var(--space-3)"></div>
+</dialog>
 
-<script src="deja-identifie.js?v=1"></script>
-<script src="api.js?v=3"></script>
-<script src="commun.js?v=1"></script>
-<script src="pense-bete.js?v=1"></script>
-<script src="notifications-portail.js?v=1"></script>
-<script src="pages/portail-structure.js?v=8"></script>
+<script src="api.js?v=5"></script>
+<script src="commun.js?v=5"></script>
+<script src="pense-bete.js?v=5"></script>
+<script src="notifications-portail.js?v=4"></script>
+<script src="transfert-stock.js?v=2"></script>
+<script src="personnes-structure.js?v=2"></script>
+<script src="depannage.js?v=3"></script>
+<script src="pages/portail-structure.js?v=19"></script>
 </body>
 </html>

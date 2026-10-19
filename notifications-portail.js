@@ -1,27 +1,40 @@
 /* Cloche de notifications du portail structure (en-tête de cvdl-ui.js) : paiements des personnes
-   (échéances en retard ou proches), livraisons, flotte. Serveur : portail-agenda
+   (échéances en retard ou proches), livraisons, ventes solidaires à préparer, flotte. Serveur : portail-agenda
    (routes/echeancier.js). Le compteur ne retient que ce qui demande une action. Sur le portail,
    la bande « À traiter » ouvre la même fenêtre (NotificationsPortail.brancherBande). */
 window.NotificationsPortail = (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const N = { donnees: null, contexte: null, ouvert: false, filtre: 'tout', bouton: null, panneau: null };
   const GROUPES = [
     ['contexte', 'À traiter'],
     ['paiement', 'Paiements des personnes'],
     ['livraison', 'Livraisons'],
+    ['vente', 'Ventes solidaires'],
     ['flotte', 'Flotte'],
   ];
   const FILTRES = [
     ['paiement', 'Paiements'],
     ['livraison', 'Livraisons'],
+    ['vente', 'Ventes'],
     ['flotte', 'Flotte'],
   ];
-  const ICONES = { paiement: 'facture', livraison: 'commandes', flotte: 'gestionFlotte', contexte: 'cloche' };
-  const CLASSES = { retard: 'r', bientot: 'a', avenir: 'a', prevue: 'i', livree: 'l', info: 'i', contexte: 'i' };
+  const ICONES = {
+    paiement: 'facture',
+    livraison: 'commandes',
+    flotte: 'gestionFlotte',
+    contexte: 'cloche',
+    vente: 'calendrier',
+  };
+  const CLASSES = {
+    retard: 'r',
+    bientot: 'a',
+    avenir: 'a',
+    prevue: 'i',
+    livree: 'l',
+    info: 'i',
+    contexte: 'i',
+    annulee: 'r',
+  };
 
   function code() {
     try {
@@ -31,7 +44,7 @@ window.NotificationsPortail = (function () {
     }
   }
   function lien(n) {
-    if (n.type === 'contexte') return n.lien || '#';
+    if (n.type === 'contexte' || n.type === 'vente') return n.lien || '#';
     if (n.type === 'paiement') return `flotte-structure.html?personne=${encodeURIComponent(n.appareilId)}`;
     if (n.type === 'livraison') return 'suivi.html';
     return 'flotte-structure.html';
@@ -67,7 +80,7 @@ window.NotificationsPortail = (function () {
                 ? `<div class="nf-g">${titre}</div>${g
                     .map(
                       (n) =>
-                        `<a class="nf-i ${n.etat === 'retard' ? 'r' : ''}" href="${esc(lien(n))}"><span data-ill="${ICONES[n.type]}" class="ill s"></span><span class="nf-t"><b>${esc(n.titre)}</b><span>${esc(n.detail || '')}</span></span><em class="nf-e ${CLASSES[n.etat] || 'i'}">${esc(n.quand || '')}</em></a>`,
+                        `<a class="nf-i ${n.etat === 'retard' || n.etat === 'annulee' ? 'r' : ''}" href="${esc(lien(n))}"><span data-ill="${ICONES[n.type]}" class="ill s"></span><span class="nf-t"><b>${esc(n.titre)}</b><span>${esc(n.detail || '')}</span></span><em class="nf-e ${CLASSES[n.etat] || 'i'}">${esc(n.quand || '')}</em></a>`,
                     )
                     .join('')}`
                 : '';
@@ -146,7 +159,7 @@ window.NotificationsPortail = (function () {
   async function lire() {
     const c = code();
     if (!c) return;
-    const r = await jsonp({ action: 'portail-agenda', code: c }).catch(() => null);
+    const r = await lireApi({ action: 'portail-agenda', code: c }).catch(() => null);
     if (!r || !r.ok) return;
     N.donnees = r;
     // L'en-tête est construit par cvdl-ui.js au chargement : on l'attend un court instant.

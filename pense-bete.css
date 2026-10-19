@@ -110,39 +110,16 @@ html body[data-famille] .pb-rangee .message-contexte {
   font-size: 12px;
   opacity: 0.6;
 }
-.pb-pas {
-  display: inline-flex;
-  align-items: center;
-  border: var(--trait);
-  border-radius: 999px;
-  overflow: hidden;
-  background: #fff;
-}
-.pb-pas button {
-  width: 36px;
-  height: 36px;
-  border: 0;
+/* + / − : .stepper-quantite (cvdl-ui.css), comme dans le formulaire de commande */
+.pb-ligne .stepper-quantite button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
   background: #fff;
   color: var(--navy);
-  font: 700 18px var(--police);
-  cursor: pointer;
 }
-.pb-pas button.plus {
-  background: var(--tur);
-  color: #fff;
-}
-.pb-pas button:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-.pb-pas button:focus-visible {
+.pb-ligne .stepper-quantite button:focus-visible {
   outline: 3px solid var(--mag);
-  outline-offset: -3px;
-}
-.pb-pas b {
-  min-width: 36px;
-  text-align: center;
-  font-size: 15px;
+  outline-offset: 2px;
 }
 .pb-pied {
   display: flex;
@@ -277,4 +254,55 @@ html body[data-famille] .pb-rangee .message-contexte {
 }
 .pb-modale .modale-qr-entete .pk-modale-ill {
   margin: 0;
+}
+
+/* Commentaire partagé (fenêtre du portail, panneau de la commande) */
+.pb-commentaire {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: var(--pointille);
+}
+.pb-commentaire label {
+  font-weight: 700;
+  font-size: 13px;
+}
+.pb-commentaire textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+.pb-commentaire small {
+  font-size: 12px;
+  min-height: 1em;
+  color: color-mix(in srgb, var(--navy) 60%, transparent);
+}
+.pb-panneau-commentaire {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: var(--pointille);
+  font-size: 13px;
+}
+.pb-panneau-commentaire p {
+  margin: 4px 0 0;
+  white-space: pre-line;
+}
+
+/* Rebond quand le pense-bête augmente ou qu'un produit noté entre dans la commande */
+.pb-bond {
+  animation: pb-bond 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes pb-bond {
+  40% {
+    transform: scale(1.08) rotate(-2deg);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pb-bond {
+    animation: none;
+  }
 }

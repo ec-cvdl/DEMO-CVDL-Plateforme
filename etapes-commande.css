@@ -1,0 +1,314 @@
+/* ════════════════════════════════════════════════════════════════════════════════════
+   etapes-commande.css — étapes communes d'une commande (etapes-commande.js) : quantités,
+   numéros de série, expédition. Chargé par l'admin et l'espace Logistique ; couleurs reprises
+   des variables du thème de l'admin, avec la charte en repli.
+   ════════════════════════════════════════════════════════════════════════════════════ */
+.ec {
+  --ec-navy: var(--th-bd-002743ff, #002743);
+  --ec-filet: var(--th-bd-e3e8ecff, #dfe5ea);
+  --ec-gris: var(--th-tx-5a6d7dff, #5a6d7d);
+  --ec-fond: var(--color-surface, #fff);
+  --ec-tur: var(--th-bg-00acb0ff, #00a3a8);
+  --ec-rose: var(--th-bg-e62460ff, #e62460);
+  --ec-vert: var(--th-bg-1f9d55ff, #1f9d55);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.ec-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.ec-aide {
+  margin: 0;
+  color: var(--ec-gris);
+  font-size: 12.5px;
+}
+
+/* Quantités */
+.ec-q {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--ec-filet);
+}
+.ec-q > svg {
+  width: 30px;
+  height: 30px;
+}
+.ec-p {
+  font-weight: 600;
+}
+.ec-cmd {
+  color: var(--ec-gris);
+  font-size: 12.5px;
+}
+.ec-pas {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--ec-navy);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--ec-fond);
+}
+.ec-pas button {
+  all: unset;
+  cursor: pointer;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  font: 700 18px var(--police, Inter, sans-serif);
+}
+.ec-pas button.plus {
+  background: var(--ec-tur);
+  color: #fff;
+}
+.ec-pas button:focus-visible,
+.ec-pas input:focus-visible {
+  outline: 2px solid var(--ec-tur);
+  outline-offset: -2px;
+}
+.ec-pas input {
+  width: 52px;
+  border: 0;
+  text-align: center;
+  font: 700 15px var(--police, Inter, sans-serif);
+  color: inherit;
+  background: transparent;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.ec-pas input::-webkit-inner-spin-button {
+  display: none;
+}
+.ec-pas.change input {
+  color: var(--ec-rose);
+}
+.ec-message {
+  margin-top: 4px;
+}
+
+/* Numéros de série */
+.ec-tete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ec-total,
+.ec-prog {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ec-navy) 8%, transparent);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ec-total.ok,
+.ec-prog.ok {
+  background: color-mix(in srgb, var(--ec-vert) 15%, transparent);
+  color: var(--ec-vert);
+}
+.ec-csv {
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ec-groupe {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--ec-filet);
+}
+.ec-gt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ec-gt > svg {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+.ec-gt .ec-prog {
+  margin-left: auto;
+}
+.ec-sns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.ec-sn {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ec-sn input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+}
+.ec-sn.ok input {
+  border-color: var(--ec-vert) !important;
+  background: color-mix(in srgb, var(--ec-vert) 7%, var(--ec-fond));
+}
+.ec-nom {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ec-gris);
+}
+.ec-sn-lu {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #ede8fc;
+  color: #553a9e;
+  font: 600 12.5px var(--mono, ui-monospace, monospace);
+}
+
+/* Messages */
+.ec-retour:empty {
+  display: none;
+}
+.ec-retour {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ec-ok,
+.ec-err,
+.ec-warn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+.ec-ok {
+  background: #e3f5ea;
+  color: #16703d;
+}
+.ec-err {
+  background: #fde8ee;
+  color: #b0123f;
+}
+.ec-warn {
+  background: #fff4d6;
+  color: #7a5a00;
+}
+
+/* Expédition */
+.ec-date {
+  max-width: 220px;
+}
+/* ── Mode de livraison : cartes de choix illustrées ── */
+.ml-cartes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.ml-carte {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 14px 13px;
+  border-radius: 14px;
+  border: 1.5px solid color-mix(in srgb, var(--th-bd-002743ff, #002743) 22%, transparent);
+  background: var(--color-surface, #fff);
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s,
+    transform 0.12s,
+    background 0.12s;
+  min-width: 0;
+}
+.ml-carte:hover {
+  border-color: var(--th-bd-002743ff, #002743);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--th-om-002743ff, #002743) 12%, transparent);
+}
+.ml-carte:focus-visible {
+  outline: 2px solid var(--th-bd-002743ff, #002743);
+  outline-offset: 2px;
+}
+.ml-carte .ml-ill {
+  display: block;
+  margin-bottom: 6px;
+  transition: transform 0.2s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.ml-carte:hover .ml-ill {
+  transform: translate(-2px, -2px);
+}
+.ml-carte b {
+  font-size: 14px;
+  line-height: 1.25;
+  padding-right: 22px;
+}
+.ml-carte small {
+  font-size: 12px;
+  color: var(--d-texte2, var(--th-tx-5a6d7dff, #5a6d7d));
+  line-height: 1.4;
+}
+.ml-carte.choisi {
+  border-color: var(--th-bd-002743ff, #002743);
+  background: color-mix(in srgb, var(--th-bg-00acb0ff, #00acb0) 10%, var(--color-surface, #fff));
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--th-om-00acb0ff, #00acb0) 50%, transparent);
+}
+.ml-cartes:has(.choisi) .ml-carte:not(.choisi) {
+  opacity: 0.72;
+}
+.ml-cartes:has(.choisi) .ml-carte:not(.choisi):hover {
+  opacity: 1;
+}
+@media (max-width: 640px) {
+  .ml-cartes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ml-coche {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--ec-navy, #002743);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  background: var(--color-surface, #fff);
+}
+.choisi > .ml-coche {
+  background: var(--th-bg-00acb0ff, #00acb0);
+  color: #fff;
+}
+@media (max-width: 600px) {
+  .ec-q {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+  .ec-cmd {
+    grid-column: 2;
+  }
+  .ec-pas {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+}

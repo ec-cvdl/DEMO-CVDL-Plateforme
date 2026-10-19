@@ -195,3 +195,84 @@
     width: auto;
   }
 }
+
+/* « Un bug, une idée ? » : bouton flottant de l'espace structure (retours.js) */
+.rt-signaler {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px 7px 10px;
+  border: 1.5px solid #002743;
+  border-radius: 999px;
+  background: #fff;
+  color: #002743;
+  font: 600 14.5px var(--police-titre, 'Lexend', sans-serif);
+  box-shadow: 4px 4px 0 #e62460;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.rt-signaler:hover,
+.rt-signaler:focus-visible {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #e62460;
+}
+.rt-signaler:hover svg {
+  animation: rt-signaler-hop 0.5s ease;
+}
+@keyframes rt-signaler-hop {
+  40% {
+    transform: translateY(-3px) rotate(-6deg);
+  }
+}
+@media (max-width: 700px) {
+  .rt-signaler {
+    right: 12px;
+    bottom: 12px;
+    padding: 7px;
+  }
+  .rt-signaler span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+}
+@media print {
+  .rt-signaler {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-signaler,
+  .rt-signaler:hover svg {
+    transition: none;
+    animation: none;
+  }
+}
+/* Sujet du retour (bouton « Un bug, une idée ? ») */
+.rt-sujets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+.rt-sujet {
+  padding: 6px 14px;
+  border: 1.5px solid #002743;
+  border-radius: 999px;
+  background: #fff;
+  color: #002743;
+  font: 600 13.5px var(--police, 'Inter', sans-serif);
+  cursor: pointer;
+}
+.rt-sujet.choisi {
+  background: #002743;
+  color: #fff;
+}

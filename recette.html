@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <script src="anti-cadre.js?v=1"></script>
+    <script src="base.js?v=1"></script>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Recette — CVDL</title>
+    <link rel="stylesheet" href="cvdl-ui.css?v=39" />
+    <link rel="stylesheet" href="recette.css?v=3" />
+    <link rel="stylesheet" href="affichage.css?v=2" />
+    <script src="affichage.js?v=3"></script>
+  </head>
+  <body data-famille="accueil">
+    <main id="contenu-principal" class="rc-page">
+      <img src="logo.png" alt="Emmaüs Connect" class="logo-portail" />
+      <div class="rc-tete">
+        <div>
+          <span class="cvdl-surtitre">Démo · avant déploiement</span>
+          <h1>Recette de la <em>plateforme</em></h1>
+          <p class="rc-sous">
+            Chaque cas prépare des données neuves au clic, en conditions réelles : on peut le rejouer autant de fois que
+            nécessaire. Notez le résultat : il est partagé avec les autres testeurs.
+          </p>
+        </div>
+        <label class="rc-testeur"
+          ><span>Testeur</span
+          ><input class="input" id="rc-testeur" maxlength="60" placeholder="Votre prénom" autocomplete="given-name"
+        /></label>
+      </div>
+
+      <details class="rc-guide" id="rc-guide">
+      <summary>Comment tester ? (à lire une fois)</summary>
+      <ol>
+        <li>Indiquez votre prénom en haut à droite : il signe vos résultats.</li>
+        <li>Ouvrez un cas, cliquez « Préparer les données » : des données neuves sont créées rien que pour ce test.</li>
+        <li>Les boutons ↗ ouvrent chaque espace concerné dans un nouvel onglet, déjà connecté. Suivez les étapes, dans l’ordre.</li>
+        <li>Comparez avec « Attendu », puis notez : <b>OK</b> si tout correspond ; <b>KO</b> si quelque chose ne va pas ; <b>Bloqué</b> si vous ne pouvez pas aller au bout.</li>
+        <li>Pour un KO, décrivez : l’étape, ce que vous avez fait, ce qui s’est affiché (message exact), ce que vous attendiez. Une capture d’écran envoyée à part aide beaucoup.</li>
+        <li>Un cas « À retester » a été corrigé : refaites-le (« Préparer à nouveau ») et notez le nouveau résultat.</li>
+          <li>Un bug ou une idée hors des cas ? Utilisez « Remarques libres » en bas de la page.</li>
+      </ol>
+      <p>Tout se passe en démo : aucune donnée réelle, aucun e-mail envoyé. Rien ne peut être cassé.</p>
+    </details>
+    <div class="rc-bilan" id="rc-bilan" aria-live="polite"></div>
+
+      <div class="rc-barre">
+        <div class="rc-filtres" id="rc-filtres" role="group" aria-label="Parcours"></div>
+        <div class="rc-filtres" id="rc-statuts" role="group" aria-label="Résultat"></div>
+        <button type="button" class="btn" id="rc-export">Exporter (CSV)</button>
+      </div>
+
+      <p class="rc-erreur" id="rc-erreur" role="alert" hidden></p>
+      <div id="rc-liste" class="rc-liste"><p class="rc-sous">Chargement…</p></div>
+      <section class="rc-remarques" aria-labelledby="rc-rem-titre">
+        <h2 id="rc-rem-titre">Remarques libres</h2>
+        <p class="rc-sous">Un bug, une idée, une question en dehors des cas ci-dessus : notez-le ici, toute l’équipe le voit.</p>
+        <form id="rc-remarque" class="rc-rem-form">
+          <select class="input" name="type" aria-label="Type">
+            <option value="bug">Bug</option>
+            <option value="suggestion">Suggestion</option>
+            <option value="question">Question</option>
+          </select>
+          <input class="input" name="page" maxlength="200" placeholder="Page ou écran concerné (facultatif)" />
+          <textarea class="input" name="texte" rows="2" maxlength="3000" required placeholder="Ce que vous avez vu, ce que vous proposez…"></textarea>
+          <button type="submit" class="btn btn-primary">Envoyer</button>
+        </form>
+        <ul class="rc-rem-liste" id="rc-remarques-liste"></ul>
+      </section>
+    </main>
+    <script src="api.js?v=5"></script>
+    <script src="pages/recette.js?v=5"></script>
+  </body>
+</html>

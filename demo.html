@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>CVDL — Démonstration</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
 <style>
 .demo-prep{ position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:16px; background:var(--fond-doux, #f3f6f8); }
 .demo-prep[hidden]{ display:none; }
@@ -152,7 +153,9 @@
 .demo-pied button{ font:inherit; background:none; border:0; padding:0; color:inherit; text-decoration:underline; cursor:pointer; }
 .demo-pied .sep{ opacity:.4; }
 </style>
-<script src="portail-ui.js?v=36" defer></script>
+<script src="portail-ui.js?v=45" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="accueil">
 <div class="demo-prep" id="demo-prep" hidden>
@@ -279,11 +282,14 @@
     <span id="genere">Chargement de la démo…</span>
     <span class="sep">·</span>
     <button type="button" id="btn-reinit">Réinitialiser les données</button>
+    <span class="sep" data-equipe>·</span>
+    <a href="recette.html" data-equipe>Recette avant déploiement</a>
     <span class="sep" id="sep-quitter">·</span>
     <button type="button" id="btn-quitter">Quitter la démo</button>
   </div>
 </main>
 
-<script src="pages/demo.js?v=17"></script>
+<script src="api.js?v=5"></script>
+<script src="pages/demo.js?v=24"></script>
 </body>
 </html>

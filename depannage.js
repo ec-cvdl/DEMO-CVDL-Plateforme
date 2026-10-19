@@ -12,11 +12,7 @@
    }) → { detruire() }
    ════════════════════════════════════════════════════════════════════════════════════ */
 (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const texte = (s) => esc(s).replace(/\n/g, '<br>');
   const urlImage = (u) => (/^data:image\/(png|jpe?g|gif|webp);base64,/.test(u) || /^https:\/\//.test(u) ? u : '');
   const FLECHE =
@@ -176,8 +172,7 @@
   let chargement = null;
   function charger(api) {
     if (!chargement) {
-      chargement = fetch(api + '?' + new URLSearchParams({ action: 'depannage-arbres' }))
-        .then((r) => r.json())
+      chargement = appelApi({ action: 'depannage-arbres' }, { base: api })
         .then((r) => (r && r.ok ? r : { arbres: [], parSymptome: {} }))
         .catch(() => ({ arbres: [], parSymptome: {} }));
     }
@@ -189,13 +184,9 @@
     return (d.arbres || []).find((a) => a.identifiant === id) || null;
   }
   function enregistrerParcours(api, donnees) {
-    return fetch(api, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'depannage-parcours', ...donnees }),
-    })
-      .then((r) => r.json())
-      .catch(() => ({ ok: false }));
+    return appelApi({ action: 'depannage-parcours', ...donnees }, { methode: 'POST', base: api }).catch(() => ({
+      ok: false,
+    }));
   }
 
   window.CvdlDepannage = { monter, charger, pourSymptome, enregistrerParcours };

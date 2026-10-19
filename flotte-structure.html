@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="api.js?v=3"></script>
-<script src="commun.js?v=1"></script>
+<script src="api.js?v=5"></script>
+<script src="commun.js?v=5"></script>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net https://fonts.googleapis.com https://fonts.gstatic.com; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ma flotte — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -101,7 +102,7 @@ main{ padding:var(--space-6) var(--space-4); }
 .tableau-flotte tr[data-statut-flotte="sav"] td{ background:color-mix(in srgb, #D97706 9%, #fff); }
 .tableau-flotte tr[data-statut-flotte="d3e"] td{ background:color-mix(in srgb, #8FA3B3 12%, #fff); }
 .tableau-flotte tr[data-statut-flotte] td:first-child{ box-shadow:inset 4px 0 0 var(--teinte-flotte, transparent); }
-.tableau-flotte tr.tl-alerte td{ background:var(--violet-fond); } .tableau-flotte tr.tl-alerte{ --teinte-flotte:var(--violet); }
+.tableau-flotte tr.tl-alerte{ font-weight:inherit; color:inherit; } .tableau-flotte tr.tl-alerte td{ background:var(--violet-fond); } .tableau-flotte tr.tl-alerte{ --teinte-flotte:var(--violet); }
 .tableau-flotte tr[data-statut-flotte="remis"]{ --teinte-flotte:#1F9D55; } .tableau-flotte tr[data-statut-flotte="sav"]{ --teinte-flotte:#D97706; } .tableau-flotte tr[data-statut-flotte="d3e"]{ --teinte-flotte:#8FA3B3; }
 .carte-dispositif[data-statut-flotte="remis"]{ background:color-mix(in srgb, #1F9D55 6%, #fff) !important; }
 .carte-dispositif[data-statut-flotte="sav"]{ background:color-mix(in srgb, #D97706 8%, #fff) !important; }
@@ -112,7 +113,7 @@ main{ padding:var(--space-6) var(--space-4); }
 .tl-case{ width:17px; height:17px; cursor:pointer; }
 .tl-centre{ text-align:center; }
 .tl-muet{ white-space:nowrap; }
-.tl-appareil{ display:flex; align-items:center; gap:12px; min-width:240px; }
+.tl-appareil{ display:flex; align-items:center; gap:12px; min-width:320px; }
 .tl-appareil .tl-ico{ width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; flex:none; }
 .tl-app-txt{ display:flex; flex-direction:column; min-width:0; }
 .tl-ligne1{ display:flex; gap:2px; align-items:center; }
@@ -122,8 +123,10 @@ main{ padding:var(--space-6) var(--space-4); }
 .tl-personne{ box-sizing:border-box; display:inline-flex; align-items:center; gap:9px; cursor:pointer; padding:4px 10px 4px 4px; white-space:nowrap; }
 span.tl-personne{ cursor:default; }
 .tl-personne-champ{ display:inline-flex; align-items:center; gap:8px; }
-.tl-personne-cel{ display:inline-flex; align-items:center; gap:8px; }
-.tl-attest{ display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border:var(--trait-doux); border-radius:999px; background:#fff; color:var(--navy); font:600 12px var(--police); white-space:nowrap; cursor:pointer; transition:border-color .12s, box-shadow .12s; }
+/* Personne à gauche, attestation calée à droite de la colonne : alignées d'une ligne à l'autre. */
+.tl-personne-cel{ display:grid; grid-template-columns:auto 112px; align-items:center; gap:8px; }
+.tl-personne-cel > .tl-personne{ justify-self:start; max-width:100%; }
+.tl-attest{ display:inline-flex; align-items:center; justify-content:center; gap:5px; width:112px; box-sizing:border-box; padding:4px 10px; border:var(--trait-doux); border-radius:999px; background:#fff; color:var(--navy); font:600 12px var(--police); white-space:nowrap; cursor:pointer; transition:border-color .12s, box-shadow .12s; }
 .tl-attest:hover{ border-color:var(--navy); box-shadow:2px 2px 0 var(--aplat); }
 .tl-attest.fait{ background:color-mix(in srgb, var(--vert) 12%, #fff); border-color:color-mix(in srgb, var(--vert) 55%, transparent); color:color-mix(in srgb, var(--vert) 75%, var(--navy)); }
 .tl-attest:disabled{ opacity:.6; cursor:wait; }
@@ -181,8 +184,6 @@ span.tl-personne{ cursor:default; }
 .fi3-sn{ display:flex; min-width:0; }
 .fi3-statut{ flex:none; }
 .fi3-pied-vide{ padding:0 0 6px !important; }
-.tl-ident{ flex-wrap:nowrap !important; }
-.tl-ident .tl-ident-champ{ display:inline-block !important; width:auto !important; flex:0 1 auto; max-width:14ch; min-width:0 !important; }
 .fi3-ident{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); margin:0 16px; border:1px solid color-mix(in srgb, #002743 12%, transparent); border-radius:12px; overflow:hidden; }
 .fi3-champ{ display:flex; flex-direction:column; gap:1px; padding:7px 10px; min-width:0; cursor:text; }
 .fi3-champ + .fi3-champ{ border-left:1px solid color-mix(in srgb, #002743 12%, transparent); }
@@ -199,12 +200,20 @@ span.tl-personne{ cursor:default; }
 .fi3-pied{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:10px 16px 14px; font-size:12px; opacity:1; color:var(--d-texte2, #5A6D7D); }
 .fi3-pied b{ color:#002743; }
 .fi3-puce{ font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px; }
-.fi3-puce.att{ background:var(--violet-fond); color:var(--violet-texte); } .fi3-puce.sav{ background:#FDECEC; color:#B42318; }
-/* Vue Liste : produit en titre, marque · modèle · catégorie sur UNE ligne */
+.fi3-puce.att{ background:var(--violet-texte); color:#fff; } .fi3-puce.sav{ background:#FDECEC; color:#B42318; }
+/* Vue Liste : produit en titre, marque · modèle · catégorie sur UNE ligne, en colonnes de
+   largeur fixe (les séparateurs tombent au même endroit d'une ligne à l'autre). */
+.tl-titre{ display:flex; align-items:center; gap:8px; min-width:0; }
+.tl-titre .tl-produit-nom{ min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tableau-flotte-liste .fl-prix b{ white-space:nowrap; }
 .tl-produit-nom{ display:block; font-size:13.5px; line-height:1.3; }
-.tl-ident{ display:flex; align-items:center; gap:2px; flex-wrap:wrap; margin-top:2px; }
-.tl-ident i{ font-style:normal; opacity:.4; margin:0 2px; }
-.tl-ident .tl-ident-champ{ font-size:12.5px !important; font-weight:500 !important; padding:1px 4px !important; margin:0 !important; opacity:.85; }
+.tl-puce-2mois{ display:inline-flex; align-items:center; flex:none; white-space:nowrap; font-size:11.5px; font-weight:700; line-height:1; padding:4px 9px; border-radius:999px; background:var(--violet-texte); color:#fff; }
+.tl-legende-2mois{ display:inline-flex; align-items:center; gap:6px; }
+.tl-app-txt{ max-width:330px; }
+.fi3-puce.att{ display:inline-flex; align-items:center; gap:5px; }
+.tl-ident{ display:grid; grid-template-columns:minmax(0,66px) 12px minmax(0,108px) 12px minmax(0,1fr); align-items:center; margin-top:2px; min-width:320px; }
+.tl-ident i{ font-style:normal; opacity:.4; text-align:center; }
+.tl-ident .tl-ident-champ{ display:block !important; width:100% !important; min-width:0 !important; text-overflow:ellipsis; font-size:12.5px !important; font-weight:500 !important; padding:1px 4px !important; margin:0 !important; opacity:.85; }
 .tl-ident-lu{ font-size:12.5px; opacity:.7; }
 @media (max-width:600px){ .fi3-ident{ grid-template-columns:1fr; } .fi3-champ + .fi3-champ{ border-left:0; border-top:1px solid color-mix(in srgb, #002743 12%, transparent); } .flotte-vues button{ max-width:none; } .flotte-vues small{ display:none; } .flotte-tris{ margin-left:0; } }
 
@@ -213,6 +222,7 @@ span.tl-personne{ cursor:default; }
 .fs-tete{ display:flex; align-items:center; gap:12px; padding-right:44px; }
 .fs-tete h3{ flex:1; margin:0; }
 .fs-tete .pk-modale-ill{ margin:0; }
+.fs-tete-boutons{ display:flex; flex-wrap:wrap; gap:8px; }
 
 /* Vue matériel (depuis l'admin) : bandeau d'information */
 .flotte-note-materiel{ margin:10px 0 0; font-size:13px; padding:9px 12px; border-radius:10px; background:color-mix(in srgb, #00ACB0 10%, transparent); border-left:3px solid #00ACB0; }
@@ -251,6 +261,15 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 .fl-projet.on{ border-style:solid !important; border-color:var(--tur, #00ACB0) !important; background:color-mix(in srgb, var(--tur, #00ACB0) 12%, #fff) !important; font-weight:600; }
 .fi3-v .fl-projet{ margin-top:0; max-width:100%; }
 .fl-projet-lu{ display:inline-block; margin-top:6px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; background:color-mix(in srgb, var(--tur, #00ACB0) 12%, #fff); }
+/* « Confié à » (vendeurs de l'équipe d'une Interne) */
+.fl-confie{ min-width:130px; max-width:200px; font:inherit; font-size:12.5px !important; padding:4px 8px !important; border-radius:999px !important; border:1.5px dashed color-mix(in srgb, var(--navy, #002743) 35%, transparent) !important; background:#fff !important; color:inherit; cursor:pointer; text-overflow:ellipsis; }
+.fl-confie.on{ border-style:solid !important; border-color:var(--navy, #002743) !important; background:color-mix(in srgb, var(--navy, #002743) 8%, #fff) !important; font-weight:600; }
+.fi3-v .fl-confie{ max-width:100%; width:100%; }
+.fl-confie-lu{ display:inline-block; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:600; background:color-mix(in srgb, var(--navy, #002743) 8%, #fff); }
+.flotte-vendeur{ display:flex; align-items:center; gap:8px; }
+.flotte-vendeur select{ width:auto; min-width:170px; padding:6px 10px; font-size:13px; }
+.fl-confier-groupe{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.fl-confier-groupe select{ width:auto; min-width:170px; }
 /* Fiche personne de la flotte : deux colonnes (Personne / Vente), une seule sous 640px */
 .modale-personne{ max-width:800px; }
 .pp-grille{ display:grid; grid-template-columns:1fr 1fr; gap:12px 20px; margin-top:12px; }
@@ -268,17 +287,19 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 .pp-case input{ flex:none; width:17px; height:17px; accent-color:var(--tur, #00ACB0); }
 @media (max-width:640px){ .pp-grille{ grid-template-columns:1fr; } .pp-sf{ grid-template-columns:1fr 1fr; } .pp-sf .pp-case{ grid-column:1 / -1; } }
 </style>
-<script src="portail-ui.js?v=36" defer></script>
-<script src="cvdl-ui.js?v=13" defer></script>
-<link rel="stylesheet" href="retours.css?v=2">
-<link rel="stylesheet" href="stats-flotte.css?v=1">
-<script src="stats-flotte.js?v=1" defer></script>
+<script src="portail-ui.js?v=45" defer></script>
+<script src="cvdl-ui.js?v=18" defer></script>
+<link rel="stylesheet" href="retours.css?v=3">
+<link rel="stylesheet" href="stats-flotte.css?v=4">
+<script src="stats-flotte.js?v=4" defer></script>
 <link rel="stylesheet" href="reglement-personne.css?v=1">
 <link rel="stylesheet" href="notifications-portail.css?v=1">
-<script src="notifications-portail.js?v=1" defer></script>
-<script src="reglement-personne.js?v=1" defer></script>
+<script src="notifications-portail.js?v=4" defer></script>
+<script src="reglement-personne.js?v=2" defer></script>
 <script src="html-to-image.min.js?v=1" defer></script>
-<script src="retours.js?v=2" defer></script>
+<script src="retours.js?v=5" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="materiel">
 <div class="voile-modale-qr" id="modale-personne-portail">
@@ -311,7 +332,7 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
     <span data-ill="attestations" class="pk-modale-ill"></span><h3>Attestation de paiement</h3>
     <p>La date de naissance n’est pas notée dans la fiche de cette personne : indiquez-la (elle n’est pas enregistrée).</p>
     <input type="text" id="attestation-nom-input" class="input" aria-label="Nom complet de la personne" autocomplete="name" style="margin-bottom:10px" placeholder="Nom complet">
-    <input type="date" id="attestation-naissance-input" class="input" aria-label="Date de naissance" style="margin-bottom:10px">
+    <input type="date" id="attestation-naissance-input" class="input" data-naissance min="1920-01-01" aria-label="Date de naissance" style="margin-bottom:10px">
     <div id="retour-attestation-flotte" style="margin-bottom:10px"></div>
     <button type="button" class="btn btn-primary" style="width:100%;justify-content:center" id="btn-generer-attestation-flotte">Générer l'attestation</button>
     <button type="button" class="lien-changer-code" id="attestation-fermer">Annuler</button>
@@ -320,7 +341,7 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 
 <div class="voile-modale-qr" id="modale-stats-flotte-portail">
   <div class="modale-qr fs-modale" style="text-align:left">
-    <div class="fs-tete"><span data-ill="stats" class="pk-modale-ill"></span><h3>Statistiques de ma flotte</h3><button type="button" class="btn btn-secondary btn-sm" id="stats-flotte-image">Télécharger en image</button></div>
+    <div class="fs-tete"><span data-ill="stats" class="pk-modale-ill"></span><h3>Statistiques de ma flotte</h3><span class="fs-tete-boutons"><button type="button" class="btn btn-secondary btn-sm" id="stats-flotte-csv">Exporter (tableur)</button><button type="button" class="btn btn-secondary btn-sm" id="stats-flotte-image">Télécharger en image</button></span></div>
     <div id="stats-flotte-portail-contenu" style="margin-top:var(--space-4)"></div>
     <button type="button" class="lien-changer-code" id="stats-flotte-portail-fermer">Fermer</button>
   </div>
@@ -372,6 +393,6 @@ html.flotte-depuis-admin main{ padding-top:14px !important; }
 </main>
 
 <script src="pages/flotte-structure-tete.js?v=1"></script>
-<script src="pages/flotte-structure.js?v=15"></script>
+<script src="pages/flotte-structure.js?v=25"></script>
 </body>
 </html>

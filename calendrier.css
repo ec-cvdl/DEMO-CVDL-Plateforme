@@ -127,6 +127,10 @@
 .d.g {
   background: #a3b3c0;
 }
+.d.t {
+  border-radius: 2px;
+  background: #00acb0;
+}
 .cx-s {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -273,6 +277,10 @@
 .cx-e.g {
   background: #eef2f5;
 }
+.cx-e.t {
+  background: #e0f5f5;
+  color: #00686b;
+}
 .cx-vide {
   margin: 4px 0 0;
   font-size: 13.5px;
@@ -296,4 +304,31 @@
   .cx-ev .d {
     margin: 1px;
   }
+}
+
+/* Vente à venir : appareils à préparer */
+.cx-it-t .cx-prep {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  opacity: 1;
+}
+.cx-prep i {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 8px;
+  line-height: 1.35;
+  background: linear-gradient(90deg, color-mix(in srgb, #d97706 20%, transparent), transparent 120%);
+}
+.cx-prep i.ok {
+  background: linear-gradient(90deg, color-mix(in srgb, #1f9d55 20%, transparent), transparent 120%);
+}
+.cx-prep small {
+  margin-left: 6px;
+  white-space: nowrap;
+  font-weight: 500;
+  opacity: 0.75;
 }

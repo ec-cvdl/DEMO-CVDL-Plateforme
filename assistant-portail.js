@@ -21,12 +21,9 @@
     etape = 0,
     vues = 0,
     racine = null,
-    precedentFocus = null;
-  const esc = (s) => {
-    const d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
-  };
+    precedentFocus = null,
+    modifie = false;
+  const esc = echapper;
 
   function rendre() {
     const et = cfg.etapes[etape],
@@ -148,11 +145,12 @@
     if (precedentFocus && precedentFocus.focus) precedentFocus.focus();
     if (c && c.apresFermeture) c.apresFermeture(!!fini);
   }
+  /** Création ou modification : confirmation seulement si quelque chose a été saisi. */
   async function demanderFermeture() {
     if (
+      modifie &&
       window.confirmerCvdl &&
-      !cfg.modification &&
-      !(await window.confirmerCvdl('Fermer sans enregistrer ? Ce qui a été saisi sera perdu.'))
+      !(await window.confirmerCvdl('Fermer sans enregistrer ?\nCe que vous avez saisi sera perdu.', { ok: 'Fermer' }))
     )
       return;
     fermer(false);
@@ -181,6 +179,7 @@
       if (racine) fermer(false);
       cfg = options;
       etape = 0;
+      modifie = false;
       vues = options.modification ? options.etapes.length - 1 : 0;
       precedentFocus = document.activeElement;
       racine = document.createElement('div');
@@ -216,10 +215,12 @@
         if (cfg.clic) cfg.clic(e, cfg.v, rendre);
       });
       racine.addEventListener('input', (e) => {
+        if (e.isTrusted) modifie = true;
         lire(e.target);
         if (cfg.saisie) cfg.saisie(e.target, cfg.v, 'input');
       });
       racine.addEventListener('change', (e) => {
+        if (e.isTrusted) modifie = true;
         lire(e.target);
         if (cfg.saisie) cfg.saisie(e.target, cfg.v, 'change');
         if (e.target.closest('[data-ap-rendre]')) rendre();

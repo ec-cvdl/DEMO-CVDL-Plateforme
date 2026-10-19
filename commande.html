@@ -3,12 +3,16 @@
 <head>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Commander du matériel — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
-<link rel="stylesheet" href="pense-bete.css?v=1">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="pense-bete.css?v=4">
+<link rel="stylesheet" href="linux-mint.css?v=3">
 <style>
+.champ-cheque{ margin-top:14px; max-width:340px; }
+.champ-cheque small{ display:block; margin-top:4px; font-size:13px; opacity:.7; }
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
 .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; }
@@ -31,11 +35,38 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
 .coche-produit{ margin-left:auto; width:20px; height:20px; flex:none; display:flex; align-items:center; justify-content:center; }
 .coche-produit svg{ opacity:0; }
 .carte-produit.selectionnee .coche-produit svg{ opacity:1; }
+/* Touches visuelles : titre équilibré, carte choisie mise en avant, cartes en cascade */
+h1{ text-wrap:balance; }
+.carte-produit{ transition:transform .18s ease, box-shadow .18s ease, background .18s ease; }
+.carte-produit:not(.epuisee):hover{ transform:translate(-2px,-2px); }
+.carte-produit.selectionnee{ background:color-mix(in srgb, var(--tur) 10%, #fff); border-color:var(--navy); box-shadow:5px 5px 0 var(--tur); }
+.carte-produit.cmd-pop .icone-carre{ animation:cmd-pop .35s cubic-bezier(.3,1.6,.5,1); }
+@keyframes cmd-pop{ 50%{ transform:scale(1.18) rotate(-6deg); } }
+@media (prefers-reduced-motion: no-preference){
+  .cmd-premier .carte-produit{ animation:cmd-entre .45s cubic-bezier(.2,.7,.2,1) both; }
+  .cmd-premier .carte-produit:nth-child(2){ animation-delay:.04s; } .cmd-premier .carte-produit:nth-child(3){ animation-delay:.08s; } .cmd-premier .carte-produit:nth-child(4){ animation-delay:.12s; } .cmd-premier .carte-produit:nth-child(5){ animation-delay:.16s; } .cmd-premier .carte-produit:nth-child(n+6){ animation-delay:.2s; }
+}
+@keyframes cmd-entre{ from{ opacity:0; transform:translateY(12px); } }
+@media (prefers-reduced-motion: reduce){ .carte-produit.cmd-pop .icone-carre{ animation:none; } }
 .ligne-quantite{ display:flex; align-items:center; gap:var(--space-4); padding:var(--space-4); }
+.qte-nom .pb-note{ position:static; align-self:flex-start; margin-top:4px; }
+.pb-appliquer{ padding:0; border:0; background:none; font:inherit; font-weight:700; color:inherit; text-decoration:underline; cursor:pointer; }
 .valeur-quantite{ width:28px; text-align:center; }
+.valeur-quantite.qte-bond{ display:inline-block; animation:qte-bond .32s cubic-bezier(.3,1.6,.5,1); }
+.valeur-quantite.qte-bond.moins{ animation-name:qte-bond-bas; }
+@keyframes qte-bond{ 0%{ transform:translateY(6px); opacity:.3; } 60%{ transform:translateY(-2px) scale(1.25); } }
+@keyframes qte-bond-bas{ 0%{ transform:translateY(-6px); opacity:.3; } 60%{ transform:translateY(2px) scale(.85); } }
 .confirmation{ text-align:center; }
 .confirmation-icone{ width:56px; height:56px; display:flex; align-items:center; justify-content:center; margin:0 auto var(--space-4); }
 .ref{ margin-top:var(--space-2); }
+.cm-homogene{ display:grid; gap:10px; margin-top:var(--space-4); padding:var(--space-4); border:1.5px solid color-mix(in srgb, var(--navy) 20%, transparent); border-radius:16px; }
+.cm-homogene .icone-homogene{ color:#00868a; }
+.cm-homogene.actif{ border-color:var(--navy); background:color-mix(in srgb, var(--tur) 10%, #fff); box-shadow:4px 4px 0 color-mix(in srgb, var(--tur) 55%, transparent); }
+.cm-destination{ display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3) var(--space-4); margin-top:var(--space-4); padding:var(--space-4); border:1.5px solid color-mix(in srgb, var(--navy) 20%, transparent); border-radius:16px; }
+.cm-destination .field{ margin:0; }
+.cm-destination .cm-large{ grid-column:1 / -1; }
+.cm-facultatif{ opacity:.6; font-weight:400; }
+@media (max-width:640px){ .cm-destination{ grid-template-columns:1fr; } }
 .case-toggle{ display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); padding:var(--space-4); margin-top:var(--space-4); cursor:pointer; }
 .rp-interrupteur{ position:relative; display:inline-block; width:52px; height:30px; flex:none; }
 .rp-interrupteur input{ opacity:0; width:0; height:0; position:absolute; }
@@ -46,6 +77,10 @@ html.deja-identifie #voile-verification-precoce{ display:flex; }
 .barre-envoi-commande-remplie{ height:100%; width:0%; }
 .grille-produits-commande{ display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3); }
 .grille-personne-bo{ display:grid; grid-template-columns:1fr 1fr 150px; gap:var(--space-4); }
+.bo-attestations{ border:1.5px solid var(--color-neutral-200, #d5dde4); border-radius:var(--r-m, 14px); padding:var(--space-3) var(--space-4) var(--space-4); margin:0; display:grid; gap:6px; }
+.bo-attestations legend{ font-weight:700; font-size:14px; padding:0 6px; }
+.bo-attestation{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; font-size:13.5px; line-height:1.45; cursor:pointer; padding:4px 2px; }
+.bo-attestation input{ order:2; width:18px; height:18px; flex:none; margin:1px 4px 0 0; }
 @media (max-width: 560px){
 .grille-produits-commande{ grid-template-columns:1fr; }
 .grille-personne-bo{ grid-template-columns:1fr; }
@@ -152,10 +187,12 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
 .presc-lien{ display:inline-block; margin-top:8px; padding:0; border:0; background:none; color:var(--color-accent-700, #C4144F); font-weight:700; font-size:13.5px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
 .presc-lien:focus-visible{ outline:2px solid currentColor; outline-offset:2px; border-radius:4px; }
 </style>
-<script src="portail-ui.js?v=36"></script>
-<script src="cvdl-ui.js?v=13"></script>
-<link rel="stylesheet" href="retours.css?v=2">
-<script src="retours.js?v=2" defer></script>
+<script src="portail-ui.js?v=45"></script>
+<script src="cvdl-ui.js?v=18"></script>
+<link rel="stylesheet" href="retours.css?v=3">
+<script src="retours.js?v=5" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="commandes">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -181,6 +218,7 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
           <span data-ill="cle" class="pk-titre-ill"></span>
           <h1 style="margin:0">Quel est votre <em>code structure</em> ?</h1>
           <p style="opacity:0.6;margin:0">Ce code vous a été communiqué par mail — le même que pour commander du matériel ou signaler une panne. Vous voulez plutôt suivre une commande déjà passée ? <a href="suivi.html">Cliquez ici</a>.</p>
+          <p class="msg" style="margin:0">Vous avez un accès personnel ? <a href="portail-structure.html">Connectez-vous avec votre e-mail</a> : plus besoin du code.</p>
           <div class="field">
             <label for="champ-code" class="sr-only">Code structure</label>
             <input type="text" class="input" id="champ-code" autocomplete="off" spellcheck="false" placeholder="Saisissez votre code">
@@ -198,6 +236,7 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
         <p style="opacity:0.6;margin:0 0 var(--space-6);text-align:center">Choisissez un ou plusieurs produits à ajouter.</p>
         <div id="bandeau-limites-commande" hidden></div>
         <div class="card elev-lg" style="padding:var(--space-8) var(--space-6)">
+          <div id="bandeau-linux"></div>
           <div class="grille-produits-commande" id="grille-produits"><div class="pk-etat pk-chargement"><span class="spinner-inline"></span>Chargement…</div></div>
         </div>
         <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;margin-top:var(--space-4)">
@@ -227,6 +266,21 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
             <span style="display:flex;align-items:center;gap:8px"><svg class="icone-eclair" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg>Commande urgente<span style="opacity:0.6">— à cocher seulement si le besoin est immédiat</span></span>
             <span class="rp-interrupteur"><input type="checkbox" id="toggle-urgent" aria-label="Commande urgente"><span class="rp-interrupteur-piste"></span></span>
           </label>
+          <div id="bloc-interne" hidden>
+            <div class="cm-homogene" id="bloc-homogene">
+              <label class="case-toggle" style="margin:0;padding:0;border:0;box-shadow:none;background:none">
+                <span style="display:flex;align-items:center;gap:8px"><svg class="icone-homogene" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="9" height="7" rx="1"/><path d="M1 15h11"/><rect x="13" y="5" width="9" height="7" rx="1"/><path d="M12 15h11"/></svg>Commande homogène<span style="opacity:0.6">— même modèle pour tous les ordinateurs</span></span>
+                <span class="rp-interrupteur"><input type="checkbox" id="toggle-homogene" aria-label="Commande homogène"><span class="rp-interrupteur-piste"></span></span>
+              </label>
+              <input class="input" id="homogene-precision" maxlength="200" placeholder="Précision (facultatif)" aria-label="Précision sur la commande homogène" hidden>
+            </div>
+            <div class="cm-destination">
+              <div class="field"><label for="raison-commande">Raison de la commande</label><select class="input" id="raison-commande"></select></div>
+              <div class="field"><label for="destination-commande">Structure concernée <span class="cm-facultatif">(facultatif)</span></label><select class="input" id="destination-commande"></select></div>
+              <div class="field cm-large" id="bloc-destination-libre" hidden><label for="destination-libre">Nom de la structure</label><input class="input" id="destination-libre" maxlength="150"></div>
+              <div class="field cm-large"><label for="raison-detail">Précisions <span class="cm-facultatif">(facultatif)</span></label><input class="input" id="raison-detail" maxlength="300" placeholder="Ce que vous voulez préciser sur cette commande"></div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -239,20 +293,12 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
         <p style="opacity:0.6;margin:0 0 var(--space-6);text-align:center">Un nom complet et une date de naissance par appareil commandé — cela nous sert à préparer l'attestation de chaque personne, vous n'avez plus de document à remplir vous-même.</p>
         <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
           <div id="zone-personnes-bo" style="display:grid;gap:var(--space-4)"></div>
-          <div id="cases-attestation-bo" hidden style="display:flex;flex-direction:column;gap:8px">
-            <label class="case-toggle">
-              <span>J'atteste avoir réalisé un diagnostic social de la situation de la personne orientée.</span>
-              <input type="checkbox" class="case-attestation-bo" data-attestation-bo="1" aria-label="Attestation 1" style="width:18px;height:18px;flex-shrink:0">
-            </label>
-            <label class="case-toggle">
-              <span>J'atteste m'être assuré que la situation de la personne orientée relevait bien des conditions de ventes solidaires proposées par Emmaüs Connect.</span>
-              <input type="checkbox" class="case-attestation-bo" data-attestation-bo="2" aria-label="Attestation 2" style="width:18px;height:18px;flex-shrink:0">
-            </label>
-            <label class="case-toggle">
-              <span>J'atteste que la personne orientée n'a pas fait l'acquisition d'équipement(s) solidaire(s) vendu(s) par Emmaüs Connect selon les conditions d'accès fixées par la convention (2 ans pour un ordinateur fixe ou portable, 1 an pour une tablette ou un Smartphone).</span>
-              <input type="checkbox" class="case-attestation-bo" data-attestation-bo="3" aria-label="Attestation 3" style="width:18px;height:18px;flex-shrink:0">
-            </label>
-          </div>
+          <fieldset id="cases-attestation-bo" class="bo-attestations" hidden>
+            <legend>Attestations</legend>
+            <label class="bo-attestation"><input type="checkbox" class="case-attestation-bo" data-attestation-bo="1"><span>J'atteste avoir réalisé un diagnostic social de la situation de la personne orientée.</span></label>
+            <label class="bo-attestation"><input type="checkbox" class="case-attestation-bo" data-attestation-bo="2"><span>J'atteste m'être assuré que la situation de la personne orientée relevait bien des conditions de ventes solidaires proposées par Emmaüs Connect.</span></label>
+            <label class="bo-attestation"><input type="checkbox" class="case-attestation-bo" data-attestation-bo="3"><span>J'atteste que la personne orientée n'a pas fait l'acquisition d'équipement(s) solidaire(s) vendu(s) par Emmaüs Connect selon les conditions d'accès fixées par la convention (2 ans pour un ordinateur fixe ou portable, 1 an pour une tablette ou un Smartphone).</span></label>
+          </fieldset>
           <div id="retour-personnes-bo" aria-live="polite"></div>
         </div>
       </div>
@@ -278,6 +324,11 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
           <div id="zone-paiement">
             <div style="opacity:0.55;margin-bottom:var(--space-2)">Moyen de paiement</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px" id="grille-paiement"></div>
+            <div class="field champ-cheque" id="zone-numero-cheque" hidden>
+              <label for="champ-numero-cheque">Numéro du chèque</label>
+              <input class="input" type="text" id="champ-numero-cheque" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="30" placeholder="Ex. 1234567" aria-describedby="aide-numero-cheque">
+              <small id="aide-numero-cheque">Indiqué sur le chèque, en haut à droite (7 chiffres en général).</small>
+            </div>
           </div>
 
           <label class="case-toggle" id="case-devis" for="case-devis-input">
@@ -408,10 +459,10 @@ html body .carte-moyen-paiement.choisi, html body .case-choix-partage.choisi{ ba
 
 </main>
 
-<script src="deja-identifie.js?v=1"></script>
-<script src="api.js?v=3"></script>
-<script src="commun.js?v=1"></script>
-<script src="pense-bete.js?v=1"></script>
-<script src="pages/commande.js?v=5"></script>
+<script src="api.js?v=5"></script>
+<script src="commun.js?v=5"></script>
+<script src="pense-bete.js?v=5"></script>
+<script src="linux-mint.js?v=2"></script>
+<script src="pages/commande.js?v=14"></script>
 </body>
 </html>

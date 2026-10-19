@@ -289,3 +289,36 @@
     align-self: center;
   }
 }
+/* Onglet « Public équipé » : part des fiches renseignées, tableau situation × âge */
+.sf-note {
+  margin: 0 0 12px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+.sf-table-defile {
+  overflow-x: auto;
+}
+.sf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.sf-table th,
+.sf-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e3e8ed;
+  text-align: right;
+  white-space: nowrap;
+}
+.sf-table th:first-child,
+.sf-table tbody th {
+  text-align: left;
+  font-weight: 600;
+}
+.sf-table thead th {
+  font-size: 12px;
+  opacity: 0.7;
+}
+.sf-corps > .sf-p + .sf-p {
+  margin-top: 14px;
+}

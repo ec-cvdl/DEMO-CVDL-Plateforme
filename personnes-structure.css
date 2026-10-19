@@ -1,0 +1,112 @@
+/* Personnes d'une structure (personnes-structure.js). Préfixe pst-. Système visuel de
+   cvdl-ui.css : trait bleu nuit, aplats, pastilles. */
+.pst-aide {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+.pst-liste {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+.pst-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1.5px solid color-mix(in srgb, var(--navy, #002743) 18%, transparent);
+  border-radius: 14px;
+  background: #fff;
+}
+.pst-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--navy, #002743);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tur, #00acb0) 18%, #fff);
+  color: var(--navy, #002743);
+  font-size: 13px;
+  font-weight: 800;
+}
+.pst-avatar.pst-responsable {
+  background: color-mix(in srgb, var(--mag, #e6007e) 16%, #fff);
+}
+.pst-avatar.pst-conseiller {
+  background: color-mix(in srgb, #fecc38 35%, #fff);
+}
+.pst-qui {
+  flex: 1 1 200px;
+  display: grid;
+  min-width: 0;
+}
+.pst .pst-ligne .pst-qui b {
+  font-size: 14.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.pst-moi {
+  flex: none;
+}
+.pst-nom,
+.pst-qui small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pst-qui small {
+  font-size: 12.5px;
+  opacity: 0.6;
+}
+.pst-moi,
+.pst-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--navy, #002743);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+.pst-badge {
+  flex: none;
+  background: color-mix(in srgb, var(--navy, #002743) 8%, #fff);
+  color: var(--navy, #002743);
+}
+.pst .pst-ligne .pst-role {
+  flex: none;
+  width: auto;
+  max-width: 190px;
+  min-height: 0;
+  padding: 5px 8px;
+}
+.pst-actions {
+  flex: none;
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+.pst-vide {
+  padding: 10px 0;
+  opacity: 0.6;
+}
+.pst-ajout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .pst-ajout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,17 +10,13 @@
    contenu chargé sont conservés (rafraîchissement automatique de la page sans rien perdre).
    ════════════════════════════════════════════════════════════════════════════════════ */
 (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const urlSure = (u) => (/^https?:\/\//i.test(String(u || '')) ? u : '#');
-  const api = () => (typeof API !== 'undefined' && API ? API : window.CVDL_API || '');
   const post = (d) =>
-    fetch(api(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) })
-      .then((r) => r.json())
-      .catch(() => ({ ok: false, erreur: 'Connexion impossible. Réessayez dans un instant.' }));
+    appelApi(d, { methode: 'POST' }).catch(() => ({
+      ok: false,
+      erreur: 'Connexion impossible. Réessayez dans un instant.',
+    }));
 
   const ouverts = new Set(); // références dont le fil est ouvert
   const donnees = new Map(); // référence -> dernière réponse /sav-fil

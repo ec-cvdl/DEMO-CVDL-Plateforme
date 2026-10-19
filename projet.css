@@ -1,4 +1,5 @@
-/* Pilotage du projet (projet.html) : rétroplanning et journal. Jetons et composants de base :
+/* Projet (projet.html, affiché dans l'onglet « Projet » de l'admin) : rétroplanning, journal
+   et démarche. Jetons et composants de base :
    cvdl-ui.css (trait bleu nuit + aplat décalé, pilules, cartes). */
 
 .pj-page {
@@ -880,4 +881,13 @@ svg.pj-liens {
   .pj-kpi small {
     letter-spacing: 0.08em;
   }
+}
+
+/* Dans l'onglet « Projet » de l'admin : ni logo ni en-tête de page, l'admin les porte déjà. */
+.pj-dans-admin .cvdl-entete,
+.pj-dans-admin .logo-portail {
+  display: none !important;
+}
+.pj-dans-admin .pj-page {
+  padding-top: var(--space-4);
 }

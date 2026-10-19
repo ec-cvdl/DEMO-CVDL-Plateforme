@@ -1,12 +1,13 @@
 /* Pense-bête de commande (portail structure et formulaire de commande) : les besoins notés au
    fil de l'eau avant de commander, partagés par toute la structure (serveur :
    routes/penseBete.js). Chaque clic sur + / − est enregistré ; une commande envoyée en retire
-   ce qui a été commandé.
+   ce qui a été commandé. Un commentaire libre, partagé aussi, est enregistré au fil de la frappe.
    · Portail : carte « Pense-bête » (#pb-carte) et fenêtre rapide (#modale-pense-bete) ;
    · Commande : pastille dans la barre du haut, avec ce qui a été noté et ce qui est déjà choisi.
-   Utilise `poster`, `jsonp`, `echapper` de commun.js. */
+   Utilise `poster`, `lireApi`, `echapper` de commun.js. */
 window.PenseBete = (function () {
-  const PB = { code: '', notes: {}, produits: [], charge: false };
+  const PB = { code: '', notes: {}, commentaire: { texte: '', majLe: '', majPar: '' }, produits: [], charge: false };
+  let envoiCommentaire = null;
   const envois = {}; // produit → minuteur d'envoi (clics rapprochés regroupés)
   let surChangement = () => {};
 
@@ -17,13 +18,19 @@ window.PenseBete = (function () {
       ? window.illustrationCvdl(window.cleIllustrationProduit(nom, icone), taille)
       : '';
   const $id = (id) => document.getElementById(id);
+  // Boutons + / − : même dessin que les quantités du formulaire de commande (.stepper-quantite).
+  const MOINS =
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>';
+  const PLUS =
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
 
   async function charger(code) {
     PB.code = code;
     try {
-      const r = await jsonp({ action: 'pense-bete', code });
+      const r = await lireApi({ action: 'pense-bete', code });
       if (r.ok) {
         PB.notes = r.notes || {};
+        PB.commentaire = r.commentaire || PB.commentaire;
         PB.produits = r.produits || [];
         PB.charge = true;
       }
@@ -39,8 +46,22 @@ window.PenseBete = (function () {
     if (!carte) return;
     carte.hidden = !PB.charge;
     const n = total();
-    $id('pb-carte-texte').textContent = n ? pluriel(n) : 'Notez vos besoins';
-    carte.classList.toggle('vide', !n);
+    $id('pb-carte-texte').textContent = n
+      ? pluriel(n)
+      : PB.commentaire.texte
+        ? 'Un commentaire noté'
+        : 'Notez vos besoins';
+    carte.classList.toggle('vide', !n && !PB.commentaire.texte);
+    if (dernierTotal !== null && n > dernierTotal) rebondir(carte);
+    dernierTotal = n;
+  }
+  let dernierTotal = null;
+  /** Rebond court pour signaler qu'un élément vient d'augmenter. */
+  function rebondir(el) {
+    if (!el) return;
+    el.classList.remove('pb-bond');
+    void el.offsetWidth; // relance l'animation si elle tourne déjà
+    el.classList.add('pb-bond');
   }
   function rendreFenetre() {
     const produits = [...PB.produits];
@@ -54,7 +75,7 @@ window.PenseBete = (function () {
             const q = PB.notes[p.nom] || 0;
             return `<div class="pb-ligne${q ? ' note' : ''}">${illu(p.nom, p.icone, 30)}
           <span class="pb-nom">${echapper(p.nom)}${p.horsCatalogue ? '<small>plus proposé</small>' : p.disponible === false ? '<small>en rupture pour le moment</small>' : ''}</span>
-          <span class="pb-pas"><button type="button" data-pb-pas="-1" data-pb-produit="${echapper(p.nom)}" aria-label="Retirer un ${echapper(p.nom)}" ${q ? '' : 'disabled'}>−</button><b aria-live="polite">${q}</b><button type="button" class="plus" data-pb-pas="1" data-pb-produit="${echapper(p.nom)}" aria-label="Ajouter un ${echapper(p.nom)}" ${p.horsCatalogue || q >= 999 ? 'disabled' : ''}>+</button></span></div>`;
+          <span class="stepper-quantite"><button type="button" data-pb-pas="-1" data-pb-produit="${echapper(p.nom)}" aria-label="Retirer un ${echapper(p.nom)}" ${q ? '' : 'disabled'}>${MOINS}</button><span class="valeur-quantite" aria-live="polite">${q}</span><button type="button" data-pb-pas="1" data-pb-produit="${echapper(p.nom)}" aria-label="Ajouter un ${echapper(p.nom)}" ${p.horsCatalogue || q >= 999 ? 'disabled' : ''}>${PLUS}</button></span></div>`;
           })
           .join('')
       : '<p class="pb-vide">Aucun produit proposé pour le moment.</p>';
@@ -62,8 +83,27 @@ window.PenseBete = (function () {
     $id('pb-total').textContent = n ? pluriel(n) : 'Rien de noté pour l’instant';
     $id('pb-vider').hidden = !n;
   }
+  /** « Modifié le 13/10 par marie@… » sous le commentaire. */
+  // « marie.dupont@x.org » → « Marie Dupont » (même règle que les vendeurs de la flotte).
+  const nomAuteur = (v) =>
+    String(v || '').includes('@')
+      ? v
+          .split('@')[0]
+          .split(/[._+]+/)
+          .filter(Boolean)
+          .map((m) => m.charAt(0).toUpperCase() + m.slice(1))
+          .join(' ')
+      : v;
+  function infoCommentaire() {
+    const c = PB.commentaire;
+    $id('pb-commentaire-info').textContent = c.majLe
+      ? `Modifié le ${new Date(c.majLe).toLocaleDateString('fr-FR')}${c.majPar ? ` par ${nomAuteur(c.majPar)}` : ''}`
+      : '';
+  }
   function ouvrir() {
     $id('pb-retour').innerHTML = '';
+    $id('pb-commentaire').value = PB.commentaire.texte;
+    infoCommentaire();
     rendreFenetre();
     $id('modale-pense-bete').classList.add('visible');
   }
@@ -111,6 +151,24 @@ window.PenseBete = (function () {
       document.querySelector(`[data-pb-produit="${CSS.escape(nom)}"][data-pb-pas="${b.dataset.pbPas}"]`)?.focus();
       envoyer(nom);
     });
+    // Commentaire : enregistré 0,8 s après la dernière frappe (comme les + / −, sans bouton).
+    $id('pb-commentaire').addEventListener('input', () => {
+      clearTimeout(envoiCommentaire);
+      $id('pb-commentaire-info').textContent = 'Enregistrement…';
+      envoiCommentaire = setTimeout(async () => {
+        const r = await poster({
+          action: 'pense-bete-commenter',
+          code: PB.code,
+          texte: $id('pb-commentaire').value,
+        }).catch(() => ({ ok: false, erreur: 'Connexion impossible — réessayez.' }));
+        if (r.ok) {
+          PB.commentaire = r.commentaire;
+          infoCommentaire();
+          majCarte();
+          surChangement(PB.notes);
+        } else $id('pb-commentaire-info').textContent = r.erreur || 'Enregistrement impossible.';
+      }, 800);
+    });
     $id('pb-vider').addEventListener('click', async () => {
       if (!(await confirmerCvdl('Effacer tout le pense-bête de votre structure ?'))) return;
       const r = await poster({ action: 'pense-bete-vider', code: PB.code }).catch(() => ({ ok: false }));
@@ -133,7 +191,7 @@ window.PenseBete = (function () {
     P.reprendre = reprendre;
     const actions = document.querySelector('.cvdl-entete-actions');
     let zone = $id('pb-entete');
-    if (!PB.charge || !total() || !actions) {
+    if (!PB.charge || (!total() && !PB.commentaire.texte) || !actions) {
       if (zone) zone.remove();
       return;
     }
@@ -166,14 +224,23 @@ window.PenseBete = (function () {
       return `<div class="pb-r">${illu(nom, p.icone, 26)}<span>${echapper(nom)}</span><b class="${choisi >= q ? 'ok' : ''}">${choisi} / ${q}${choisi >= q ? ' ✓' : ''}</b></div>`;
     });
     const tousPris = Object.entries(PB.notes).every(([nom, q]) => (selection[nom] || 0) >= q);
-    zone.innerHTML = `<button type="button" class="pb-pastille" data-pb-basculer aria-expanded="${P.ouverte}" aria-controls="pb-panneau"><span>Pense-bête</span><b>${total()}</b><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    const pris = Object.entries(PB.notes).reduce((s, [nom, q]) => s + Math.min(selection[nom] || 0, q), 0);
+    const augmente = P.pris !== undefined && pris > P.pris;
+    P.pris = pris;
+    zone.innerHTML = `<button type="button" class="pb-pastille" data-pb-basculer aria-expanded="${P.ouverte}" aria-controls="pb-panneau"><span>Pense-bête</span>${total() ? `<b>${total()}</b>` : ''}<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
       <div class="pb-panneau" id="pb-panneau" ${P.ouverte ? '' : 'hidden'}>
         <h3>Ce que vous aviez noté</h3>
-        <p>Choisi dans cette commande / noté.</p>
+        ${
+          lignes.length
+            ? `<p>Choisi dans cette commande / noté.</p>
         ${lignes.join('')}
         <button type="button" class="btn btn-primary btn-block" data-pb-reprendre ${tousPris ? 'disabled' : ''}>${tousPris ? 'Tout est dans la commande ✓' : 'Tout reprendre dans la commande'}</button>
-        <p class="pb-apres">Une fois la commande envoyée, ce qui a été commandé sort du pense-bête.</p>
+        <p class="pb-apres">Une fois la commande envoyée, ce qui a été commandé sort du pense-bête.</p>`
+            : ''
+        }
+        ${PB.commentaire.texte ? `<div class="pb-panneau-commentaire"><b>Commentaire</b><p>${echapper(PB.commentaire.texte)}</p></div>` : ''}
       </div>`;
+    if (augmente) rebondir(zone.querySelector('.pb-pastille'));
   }
 
   return { charger, brancherPortail, majCarte, pastille, notes: () => PB.notes, total };

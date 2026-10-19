@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Répartition de distribution autonome : fonctionne sans compte, les données restent dans ce navigateur.">
+<title>Répartition de distribution — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="repartition.css?v=1">
+<link rel="stylesheet" href="autonome.css?v=1">
+<script src="cvdl-ui.js?v=18" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
+</head>
+<body data-famille="accueil">
+<main id="contenu-principal" class="da-page">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+
+  <div class="da-tete">
+    <div>
+      <span class="cvdl-surtitre">Version autonome</span>
+      <h1>Répartition de <em>distribution</em></h1>
+      <p class="da-sous">Programmes, structures pressenties et appareils prévus pour chacune.</p>
+    </div>
+    <div class="da-tete-actions">
+      <button type="button" class="btn" id="auto-exporter">Exporter</button>
+      <button type="button" class="btn" id="auto-importer">Importer</button>
+    </div>
+  </div>
+  <p class="auto-note">Sans compte ni serveur : les programmes sont enregistrés dans ce navigateur. Exportez-les régulièrement pour les garder ou les reprendre sur un autre poste.</p>
+  <p class="auto-note ko" id="da-alerte" role="alert"></p>
+
+  <div class="da-grille">
+    <aside class="da-colonne">
+      <div class="da-carte">
+        <div class="da-carte-tete"><h2>Programmes</h2><button type="button" class="btn btn-primary" id="da-nouveau">＋ Nouveau</button></div>
+        <div id="da-liste" class="da-liste"></div>
+      </div>
+      <div class="da-carte" id="da-structures" hidden>
+        <h2>Toutes structures</h2>
+        <p class="da-sous">Appareils prévus, tous programmes confondus.</p>
+        <ul id="da-structures-liste" class="da-structures"></ul>
+      </div>
+    </aside>
+
+    <section class="da-carte da-accueil" id="da-accueil">
+      <h2>Commencez par un programme</h2>
+      <p class="da-sous">Donnez-lui un objectif (nombre d’appareils, et si besoin par catégorie), puis ajoutez les structures pressenties et réglez leur part avec les réglettes : le résultat suit en direct.</p>
+    </section>
+
+    <section class="da-colonne" id="da-fiche" hidden>
+      <div class="da-carte">
+        <div class="da-carte-tete"><h2>Programme</h2><button type="button" class="da-lien ko" id="da-supprimer">Supprimer</button></div>
+        <div class="da-champs">
+          <label class="da-large"><span>Nom</span><input class="input" id="da-nom" maxlength="150"></label>
+          <label><span>Objectif (appareils)</span><input class="input" id="da-objectif" type="number" min="0" placeholder="Somme des catégories"></label>
+          <label><span>Début</span><input class="input" id="da-debut" type="date"></label>
+          <label><span>Date butoir</span><input class="input" id="da-butoir" type="date"></label>
+        </div>
+        <div class="da-cats-tete"><span>Catégories imposées <small>(facultatif)</small></span><button type="button" class="da-lien" id="da-ajouter-cat">＋ Ajouter une catégorie</button></div>
+        <div id="da-categories"></div>
+      </div>
+      <div class="da-carte" id="da-repartition"></div>
+    </section>
+  </div>
+</main>
+
+<script src="autonome.js?v=1"></script>
+<script src="repartition.js?v=2"></script>
+<script src="pages/distribution-autonome.js?v=1"></script>
+</body>
+</html>

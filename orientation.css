@@ -1,0 +1,1154 @@
+/* Ventes à préparer (ventes-preparer.html) : préfixe bo- ; bons d'orientation (orientation.html) :
+   préfixe ob-, composants de la page Commander. Composants de base : cvdl-ui.css. */
+[hidden] {
+  display: none !important;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6) 64px;
+}
+@media (max-width: 640px) {
+  main {
+    padding: var(--space-6) var(--space-4) 48px;
+  }
+}
+.spinner-inline {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  animation: bo-tourner 0.7s linear infinite;
+  margin-right: 8px;
+  vertical-align: -2px;
+}
+@keyframes bo-tourner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── En-tête de la vente ── */
+.bo-tete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.bo-tete h1 {
+  margin: 4px 0 6px;
+}
+.bo-tete p {
+  margin: 0;
+  opacity: 0.72;
+  max-width: 620px;
+}
+.bo-puce {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #fff;
+  border: var(--trait-doux);
+}
+.bo-puce.date {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.bo-puce.ok {
+  background: color-mix(in srgb, var(--vert) 16%, #fff);
+  color: #14633a;
+}
+.bo-puce.alerte {
+  background: color-mix(in srgb, var(--mag) 14%, #fff);
+  color: #a3154a;
+}
+.bo-consigne {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  margin: 0 0 18px;
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--jaune) 22%, #fff);
+  border: 1.5px solid #c98a00;
+  font-size: 14px;
+  white-space: pre-line;
+}
+.bo-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+}
+.bo-form .field {
+  margin: 0;
+}
+.bo-form .bo-large {
+  grid-column: 1 / -1;
+}
+.bo-form textarea {
+  resize: vertical;
+  min-height: 62px;
+}
+@media (max-width: 560px) {
+  .bo-form {
+    grid-template-columns: 1fr;
+  }
+}
+.bo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.bo-vide {
+  padding: 18px;
+  text-align: center;
+  opacity: 0.65;
+  border: var(--pointille);
+  border-radius: var(--r-m);
+}
+.bo-mini {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  border: var(--trait-doux);
+  background: #fff;
+  white-space: nowrap;
+}
+.bo-mini:hover {
+  background: var(--fond-doux);
+}
+.bo-mini:focus-visible {
+  outline: 2px solid var(--tur);
+  outline-offset: 2px;
+}
+.bo-mini.plein {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.bo-mini.danger {
+  color: #a3154a;
+}
+.bo-mini[disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ── Ventes à préparer (responsable) ── */
+.bo-ventes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bo-vente-carte {
+  padding: 18px 20px;
+  border-radius: var(--r-l);
+  background: #fff;
+  border: var(--trait);
+  box-shadow: 4px 4px 0 var(--aplat);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bo-vente-carte.passee {
+  box-shadow: none;
+  opacity: 0.92;
+}
+.bo-vente-tete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 16px;
+  align-items: flex-start;
+}
+.bo-vente-titre {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+.bo-vente-tete h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.bo-date {
+  flex: none;
+  width: 58px;
+  padding: 7px 0 8px;
+  border-radius: var(--r-m);
+  background: var(--navy);
+  color: #fff;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.1;
+  box-shadow: 3px 3px 0 var(--aplat);
+}
+.bo-date b {
+  display: block;
+  font-family: var(--police-titre);
+  font-size: 24px;
+}
+.bo-vente-carte.passee .bo-date {
+  background: color-mix(in srgb, var(--navy) 55%, #fff);
+}
+.bo-infos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 6px;
+  font-size: 13.5px;
+}
+.bo-infos > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: color-mix(in srgb, var(--navy) 78%, transparent);
+}
+.bo-infos svg {
+  flex: none;
+  opacity: 0.7;
+}
+.bo-ko {
+  color: #a3154a !important;
+  font-weight: 700;
+}
+.bo-ok {
+  color: #14633a;
+}
+.bo-code {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-radius: var(--r-m);
+  background: var(--fond-doux);
+  border: var(--trait-doux);
+}
+.bo-code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.bo-repartition {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+/* Places prises : petite jauge */
+.bo-places {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #fff;
+  border: var(--trait-doux);
+}
+.bo-places-barre {
+  width: 54px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--fond-doux);
+  overflow: hidden;
+}
+.bo-places-barre i {
+  display: block;
+  height: 100%;
+  background: var(--tur);
+}
+/* Besoin d'une catégorie (personnes sans appareil) face au stock : pastille de couleur */
+.bo-besoin {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: var(--fond-doux);
+}
+.bo-besoin i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--navy) 35%, transparent);
+}
+.bo-besoin.ok i {
+  background: var(--vert);
+}
+.bo-besoin.ko i {
+  background: var(--mag);
+}
+.bo-besoin.ko {
+  color: #a3154a;
+}
+
+/* ── Bons : une ligne par personne (cartes empilées sur mobile) ── */
+.bo-bons {
+  display: flex;
+  flex-direction: column;
+  border-top: var(--trait-doux);
+}
+.bo-bon {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.4fr) minmax(160px, 1fr) minmax(110px, 0.7fr) minmax(330px, 1.3fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--navy) 10%, transparent);
+  font-size: 13.5px;
+}
+.bo-bon.remis {
+  background: color-mix(in srgb, var(--vert) 5%, transparent);
+}
+.bo-bon-tete {
+  padding: 8px 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.bo-bon-tete span:last-child {
+  text-align: right;
+}
+.bo-bon-personne {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.bo-initiales {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--tur) 18%, #fff);
+  border: 1.5px solid var(--navy);
+}
+.bo-bon-produit {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.bo-bon-ill {
+  flex: none;
+  display: inline-flex;
+}
+.bo-besoins {
+  display: block;
+  font-size: 12.5px;
+  opacity: 0.72;
+  margin-top: 2px;
+  white-space: pre-line;
+}
+.bo-bon-prep {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.bo-prep-ligne {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.bo-prep-ligne select {
+  max-width: 230px;
+  min-width: 0;
+  min-height: 34px;
+  font-size: 12.5px;
+  padding: 4px 8px;
+}
+.bo-prep-liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  justify-content: flex-end;
+}
+.bo-lien {
+  all: unset;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.bo-lien:hover {
+  text-decoration-style: solid;
+}
+.bo-lien:focus-visible {
+  outline: 2px solid var(--tur);
+  outline-offset: 2px;
+}
+.bo-mobile-l {
+  display: none;
+}
+.bo-remis {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--vert) 16%, #fff);
+  color: #14633a;
+}
+@media (max-width: 900px) {
+  .bo-bon {
+    grid-template-columns: 1fr 1fr;
+  }
+  .bo-bon-tete {
+    display: none;
+  }
+  .bo-bon-prep {
+    grid-column: 1 / -1;
+    align-items: stretch;
+  }
+  .bo-prep-ligne,
+  .bo-prep-liens {
+    justify-content: flex-start;
+  }
+  .bo-mobile-l {
+    display: inline;
+    opacity: 0.6;
+  }
+}
+@media (max-width: 560px) {
+  .bo-bon {
+    grid-template-columns: 1fr;
+  }
+  .bo-prep-ligne select {
+    max-width: none;
+    flex: 1 1 100%;
+  }
+}
+
+/* ── Capteur « Ordinateurs à préparer » (même lecture que le dépôt-vente de l'admin) ── */
+.bo-capteurs {
+  margin: 4px 0 26px;
+}
+.bo-capteurs-tete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.bo-capteurs-tete .ill {
+  flex: none;
+}
+.bo-capteurs-tete h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.bo-capteurs-tete p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  opacity: 0.8;
+}
+.bo-capteurs-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.bo-capteur {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: var(--r-l);
+  background: #fff;
+  border: var(--trait);
+  box-shadow: 4px 4px 0 var(--aplat);
+}
+.bo-capteur.alerte {
+  background: color-mix(in srgb, var(--mag) 6%, #fff);
+}
+.bo-capteur-tete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.bo-capteur-ill {
+  flex: none;
+  display: inline-flex;
+}
+.bo-capteur-tete b {
+  font-size: 14.5px;
+  line-height: 1.25;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bo-capteur-chiffre {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.bo-capteur-chiffre b {
+  font-family: var(--police-titre);
+  font-size: 32px;
+  line-height: 1;
+}
+.bo-capteur-chiffre span {
+  font-size: 13px;
+  opacity: 0.72;
+}
+.bo-capteur-barre {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--fond-doux);
+  overflow: hidden;
+}
+.bo-capteur-barre i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tur);
+}
+.bo-capteur.alerte .bo-capteur-barre i {
+  background: var(--mag);
+}
+.bo-capteur-puces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bo-capteur-puces span {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fond-doux);
+}
+.bo-capteur-puces .ok {
+  background: color-mix(in srgb, var(--vert) 16%, #fff);
+  color: #14633a;
+}
+.bo-capteur-puces .ko {
+  background: color-mix(in srgb, var(--mag) 14%, #fff);
+  color: #a3154a;
+}
+.bo-capteur-puces .att {
+  background: color-mix(in srgb, var(--jaune) 35%, #fff);
+  color: #7a5a00;
+}
+@media (max-width: 640px) {
+  /* Capteurs en bandeau défilant : la liste des ventes reste visible sans long défilement. */
+  .bo-capteurs-grille {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 2px 6px 8px 2px;
+  }
+  .bo-capteur {
+    flex: 0 0 78%;
+    scroll-snap-align: start;
+  }
+}
+html.bo-conseiller #btn-nouvelle-vente {
+  display: none;
+}
+.bo-pied {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  border-top: var(--pointille);
+  padding-top: 12px;
+}
+.bo-pied > span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bo-voile {
+  position: fixed;
+  inset: 0;
+  z-index: 550;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: color-mix(in srgb, var(--navy) 45%, transparent);
+}
+.bo-dialogue {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #fff;
+  border: var(--trait);
+  border-radius: var(--r-xl);
+  box-shadow: 6px 6px 0 var(--aplat-fort);
+  padding: 22px 24px;
+}
+.bo-dialogue h2 {
+  margin: 0 0 14px;
+}
+@media (max-width: 640px) {
+  .bo-voile {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .bo-dialogue {
+    max-height: 94vh;
+    border-radius: 22px 22px 0 0;
+    padding: 18px 16px;
+  }
+}
+
+@media print {
+  .bo-actions,
+  .btn-retour-portail,
+  .bo-mini,
+  .retours-bouton {
+    display: none !important;
+  }
+}
+@media (max-width: 560px) {
+  .bo-consigne {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+/* ══════════ Bons d'orientation (orientation.html) : composants de la page Commander ══════════
+   (cartes produit, lignes de personnes, pastilles d'initiales, attestations), préfixe ob-. */
+.ob-page {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+.ob-page .cvdl-titre p {
+  opacity: 0.65;
+  margin: 4px 0 var(--space-6);
+  max-width: 640px;
+}
+.ob-page .card {
+  padding: var(--space-6);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5, 20px);
+}
+.ob-section-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ob-section-tete .card-kicker {
+  margin: 0;
+}
+.ob-lien {
+  all: unset;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-style: dashed;
+}
+.ob-lien:focus-visible {
+  outline: 2px solid var(--tur);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.ob-compteur {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--fond-doux);
+}
+
+/* Catalogue : cartes produit de Commander (non sélectionnables), usages et prix */
+.ob-page .grille-produits-commande {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 12px;
+}
+.ob-page .carte-produit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 18px 14px 16px;
+  cursor: default;
+  position: relative;
+}
+.ob-page .carte-produit .icone-carre {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ob-page .spec-produit {
+  opacity: 0.6;
+  font-size: 12.5px;
+}
+.ob-usages {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+.ob-page .prix-produit {
+  margin-top: auto;
+  padding-top: 4px;
+}
+.ob-catalogue.replie .grille-produits-commande {
+  display: none;
+}
+
+/* Pastille d'initiales (comme le choix du prescripteur dans Commander) */
+.ob-page .pc-av {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid var(--navy);
+  background: var(--c, color-mix(in srgb, var(--tur) 45%, #fff));
+  box-shadow: 2px 2px 0 var(--aplat);
+  display: grid;
+  place-items: center;
+  font: 700 14px/1 var(--police-titre);
+  letter-spacing: 0.02em;
+  color: var(--navy);
+  text-align: center;
+}
+.ob-page .pc-av.vide {
+  border-style: dashed;
+  background: #fff;
+  box-shadow: none;
+  font-size: 18px;
+}
+
+/* Lignes de personnes */
+.ob-lignes {
+  display: grid;
+  gap: 12px;
+}
+.ob-ligne {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+}
+.ob-ligne .ob-qui {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+.ob-ligne .ob-qui b {
+  font-size: 15.5px;
+}
+.ob-ligne .ob-qui small {
+  font-size: 12.5px;
+  opacity: 0.68;
+}
+.ob-appareil {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 3px 12px 3px 4px;
+  border-radius: 999px;
+  background: var(--fond-doux);
+  font-size: 12.5px;
+  font-weight: 700;
+  align-self: flex-start;
+  max-width: 100%;
+}
+.ob-appareil svg {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  overflow: visible;
+}
+.ob-appareil span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ob-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.ob-remis {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--vert) 16%, #fff);
+  color: #14633a;
+}
+/* Ligne en saisie */
+.ob-ligne.edition {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+.ob-ligne.edition .pc-av {
+  margin-top: 26px;
+}
+.ob-champs {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.ob-page .ob-ligne .grille-personne-bo {
+  display: grid;
+  grid-template-columns: 1fr 1fr 170px;
+  gap: 12px;
+}
+.ob-champs-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) 140px minmax(0, 1.3fr);
+  gap: 12px;
+}
+.ob-choix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ob-choix svg {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  overflow: visible;
+}
+.ob-choix select {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+.ob-ligne-pied {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.ob-ligne-pied .ob-titre-ligne {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.ob-erreur {
+  color: #a3154a;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ob-ligne.en-erreur {
+  border-color: var(--rouge);
+}
+.ob-ajout {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: var(--r-m);
+  border: 1.5px dashed color-mix(in srgb, var(--navy) 30%, transparent);
+  font-weight: 700;
+}
+.ob-ajout:hover {
+  background: var(--fond-doux);
+}
+.ob-ajout:focus-visible {
+  outline: 2px solid var(--tur);
+  outline-offset: 2px;
+}
+.ob-ajout .pc-av {
+  --c: color-mix(in srgb, #fecc38 55%, #fff);
+}
+.ob-envoi {
+  display: grid;
+  gap: 14px;
+  padding-top: 6px;
+  border-top: var(--pointille);
+}
+.ob-envoi .field {
+  margin: 0;
+  max-width: 420px;
+}
+/* Attestations (mêmes classes que Commander) */
+.ob-page .bo-attestations {
+  border: 1.5px solid var(--color-neutral-200, #d5dde4);
+  border-radius: var(--r-m, 14px);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.ob-page .bo-attestations legend {
+  font-weight: 700;
+  font-size: 14px;
+  padding: 0 6px;
+}
+.ob-page .bo-attestation {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.ob-page .bo-attestation input {
+  order: 2;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin: 1px 4px 0 0;
+}
+
+/* Récapitulatif : la vente */
+.ob-vente {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tur) 10%, #fff);
+}
+.ob-vente > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ob-vente small {
+  opacity: 0.7;
+  font-size: 12.5px;
+}
+.ob-date {
+  flex: none;
+  width: 48px;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--navy);
+  color: #fff;
+  line-height: 1;
+}
+.ob-date b {
+  font-size: 20px;
+}
+.ob-date small {
+  opacity: 0.85 !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.ob-places {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  font-size: 13.5px;
+}
+.ob-places i {
+  grid-column: 1 / -1;
+  height: 8px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--tur) var(--p), color-mix(in srgb, var(--navy) 10%, #fff) var(--p));
+}
+.ob-recap .cm-recap-total b {
+  font-size: 18px;
+}
+.ob-recap-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.ob-consigne b {
+  flex: none;
+}
+.ob-consigne {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  margin: 0 0 18px;
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--jaune) 22%, #fff);
+  border: 1.5px solid #c98a00;
+  font-size: 14px;
+  white-space: pre-line;
+}
+
+@media (max-width: 760px) {
+  .ob-page .grille-produits-commande {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+  }
+  html body[data-famille] .ob-page .grille-produits-commande .carte-produit {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    align-content: start;
+    padding: 14px 16px;
+  }
+  html body[data-famille] .ob-page .carte-produit .icone-carre {
+    grid-row: auto;
+    width: 48px;
+    height: 48px;
+  }
+  .ob-page .grille-produits-commande .carte-produit {
+    flex: 0 0 min(70vw, 240px);
+    scroll-snap-align: start;
+  }
+  .ob-ligne {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .ob-ligne .ob-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .ob-ligne.edition {
+    grid-template-columns: 1fr;
+  }
+  .ob-ligne.edition .pc-av {
+    margin-top: 0;
+  }
+  .ob-page .ob-ligne .grille-personne-bo,
+  .ob-champs-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ob-champs-2 .ob-choix-champ {
+    grid-column: 1 / -1;
+  }
+  .ob-consigne {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+@media print {
+  .ob-catalogue,
+  .ob-ajout,
+  .ob-envoi,
+  .cm-pied,
+  .ob-actions,
+  .ob-recap-actions,
+  .ob-ligne.edition {
+    display: none !important;
+  }
+  .cm-grille {
+    grid-template-columns: 1fr !important;
+  }
+  .cm-recap {
+    position: static;
+    box-shadow: none;
+  }
+}
+
+/* Aide au choix (arbre de décision, comme dans Commander), au-dessus des ordinateurs */
+.ob-aide {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--jaune) 24%, #fff);
+  border: 1.5px solid color-mix(in srgb, #c98a00 60%, transparent);
+}
+.ob-aide:hover {
+  background: color-mix(in srgb, var(--jaune) 34%, #fff);
+}
+.ob-aide:focus-visible {
+  outline: 2px solid var(--tur);
+  outline-offset: 2px;
+}
+.ob-aide svg {
+  flex: none;
+}
+.ob-aide span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ob-aide small {
+  font-size: 13px;
+  opacity: 0.8;
+}
+.ob-aide em {
+  flex: none;
+  font-style: normal;
+  font-weight: 700;
+  font-size: 13.5px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ob-catalogue.replie .ob-aide {
+  display: none;
+}
+@media (max-width: 560px) {
+  .ob-aide {
+    flex-wrap: wrap;
+  }
+  .ob-aide em {
+    width: 100%;
+    padding-left: 36px;
+  }
+}

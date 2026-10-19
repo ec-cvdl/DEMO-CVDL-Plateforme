@@ -28,11 +28,7 @@
       v == null ? s.removeItem(k) : s.setItem(k, v);
     } catch (e) {}
   };
-  const esc = (t) =>
-    String(t == null ? '' : t).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const page = () => (location.pathname.split('/').pop() || 'index.html').toLowerCase();
   const onglet = () => location.hash.slice(1).split('?')[0] || 'dashboard';
   const actif = () => lire(localStorage, CLE) !== '0'; // activé par défaut dans la démo
@@ -418,6 +414,19 @@
       aides: [],
       tutos: ['partenaires'],
     },
+    'ventes-preparer.html': {
+      titre: 'Ventes à préparer',
+      texte:
+        'Vos ventes solidaires à venir. Chaque structure qui vous oriente des personnes reçoit un code : elle remplit les bons, vous préparez les appareils et les attestations.',
+      aides: [
+        [
+          '#btn-nouvelle-vente',
+          'Nouvelle vente',
+          'Date, lieu et structure qui oriente : un code d’accès est créé pour elle.',
+        ],
+      ],
+      tutos: [],
+    },
     'structures-partenaires.html': {
       titre: 'Mes partenaires',
       texte: 'Les associations avec lesquelles vous travaillez. Créez-leur un accès : elles commandent, vous validez.',
@@ -451,13 +460,18 @@
     'support.html': {
       titre: 'Logistique',
       texte:
-        'L’espace de la logistique. À gauche, les commandes à valider et à préparer, puis les files de tickets SAV. Au centre, la commande ou le ticket choisi.',
+        'L’espace de la logistique, en trois onglets : Commandes (à valider, à préparer), SAV (les tickets) et Flotte (appareils déjà sur place). À gauche, les files de l’onglet ; au centre, la commande ou le ticket choisi.',
       aides: [
+        ['#sp-espaces', 'Les onglets', 'Commandes, SAV ou Flotte. La pastille compte ce qui attend l’équipe.'],
         ['[data-file="cmd:recue"]', 'Commandes à valider', 'Vérifier les quantités de chaque nouvelle commande.'],
         ['[data-file="cmd:validee"]', 'À préparer', 'Saisir les numéros de série (douchette ou CSV tec.tech).'],
         ['[data-file="a-traiter"]', 'À traiter', 'Les tickets qui attendent une action de votre part.'],
-        ['.sp-tk', 'Un ticket', 'Cliquez pour l’ouvrir au centre.'],
-        ['#sp-recherche', 'Rechercher', 'Une référence CVDL-… ou SAV-…, un numéro de série ou un nom de structure.'],
+        ['.sp-tk', 'Une commande ou un ticket', 'Cliquez pour l’ouvrir au centre.'],
+        [
+          '#sp-recherche',
+          'Rechercher',
+          'Dans l’onglet ouvert : une référence CVDL-… ou SAV-…, un numéro de série ou un nom de structure.',
+        ],
       ],
       tutos: ['support'],
     },
@@ -838,9 +852,11 @@
       etapes: [
         {
           page: 'support.html',
+          clic: '[data-espace="sav"]',
           cible: '#sp-nav',
           titre: 'Les files',
-          texte: 'Les tickets sont rangés par file : à traiter, en attente de réponse, les miens, par étape…',
+          texte:
+            'Dans l’onglet SAV, les tickets sont rangés par file : à traiter, en attente de réponse, les miens, par étape…',
         },
         {
           cible: '.sp-tk',

@@ -1,4 +1,5 @@
-/* Saisie Salesforce : page compacte, lisible en moitié d'écran (~600 px), Salesforce à côté. */
+/* Saisie Salesforce : lisible en moitié d'écran (une colonne sous 1000 px, Salesforce à côté) ;
+   en plein écran, les créneaux à gauche et la préparation (premiers pas, favori, réglages) à droite. */
 [hidden] {
   display: none !important;
 }
@@ -10,9 +11,51 @@
   clip: rect(0 0 0 0);
 }
 main {
-  max-width: 640px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: var(--space-6) 16px 64px;
+  padding: var(--space-8) var(--space-6) 64px;
+}
+@media (max-width: 640px) {
+  main {
+    padding: var(--space-6) var(--space-4) 48px;
+  }
+}
+/* Une colonne : premiers pas, créneaux, puis favori et réglages. */
+.sf-mise-en-page {
+  display: flex;
+  flex-direction: column;
+}
+.sf-cote {
+  display: contents;
+}
+#sf-premiers-pas {
+  order: 0;
+}
+.sf-principal {
+  order: 1;
+}
+.sf-favori,
+.sf-reglages {
+  order: 2;
+}
+@media (min-width: 1000px) {
+  .sf-mise-en-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 0 28px;
+    align-items: start;
+  }
+  .sf-principal {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .sf-cote {
+    grid-column: 2;
+    grid-row: 1;
+    display: block;
+    position: sticky;
+    top: var(--space-6);
+  }
 }
 .spinner-inline {
   display: inline-block;
@@ -59,31 +102,6 @@ html.deja-identifie #voile-verification-precoce {
 }
 
 /* En-tête, filtres */
-.sf-ent {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 4px;
-}
-.sf-ent h1 {
-  font-size: 19px;
-  margin: 0;
-  line-height: 1.25;
-  min-width: 0;
-}
-.sf-prog {
-  margin-left: auto;
-  flex: none;
-  font-size: 12.5px;
-  background: #fff;
-  border: var(--trait-doux);
-  border-radius: 999px;
-  padding: 4px 10px;
-  white-space: nowrap;
-}
-.sf-prog b {
-  color: #00838a;
-}
 .sf-aide {
   font-size: 12.5px;
   opacity: 0.7;
@@ -92,58 +110,28 @@ html.deja-identifie #voile-verification-precoce {
 .sf-membre {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 8px;
   font-size: 13px;
 }
-.sf-membre label {
-  flex: none;
-  opacity: 0.75;
-}
-.sf-membre select {
-  flex: 1;
-  min-width: 0;
+.sf-membre .input {
+  flex: 1 1 180px;
   min-height: 34px;
   padding: 4px 10px;
-}
-.sf-filtre {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-.sf-chip {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 999px;
-  border: var(--trait-doux);
-  background: #fff;
-}
-.sf-chip.on {
-  background: var(--navy);
-  color: #fff;
-  border-color: var(--navy);
-}
-.sf-chip:focus-visible {
-  outline: 2px solid var(--tur);
-  outline-offset: 2px;
-}
-.sf-select {
-  appearance: auto;
-  max-width: 100%;
 }
 
 /* Blocs et lignes à copier */
 .sf-bloc {
   background: #fff;
-  border: 1px solid color-mix(in srgb, var(--navy) 14%, transparent);
-  border-radius: 12px;
-  padding: 10px 14px;
-  margin-bottom: 10px;
+  border: var(--trait-doux);
+  border-radius: var(--r-l);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.sf-bloc > summary {
+  cursor: pointer;
+  font-weight: 700;
 }
 .sf-bloc h2,
 .sf-sous {
@@ -246,25 +234,6 @@ html.deja-identifie #voile-verification-precoce {
 }
 
 /* Cartes des ventes */
-.sf-carte.active {
-  border: 2px solid var(--tur);
-  padding: 9px 13px;
-}
-.sf-pers {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 34px;
-}
-.sf-pers:focus-visible {
-  outline: 2px solid var(--tur);
-  outline-offset: 3px;
-  border-radius: 6px;
-}
 .sf-av {
   width: 30px;
   height: 30px;
@@ -286,21 +255,7 @@ html.deja-identifie #voile-verification-precoce {
   background: var(--tur);
   color: #fff;
 }
-.sf-nom {
-  font-size: 14.5px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.sf-produit {
-  font-size: 12px;
-  opacity: 0.65;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .sf-tag {
-  margin-left: auto;
   flex: none;
   font-size: 11px;
   font-weight: 700;
@@ -377,11 +332,382 @@ html.deja-identifie #voile-verification-precoce {
   padding: 6px 10px;
   font-weight: 400;
 }
+/* Lieux de vente (réglages) : une carte par lieu, reliée à son Opération Salesforce. */
+.sf-lieux {
+  border: 0;
+  padding: 0;
+  margin: 6px 0 12px;
+}
+.sf-lieux legend {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.sf-lieu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border: var(--trait-doux);
+  border-radius: var(--r-m);
+}
+.sf-lieu label,
+.sf-lieu .large {
+  grid-column: 1 / -1;
+}
+.sf-lieu .input,
+.sf-lieu-vente .input {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-weight: 400;
+}
+.sf-lieu-retirer {
+  justify-self: start;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  color: var(--navy);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sf-lieu-vente {
+  max-width: 320px;
+  margin: 4px 0 8px;
+}
 @media (max-width: 480px) {
-  .sf-grille {
+  .sf-grille,
+  .sf-lieu {
     grid-template-columns: 1fr;
   }
   .sf-l {
     width: 96px;
   }
+}
+
+/* Favori « CVDL › Salesforce » : installation et saisie en cours. */
+.sf-favori summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.sf-favori-etapes {
+  margin: 8px 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+.sf-favori-lien {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: var(--navy);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: grab;
+}
+.sf-ok {
+  color: #1a6b3c;
+  font-weight: 700;
+}
+.sf-envoi-texte {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.sf-envoi-ventes {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 10px;
+}
+
+/* Premiers réglages (responsable). */
+.sf-lien-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sf-premiers {
+  border: var(--trait);
+  box-shadow: 4px 4px 0 var(--aplat);
+}
+.sf-premiers-liste {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.sf-premiers-liste li {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+.sf-pp-etat {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--navy);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+.sf-premiers-liste li.ok .sf-pp-etat {
+  background: var(--navy);
+  color: #fff;
+}
+.sf-premiers-liste li.ok > span:nth-child(2) {
+  opacity: 0.7;
+}
+.sf-premiers-liste small {
+  font-size: 12.5px;
+  opacity: 0.8;
+}
+.sf-pp-detail {
+  display: block;
+}
+
+/* En-tête : titre, résumé, Salesforce à ouvrir à côté. */
+.sf-tete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 18px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.sf-tete h1 {
+  margin: 4px 0 6px;
+}
+.sf-tete p {
+  margin: 0;
+  opacity: 0.8;
+  max-width: 620px;
+}
+.sf-tete-sous {
+  display: block;
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.sf-tete-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.sf-tuiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin: var(--space-5) 0 var(--space-4);
+}
+.sf-tuiles .flotte-tuile {
+  padding: 14px 16px;
+}
+.sf-astuce {
+  font-size: 13px;
+  background: color-mix(in srgb, var(--jaune) 22%, #fff);
+  border: 1.5px solid color-mix(in srgb, #c98a00 55%, transparent);
+  border-radius: var(--r-m);
+  padding: 10px 14px;
+  margin: 0 0 var(--space-5);
+}
+.sf-section {
+  font-size: 20px;
+  margin: 0 0 2px;
+}
+
+/* Une carte par créneau (jour + lieu). */
+.sf-cr {
+  background: #fff;
+  border: var(--trait);
+  border-radius: var(--r-l);
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 4px 4px 0 var(--aplat);
+}
+.sf-cr.ouvert {
+  box-shadow: 6px 6px 0 var(--aplat);
+}
+.sf-cr.sans-lieu {
+  border-style: dashed;
+}
+.sf-cr-tete {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 14px 16px;
+}
+.sf-cr-date {
+  grid-row: span 2;
+  align-self: start;
+  width: 58px;
+  border-radius: var(--r-m);
+  box-shadow: 3px 3px 0 var(--aplat);
+  background: var(--navy);
+  color: #fff;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.1;
+  padding: 6px 0;
+}
+.sf-cr-date b {
+  display: block;
+  font-family: var(--police-titre);
+  font-size: 24px;
+}
+.sf-cr-titre h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.sf-cr-titre p {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+.sf-cr-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+}
+.sf-cr-saisir {
+  min-height: 38px;
+}
+.sf-cr-plus {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--navy);
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: var(--trait-doux);
+  background: #fff;
+  cursor: pointer;
+}
+.sf-cr-plus:hover {
+  background: var(--fond-doux);
+}
+.sf-cr-plus[aria-expanded='true'] {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.sf-tag.attention {
+  background: #fde4ec;
+  color: #8d1240;
+}
+.sf-cr-corps {
+  border-top: var(--trait-doux);
+  padding: 4px 14px 12px;
+}
+.sf-envoi {
+  border-top: 2px solid var(--navy);
+  background: #f3f6f8;
+  padding: 10px 14px 12px;
+}
+
+/* Ventes d'un créneau. */
+.sf-ventes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sf-vente {
+  padding: 10px 0;
+  border-bottom: var(--pointille);
+}
+.sf-vente:last-child {
+  border-bottom: 0;
+}
+.sf-vente-ligne {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sf-vente-id {
+  flex: 1 1 160px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sf-vente-id small {
+  font-size: 12.5px;
+  opacity: 0.75;
+}
+.sf-vente.fait .sf-vente-id b {
+  opacity: 0.75;
+}
+.sf-lieu-vente .input {
+  min-height: 32px;
+  padding: 3px 8px;
+  font-size: 13px;
+  max-width: 220px;
+}
+.sf-vente-actions {
+  display: flex;
+  gap: 4px 16px;
+  flex-wrap: wrap;
+  margin: 6px 0 0 40px;
+}
+.sf-vente-actions .sf-lien-btn {
+  font-size: 13px;
+}
+.sf-copie {
+  margin: 10px 0 0 40px;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: #f3f6f8;
+}
+.sf-manuel {
+  margin-top: 8px;
+}
+.sf-manuel summary,
+.sf-faits summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.sf-faits {
+  margin: 14px 0;
+}
+.sf-faits .sf-cr {
+  margin-top: 8px;
+}
+@media (max-width: 480px) {
+  .sf-vente-actions,
+  .sf-copie {
+    margin-left: 0;
+  }
+}
+
+/* Fenêtre de confirmation ouverte par le favori (petite, sans en-tête de page). */
+.sf-confirmer {
+  max-width: 420px;
+  margin: 24px auto;
+  text-align: center;
+}
+.sf-confirmer h1 {
+  font-size: 22px;
+  margin: 10px 0 6px;
+}
+.sf-confirmer.erreur h1 {
+  color: #a3154a;
+}
+.sf-attente {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 8px 0;
 }

@@ -2,13 +2,10 @@
    modale « Statistiques » de flotte-structure.html et le détail d'un partenaire
    (structures-partenaires.html). Graphiques en SVG / CSS, styles dans stats-flotte.css.
    StatsFlotte.html(stats, { onglet, materiel, periodes }) → chaîne HTML ;
+   StatsFlotte.exporterCsv(stats, nomFichier, titre) : export tableur (chiffres d'ensemble) ;
    les onglets et la période portent data-sf-onglet / data-sf-periode (gérés par l'appelant). */
 window.StatsFlotte = (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const COUL = ['#00ACB0', '#E62460', '#7C5CE0', '#FECC38', '#1F9D55', '#002743', '#D97706', '#8FA3B3'];
   const COUL_AGES = ['#FECC38', '#00ACB0', '#E62460', '#7C5CE0'];
   const COUL_STATUT = { 'En stock': '#1F9D55', Remis: '#00ACB0', Vendu: '#00ACB0', SAV: '#E24B4A', D3E: '#8FA3B3' };
@@ -20,7 +17,7 @@ window.StatsFlotte = (function () {
   const ONGLETS = [
     ['ensemble', 'Vue d’ensemble'],
     ['ventes', 'Ventes et paiements'],
-    ['personnes', 'Personnes'],
+    ['personnes', 'Public équipé'],
     ['materiel', 'Matériel et stock'],
   ];
 
@@ -71,12 +68,12 @@ window.StatsFlotte = (function () {
         .join('')}</ul></div>`;
   }
   /** Barres horizontales (6 premières lignes). */
-  function barres(lignes, couleur) {
+  function barres(lignes, couleur, n) {
     const total = somme(lignes);
     if (!total) return vide;
     const max = lignes[0].valeur;
     return lignes
-      .slice(0, 6)
+      .slice(0, n || 6)
       .map(
         (l) =>
           `<div class="sf-bar"><span title="${esc(l.label)}">${esc(l.label)}</span><span class="sf-t"><i style="width:${Math.max(3, pc(l.valeur, max))}%;background:${couleur}"></i></span><b>${nb(l.valeur)} <small>${pc(l.valeur, total)} %</small></b></div>`,
@@ -113,6 +110,91 @@ window.StatsFlotte = (function () {
     const genres = ['Homme', 'Femme'].map((g) => s.genres.find((x) => x.label === g) || { label: g, valeur: 0 });
     const contenu = empilee(s.ages, COUL_AGES) + (somme(genres) ? empilee(genres, ['#002743', '#E62460'], true) : '');
     return bloc('Personnes équipées', 'âge et genre', contenu || vide);
+  }
+
+  /** Onglet « Public équipé » : qui a été équipé (âge, genre, situation, usage, qui oriente),
+   *  croisement situation × âge, structures équipées (Interne) et part des fiches renseignées. */
+  function publicEquipe(s) {
+    const t = s.totaux.remis;
+    const r = s.renseignes || {};
+    const part = (n) => (t ? `${pc(n || 0, t)} %` : '—');
+    const fiabilite = `<p class="sf-note">Renseigné pour ${t ? `${nb(t)} personne${t > 1 ? 's' : ''} équipée${t > 1 ? 's' : ''}` : 'aucune personne'} : âge ${part(r.age)} · genre ${part(r.genre)} · situation ${part(r.situation)} · usage ${part(r.usage)}.</p>`;
+    const croise = (s.situationsParAge || []).length
+      ? `<div class="sf-table-defile"><table class="sf-table"><thead><tr><th>Situation</th>${(s.tranchesAge || [])
+          .map((x) => `<th>${esc(x)}</th>`)
+          .join('')}<th>Total</th></tr></thead><tbody>${s.situationsParAge
+          .map(
+            (l) =>
+              `<tr><th>${esc(l.label)}</th>${l.valeurs.map((v) => `<td>${v || ''}</td>`).join('')}<td><b>${nb(l.total)}</b></td></tr>`,
+          )
+          .join('')}</tbody></table></div>`
+      : vide;
+    const structures = (s.structuresEquipees || []).length
+      ? bloc('Structures équipées', 'appareils remis', barres(s.structuresEquipees, '#002743', 20))
+      : '';
+    return `${fiabilite}<div class="sf-g2">${personnes(s)}${bloc('Situation', 'des personnes équipées', barres(s.situations || [], '#00686B', 20))}</div>
+      <div class="sf-g2">${bloc('Usage principal', 'de l’appareil', barres(s.usages || [], '#E62460', 20))}${oriente(s)}</div>
+      ${bloc('Situation et âge', 'personnes équipées', croise)}${structures}`;
+  }
+
+  /** Export tableur (CSV, séparateur « ; », lisible par Excel) : chiffres d'ensemble seulement. */
+  function exporterCsv(s, nom, titre) {
+    const t = s.totaux;
+    const lignes = [
+      [titre || 'Statistiques de la flotte'],
+      ['Période', s.periode === 'tout' ? 'Depuis le début' : s.periode === '12m' ? '12 derniers mois' : s.periode],
+      [],
+    ];
+    const section = (nomSection, liste, entete) => {
+      if (!liste || !liste.length) return;
+      lignes.push([nomSection], entete || ['Valeur', 'Nombre', '%']);
+      const total = somme(liste);
+      liste.forEach((l) => lignes.push([l.label, l.valeur, pc(l.valeur, total)]));
+      lignes.push([]);
+    };
+    lignes.push(
+      ['Indicateurs'],
+      ['Appareils remis', t.remis],
+      ['En stock', t.enStock],
+      ['Délai moyen livraison → remise (jours)', t.delaiMoyenJours == null ? '' : t.delaiMoyenJours],
+    );
+    if (t.montantVentes != null) lignes.push(['Montant des ventes (€)', t.montantVentes]);
+    const r = s.renseignes || {};
+    lignes.push(
+      ['Renseigné : âge', r.age || 0],
+      ['Renseigné : genre', r.genre || 0],
+      ['Renseigné : situation', r.situation || 0],
+      ['Renseigné : usage', r.usage || 0],
+      [],
+    );
+    section('Tranches d’âge', s.ages);
+    section('Genre', s.genres);
+    section('Situation', s.situations);
+    section('Usage principal', s.usages);
+    section('Orienté par', s.orientePar);
+    section('Structures équipées', s.structuresEquipees);
+    if ((s.situationsParAge || []).length) {
+      lignes.push(['Situation × âge'], ['Situation', ...(s.tranchesAge || []), 'Total']);
+      s.situationsParAge.forEach((l) => lignes.push([l.label, ...l.valeurs, l.total]));
+      lignes.push([]);
+    }
+    section(
+      'Remises par mois',
+      (s.parMois || []).map((m) => ({ label: m.libelle, valeur: m.valeur })),
+    );
+    section('Par produit', s.parProduit);
+    const cellule = (v) => {
+      const x = String(v == null ? '' : v);
+      // Pas de formule interprétée par le tableur (=, +, -, @ en tête).
+      const sur = /^[=+\-@]/.test(x) ? `'${x}` : x;
+      return /[";\n]/.test(sur) ? `"${sur.replace(/"/g, '""')}"` : sur;
+    };
+    const csv = '﻿' + lignes.map((l) => l.map(cellule).join(';')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = nom;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   function html(s, opts) {
@@ -160,7 +242,7 @@ window.StatsFlotte = (function () {
     let corps;
     if (onglet === 'ventes')
       corps = `<div class="sf-g">${remises}${paiements}</div><div class="sf-g2">${vendeurs}${oriente(s)}</div>`;
-    else if (onglet === 'personnes') corps = `<div class="sf-g2">${oriente(s)}${personnes(s)}</div>`;
+    else if (onglet === 'personnes') corps = publicEquipe(s);
     else if (onglet === 'materiel') corps = `<div class="sf-g2">${statuts}${produits}</div>`;
     else if (o.materiel) corps = `<div class="sf-g">${remises}${statuts}</div>`;
     else
@@ -180,5 +262,5 @@ window.StatsFlotte = (function () {
     return true;
   }
 
-  return { html, exporterImage };
+  return { html, exporterImage, exporterCsv };
 })();

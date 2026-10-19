@@ -5,17 +5,15 @@
    · Avis rapide après une commande / un SAV envoyé : « Était-ce simple ? » (3 visages) et un
      mot facultatif — une seule question, jamais au milieu d'une tâche, une fois par dossier ;
    · « Donner mon avis » à tout moment (CvdlRetours.ouvrirAvis) ;
+   · bouton flottant « Un bug, une idée ? » en bas à droite de l'espace structure (structure
+     connectée) : même fenêtre, avec le sujet (bug, fonctionnalité manquante, suggestion) ;
    · erreurs rencontrées, sans rien demander : messages d'erreur affichés (.msg-erreur) et
      erreurs techniques de la page (5 au plus par page, sans doublon).
    Données minimales et anonymes (aucun nom, e-mail ni date de naissance ; masquage côté
    serveur), conservées 13 mois. Styles : retours.css. Aucune dépendance.
    ════════════════════════════════════════════════════════════════════════════════════ */
 (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const lire = (k) => {
     try {
       return localStorage.getItem(k);
@@ -28,7 +26,7 @@
       localStorage.setItem(k, v);
     } catch (e) {}
   };
-  const api = () => (typeof API !== 'undefined' && API ? API : window.CVDL_API || '');
+  const api = () => (typeof API !== 'undefined' ? API : '');
   const codeStructure = () => {
     try {
       return sessionStorage.getItem('cvdl-code-structure') || '';
@@ -52,11 +50,13 @@
   };
 
   function envoyer(donnees, balise) {
-    const url = apiRetours();
-    if (!url) return Promise.resolve({ ok: false });
+    const base = apiRetours();
+    if (!base) return Promise.resolve({ ok: false });
     const ctx = contexte();
-    const corps = JSON.stringify(
-      Object.assign({ action: 'retour-enregistrer', page: page(), code: enDemo() ? '' : codeStructure() }, donnees, {
+    const corps = Object.assign(
+      { action: 'retour-enregistrer', page: page(), code: enDemo() ? '' : codeStructure() },
+      donnees,
+      {
         details: Object.assign(
           {
             largeur: window.innerWidth,
@@ -67,22 +67,15 @@
           },
           donnees.details || {},
         ),
-      }),
+      },
     );
     if (balise && navigator.sendBeacon) {
       try {
-        navigator.sendBeacon(url, new Blob([corps], { type: 'text/plain;charset=utf-8' }));
+        baliseApi(corps, base);
         return Promise.resolve({ ok: true });
       } catch (e) {}
     }
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: corps,
-      keepalive: true,
-    })
-      .then((r) => r.json())
-      .catch(() => ({ ok: false }));
+    return appelApi(corps, { methode: 'POST', base, keepalive: true }).catch(() => ({ ok: false }));
   }
 
   /* ── Visages (dessin CVDL : trait bleu nuit + aplat décalé) ── */
@@ -96,17 +89,27 @@
     `<svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true" style="overflow:visible"><circle cx="26" cy="26" r="16" fill="${FOND[n]}"/><g fill="none" stroke="#002743" stroke-width="1.9" stroke-linecap="round"><circle cx="24" cy="24" r="16"/><path d="${BOUCHE[n]}"/></g><circle cx="18.5" cy="20" r="1.9" fill="#002743"/><circle cx="29.5" cy="20" r="1.9" fill="#002743"/></svg>`;
   const LIBELLES = { 1: 'Difficile', 2: 'Moyen', 3: 'Facile' };
 
+  const SUJETS = { bug: 'Un bug', fonctionnalite: 'Une fonctionnalité manquante', suggestion: 'Une suggestion' };
   function formulaire(opts) {
     const id = 'rt-' + Math.random().toString(36).slice(2, 7);
-    return `
+    return `${
+      opts.sujets
+        ? `<div class="rt-sujets" role="group" aria-label="Sujet">${Object.entries(SUJETS)
+            .map(
+              ([k, l]) =>
+                `<button type="button" class="rt-sujet" aria-pressed="false" data-rt-sujet="${k}">${l}</button>`,
+            )
+            .join('')}</div>`
+        : ''
+    }
       <div class="rt-question" id="${id}-q">${esc(opts.question).replace(/ ([?!:;])/g, '\u00a0$1')}</div>
       <div class="rt-visages" role="radiogroup" aria-labelledby="${id}-q">
         ${[1, 2, 3].map((n) => `<button type="button" class="rt-visage" role="radio" aria-checked="false" data-rt-note="${n}">${visage(n)}<span>${LIBELLES[n]}</span></button>`).join('')}
       </div>
-      <div class="rt-suite" hidden>
+      <div class="rt-suite"${opts.ouvert ? '' : ' hidden'}>
         <label class="rt-label" for="${id}-c">${esc(opts.relance || 'Un mot pour nous aider à améliorer ? (facultatif)')}</label>
-        <textarea class="input rt-texte" id="${id}-c" rows="2" maxlength="1000" placeholder="Ce qui vous a plu, gêné ou manqué…"></textarea>
-        <div class="rt-actions"><span class="rt-mention">Anonyme, sert uniquement à améliorer l’outil.</span><button type="button" class="btn btn-primary rt-envoyer" data-rt="envoyer">Envoyer</button></div>
+        <textarea class="input rt-texte" id="${id}-c" rows="${opts.ouvert ? 4 : 2}" maxlength="1000" placeholder="${esc(opts.exemple || 'Ce qui vous a plu, gêné ou manqué…')}"></textarea>
+        <div class="rt-actions"><span class="rt-mention">${codeStructure() ? 'Lu par l’équipe CVDL, sert uniquement à améliorer l’outil.' : 'Anonyme, sert uniquement à améliorer l’outil.'}</span><button type="button" class="btn btn-primary rt-envoyer" data-rt="envoyer">Envoyer</button></div>
       </div>
       <div class="rt-merci" hidden role="status"><b>Merci !</b> Votre retour nous aide à améliorer l’outil.</div>`;
   }
@@ -114,6 +117,15 @@
   function cabler(boite, opts, fin) {
     let note = '';
     boite.addEventListener('click', (e) => {
+      const s = e.target.closest('[data-rt-sujet]');
+      if (s) {
+        boite.querySelectorAll('[data-rt-sujet]').forEach((b) => {
+          const on = b === s && b.getAttribute('aria-pressed') !== 'true';
+          b.classList.toggle('choisi', on);
+          b.setAttribute('aria-pressed', String(on));
+        });
+        return;
+      }
       const v = e.target.closest('[data-rt-note]');
       if (v) {
         note = v.dataset.rtNote;
@@ -137,7 +149,17 @@
       }
       if (e.target.closest('[data-rt="envoyer"]')) {
         const txt = boite.querySelector('.rt-texte').value.trim();
-        if (txt) envoyer({ type: 'avis', parcours: opts.parcours, reference: opts.reference, note, commentaire: txt });
+        const sujet = boite.querySelector('[data-rt-sujet].choisi');
+        if (opts.ouvert && !txt && !note) return boite.querySelector('.rt-texte').focus();
+        if (txt)
+          envoyer({
+            type: 'avis',
+            parcours: opts.parcours,
+            reference: opts.reference,
+            note,
+            commentaire: txt,
+            details: sujet ? { sujet: sujet.dataset.rtSujet } : {},
+          });
         boite.querySelector('.rt-suite').hidden = true;
         boite.querySelector('.rt-visages').hidden = true;
         boite.querySelector('.rt-question').hidden = true;
@@ -166,8 +188,14 @@
     fond.className = 'rt-fond';
     fond.innerHTML = `<div class="rt-fenetre" role="dialog" aria-modal="true" aria-labelledby="rt-titre-avis">
       <button type="button" class="rt-fermer" data-rt="fermer" aria-label="Fermer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      <div class="rt-surtitre">Votre avis</div><h2 class="rt-titre" id="rt-titre-avis">Comment se passe votre utilisation ?</h2>
-      ${formulaire({ question: opts.question || 'Globalement, l’espace est-il simple à utiliser ?', relance: 'Dites-nous en plus (facultatif) : une idée, un souci, une remarque…' })}
+      <div class="rt-surtitre">${esc(opts.surtitre || 'Votre avis')}</div><h2 class="rt-titre" id="rt-titre-avis">${esc(opts.titre || 'Comment se passe votre utilisation ?')}</h2>
+      ${formulaire({
+        question: opts.question || 'Globalement, l’espace est-il simple à utiliser ?',
+        relance: opts.relance || 'Dites-nous en plus (facultatif) : une idée, un souci, une remarque…',
+        sujets: opts.sujets,
+        ouvert: opts.ouvert,
+        exemple: opts.exemple,
+      })}
     </div>`;
     document.body.appendChild(fond);
     const fermer = () => {
@@ -183,10 +211,10 @@
     });
     cabler(
       fond.querySelector('.rt-fenetre'),
-      { parcours: opts.parcours || parcoursPage(), cle: 'cvdl-retour-avis-' + Date.now() },
+      { parcours: opts.parcours || parcoursPage(), cle: 'cvdl-retour-avis-' + Date.now(), ouvert: opts.ouvert },
       fermer,
     );
-    const premier = fond.querySelector('[data-rt-note]');
+    const premier = fond.querySelector('[data-rt-sujet], [data-rt-note]');
     if (premier) premier.focus();
   }
 
@@ -247,7 +275,37 @@
       e.preventDefault();
       ouvrirAvis({ parcours: a.dataset.donnerAvis || parcoursPage() });
     }
+    if (e.target.closest('.rt-signaler')) signaler();
   });
+
+  /* ── « Un bug, une idée ? » : bouton flottant de l'espace structure (structure connectée) ── */
+  function signaler() {
+    ouvrirAvis({
+      surtitre: 'Un bug, une idée ?',
+      titre: 'Aidez-nous à améliorer CVDL',
+      sujets: true,
+      ouvert: true,
+      relance: 'Racontez-nous : ce qui ne marche pas, ce qui manque ou votre idée.',
+      exemple: 'Ex. : sur « Ma flotte », le bouton Attestation ne réagit pas…',
+    });
+  }
+  const ICONE_SIGNALER =
+    '<svg viewBox="0 0 48 48" width="30" height="30" aria-hidden="true" style="overflow:visible"><path d="M10 12h26a5 5 0 0 1 5 5v13a5 5 0 0 1-5 5H22l-8 7v-7h-2a5 5 0 0 1-5-5V17a5 5 0 0 1 5-5Z" fill="#FBD9E3" transform="translate(2 2)"/><g fill="none" stroke="#002743" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12h26a5 5 0 0 1 5 5v13a5 5 0 0 1-5 5H22l-8 7v-7h-2a5 5 0 0 1-5-5V17a5 5 0 0 1 5-5Z"/><path d="M23 18.5a4.5 4.5 0 0 1 2.6 8.2c-.9.6-1.1 1.2-1.1 2.3h-3c0-1.1-.2-1.7-1.1-2.3A4.5 4.5 0 0 1 23 18.5Z"/><path d="M21.5 31.5h3"/><path d="M40 4v4M38 6h4M44 12l2-1"/></g></svg>';
+  const BOUTON_SIGNALER = !/^(admin|support|demo|index|accueil)\.html$/.test(page());
+  function placerBoutonSignaler() {
+    if (!BOUTON_SIGNALER || document.querySelector('.rt-signaler') || !codeStructure()) return false;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rt-signaler';
+    b.title = 'Un bug, une fonctionnalité manquante ou une suggestion ?';
+    b.innerHTML = `${ICONE_SIGNALER}<span>Un bug, une idée&nbsp;?</span>`;
+    document.body.appendChild(b);
+    return true;
+  }
+  // Le portail pose le code après la connexion : on revérifie tant que le bouton n'est pas là.
+  if (BOUTON_SIGNALER && !placerBoutonSignaler()) {
+    const t = setInterval(() => placerBoutonSignaler() && clearInterval(t), 1500);
+  }
 
   /* ── Usage : une ligne par page vue (durée à l'écran), envoyée en quittant la page ──
      Pages publiques et structure seulement (ni admin ni outil support). */

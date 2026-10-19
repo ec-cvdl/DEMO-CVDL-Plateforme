@@ -638,8 +638,8 @@ textarea.input {
   --shadow-lg: 0 20px 48px color-mix(in srgb, var(--th-om-002743ff, #002743) 24%, transparent);
 }
 
-/* Interrupteur clair/sombre, en bas de la barre latérale — même gabarit que le bouton "Lien du
-   portail public" juste au-dessus. */
+/* Bouton du pied de la barre latérale (« Affichage »…) — même gabarit que le bouton « Lien du
+   portail public » juste au-dessus. */
 .rp-toggle-theme {
   all: unset;
   box-sizing: border-box;
@@ -662,9 +662,6 @@ textarea.input {
   width: 18px;
   height: 18px;
   flex: none;
-}
-.rp-toggle-theme .rp-toggle-lune {
-  display: none;
 }
 /* fond de carte blanc comme la page : la bordure fine garde la carte visible sans ombre
    (impression…) */

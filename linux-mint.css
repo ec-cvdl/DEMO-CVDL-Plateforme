@@ -1,0 +1,169 @@
+/* Linux Mint (linux-mint.js) : bandeau du catalogue et fiche d'information. Préfixe lm-.
+   Système visuel de cvdl-ui.css : N1 trait + aplat décalé, N2 trait doux, N3 teinte. */
+.lm-bandeau {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 var(--space-4, 16px);
+  padding: 10px 14px;
+  border: var(--trait-doux);
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--vert) 10%, #fff);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lm-bandeau:hover,
+.lm-bandeau:focus-visible {
+  border: var(--trait);
+  box-shadow: 3px 3px 0 var(--aplat);
+}
+.lm-bandeau-ill {
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+.lm-bandeau-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 14px;
+}
+.lm-bandeau-txt span {
+  font-size: 13px;
+  opacity: 0.75;
+}
+.lm-plus {
+  margin-left: auto;
+  padding: 6px 12px;
+  border: var(--trait);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lm-modale {
+  max-width: 600px;
+  padding: 26px;
+}
+.lm-fermer {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+.lm-tete {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-right: 44px;
+}
+.lm-tete h2 {
+  margin: 2px 0 4px;
+  font-size: 22px;
+}
+.lm-tete p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.75;
+}
+.lm-atouts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0 6px;
+}
+.lm-atout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  border: var(--trait);
+  border-radius: var(--r-m);
+  background: #fff;
+  box-shadow: 3px 3px 0 var(--aplat);
+}
+.lm-atout .ill {
+  width: 34px;
+  height: 34px;
+}
+.lm-atout b {
+  font-size: 14px;
+}
+.lm-atout span:last-child {
+  font-size: 12.5px;
+  line-height: 1.35;
+  opacity: 0.7;
+}
+.lm-modale h3 {
+  margin: 18px 0 8px;
+  font-size: 15px;
+}
+.lm-pareil {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.lm-pareil span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 6px;
+  border: var(--trait-doux);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.lm-pareil svg {
+  width: 26px;
+  height: 26px;
+}
+.lm-eviter {
+  list-style: none;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--orange) 12%, #fff);
+  font-size: 13.5px;
+}
+.lm-eviter li {
+  padding: 3px 0 3px 18px;
+  position: relative;
+}
+.lm-eviter li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 8px;
+  height: 8px;
+  background: var(--orange);
+  transform: rotate(45deg);
+}
+.lm-modale > .lm-conseil {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 1;
+}
+.lm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+@media (max-width: 600px) {
+  .lm-atouts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lm-tete .ill {
+    display: none;
+  }
+  .lm-plus {
+    display: none;
+  }
+}

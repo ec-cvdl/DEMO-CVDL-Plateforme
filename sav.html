@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="api.js?v=3"></script>
-<script src="commun.js?v=1"></script>
+<script src="api.js?v=5"></script>
+<script src="commun.js?v=5"></script>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Demande de SAV — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
-<link rel="stylesheet" href="depannage.css?v=1">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="depannage.css?v=2">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -61,11 +62,13 @@ main{ padding:var(--space-6) var(--space-4); }
 .tableau-materiel-sav-scroll tbody tr{ cursor:pointer; }
 .icone-symptome.ill-symptome{ width:60px !important; height:60px !important; padding:0 !important; display:flex; align-items:center; justify-content:center; }
 </style>
-<script src="portail-ui.js?v=36"></script>
-<script src="cvdl-ui.js?v=13"></script>
-<link rel="stylesheet" href="retours.css?v=2">
-<script src="retours.js?v=2" defer></script>
-<script src="depannage.js?v=1"></script>
+<script src="portail-ui.js?v=45"></script>
+<script src="cvdl-ui.js?v=18"></script>
+<link rel="stylesheet" href="retours.css?v=3">
+<script src="retours.js?v=5" defer></script>
+<script src="depannage.js?v=3"></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="sav">
 <div id="voile-verification-precoce"><div class="spinner-precoce"></div></div>
@@ -101,6 +104,7 @@ main{ padding:var(--space-6) var(--space-4); }
         <span data-ill="cle" class="pk-titre-ill"></span>
         <h1 style="margin:0">Quel est votre <em>code structure</em> ?</h1>
         <p style="opacity:0.6;margin:0">Ce code vous a été communiqué par mail. Vous voulez plutôt suivre une commande ? <a href="suivi.html">Cliquez ici</a>. Ou suivre une demande SAV déjà envoyée ? <a href="suivi-sav-structure.html">Cliquez ici</a>.</p>
+          <p class="msg" style="margin:0">Vous avez un accès personnel ? <a href="portail-structure.html">Connectez-vous avec votre e-mail</a> : plus besoin du code.</p>
         <div class="field"><label for="id-code" class="sr-only">Code structure</label><input type="text" class="input" id="id-code" autocomplete="off" spellcheck="false" placeholder="Votre code structure"></div>
         <div id="retour-id-code" aria-live="polite"></div>
         <button type="button" class="btn btn-primary btn-block" id="btn-verifier-code">Continuer</button>
@@ -243,7 +247,6 @@ main{ padding:var(--space-6) var(--space-4); }
   </section>
 </main>
 
-<script src="deja-identifie.js?v=1"></script>
-<script src="pages/sav.js?v=3"></script>
+<script src="pages/sav.js?v=6"></script>
 </body>
 </html>

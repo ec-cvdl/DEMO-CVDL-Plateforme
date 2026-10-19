@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CVDL — Matériel reconditionné pour vos publics</title>
 <meta name="description" content="CVDL, la plateforme d'Emmaüs Connect pour commander et suivre du matériel informatique reconditionné destiné aux personnes que vous accompagnez.">
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
 <style>
 /* Mise en page de la page d'accueil (visuel : cvdl-ui.css, en version plus sobre) */
 [hidden]{ display:none!important; }
@@ -19,6 +20,8 @@
 .ac-hero h1{ font-size:clamp(30px,4.2vw,44px); line-height:1.08; letter-spacing:-.015em; margin:6px 0 16px; text-wrap:balance; }
 .ac-hero p{ font-size:17px; max-width:54ch; margin:0; }
 .ac-cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:28px; }
+.ac-btn-demo{ width:100%; justify-content:center; min-height:60px; padding:0 34px; font-size:18px; background:var(--mag); border-color:var(--mag); color:#fff; box-shadow:5px 5px 0 var(--navy); }
+.ac-btn-demo:hover{ transform:translate(-1px,-1px); box-shadow:7px 7px 0 var(--navy); }
 .ac-test{ display:inline-flex; gap:8px; align-items:center; margin-top:22px; font-size:13.5px; color:color-mix(in srgb, var(--navy) 70%, transparent); }
 .ac-test::before{ content:''; width:8px; height:8px; border-radius:50%; background:var(--jaune); box-shadow:0 0 0 3px color-mix(in srgb, var(--jaune) 35%, transparent); }
 .ac-visuel{ display:grid; place-items:center; }
@@ -61,6 +64,16 @@
 .ac-forme.f1{ width:260px; height:260px; right:-90px; top:-110px; border-color:var(--tur); }
 .ac-forme.f2{ width:120px; height:120px; left:-40px; bottom:-50px; border-color:var(--mag); }
 .ac-forme.f3{ width:40px; height:40px; left:34%; top:28px; border-color:var(--jaune); border-radius:4px; transform:rotate(18deg); }
+/* Formes du bandeau : une lente dérive, chacune à son rythme (coupée si les animations sont
+   désactivées, dans le panneau Affichage ou par le système) */
+@media (prefers-reduced-motion: no-preference){
+  .ac-forme.f1{ animation:ac-derive-1 26s ease-in-out infinite alternate; }
+  .ac-forme.f2{ animation:ac-derive-2 19s ease-in-out infinite alternate; }
+  .ac-forme.f3{ animation:ac-derive-3 14s ease-in-out infinite alternate; }
+}
+@keyframes ac-derive-1{ from{ transform:translate(0,0) scale(1); } to{ transform:translate(-26px,18px) scale(1.06); } }
+@keyframes ac-derive-2{ from{ transform:translate(0,0); } to{ transform:translate(22px,-14px); } }
+@keyframes ac-derive-3{ from{ transform:translate(0,0) rotate(18deg); } to{ transform:translate(-14px,20px) rotate(62deg); } }
 .ac-outils{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px 28px; }
 .ac-outil{ display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:start; }
 .ac-outil .ill{ width:44px; height:44px; }
@@ -74,18 +87,67 @@
 .ac-fin h2{ margin:0 0 6px; font-size:24px; }
 .ac-fin p{ margin:0; }
 .ac-adresse{ font-size:13.5px; margin-top:8px !important; color:color-mix(in srgb, var(--navy) 70%, transparent); }
-.ac-essai{ border:var(--trait); border-radius:var(--r-l); box-shadow:6px 6px 0 var(--aplat); padding:0; width:min(440px, calc(100vw - 32px)); color:var(--navy); }
+.ac-essai{ border:var(--trait); border-radius:var(--r-l); box-shadow:6px 6px 0 var(--aplat); padding:0; width:min(500px, calc(100vw - 32px)); color:var(--navy); }
 .ac-essai::backdrop{ background:color-mix(in srgb, var(--navy) 45%, transparent); }
 .ac-essai-form{ display:grid; gap:10px; padding:28px; }
 .ac-essai h2{ margin:4px 0 0; font-size:22px; }
 .ac-essai p{ margin:0; }
 .ac-essai-lab{ font-weight:600; margin-top:6px; }
-.ac-essai .input{ font:600 18px var(--mono); letter-spacing:.12em; text-transform:uppercase; }
+.ac-essai .input{ font:600 17px var(--mono); letter-spacing:.1em; text-transform:uppercase; min-width:0; flex:1; }
+.ac-choix{ display:grid; gap:12px; margin-top:8px; }
+.ac-choix-btn{ display:flex; align-items:center; gap:16px; width:100%; text-align:left; font:inherit; color:var(--navy); background:#fff; border:var(--trait); border-radius:var(--r-m, 14px); padding:16px 18px; cursor:pointer; box-shadow:4px 4px 0 var(--navy); transition:transform .12s, box-shadow .12s; }
+.ac-choix-btn:hover{ transform:translate(-1px,-1px); box-shadow:6px 6px 0 var(--navy); }
+.ac-choix-btn:active{ transform:translate(2px,2px); box-shadow:2px 2px 0 var(--navy); }
+.ac-choix-btn:focus-visible{ outline:3px solid var(--mag); outline-offset:3px; }
+.ac-choix-btn[aria-busy="true"]{ cursor:progress; opacity:.7; }
+.ac-choix-rn{ background:color-mix(in srgb, var(--tur) 12%, #fff); }
+.ac-choix-vs{ background:color-mix(in srgb, var(--mag) 9%, #fff); }
+.ac-choix-btn .ill{ flex:none; width:56px; height:56px; }
+.ac-choix-txt{ display:grid; gap:3px; }
+.ac-choix-txt b{ font-size:19px; }
+.ac-choix-txt span{ font-size:14.5px; line-height:1.4; }
+.ac-essai-code{ margin-top:4px; font-size:14.5px; }
+.ac-essai-code summary{ cursor:pointer; font-weight:600; width:max-content; }
+.ac-essai-code-form{ display:grid; gap:6px; margin-top:8px; }
+.ac-essai-ligne{ display:flex; gap:8px; }
 .ac-essai-erreur{ color:var(--rouge); font-size:14px; }
 .ac-essai-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
-.ac-essai-aide{ font-size:13.5px; color:color-mix(in srgb, var(--navy) 70%, transparent); }
+.ac-contact{ width:min(620px, calc(100vw - 32px)); }
+.ac-contact-form{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 16px; padding:28px; position:relative; }
+.ac-contact-form > .ac-large{ grid-column:1 / -1; }
+.ac-contact h2{ margin:4px 0 0; font-size:22px; padding-right:40px; }
+.ac-contact .input{ font:inherit; font-size:14.5px; letter-spacing:normal; text-transform:none; }
+.ac-contact textarea.input{ min-height:130px; resize:vertical; }
+.ac-contact .field > label .ac-oblig{ color:var(--mag); }
+.ac-contact-croix{ position:absolute; top:18px; right:18px; width:36px; height:36px; border-radius:50%; border:var(--trait); background:#fff; color:var(--navy); font-size:15px; cursor:pointer; }
+.ac-contact-croix:hover{ background:var(--jaune); }
+.ac-piege{ position:absolute !important; left:-9999px; width:1px; height:1px; overflow:hidden; }
 .ac-pied{ font-size:13px; color:color-mix(in srgb, var(--navy) 65%, transparent); display:flex; flex-wrap:wrap; gap:8px 20px; justify-content:space-between; border-top:var(--pointille); padding-top:18px; }
-.ac-pied a{ color:inherit; }
+/* Scène du haut : illustration, cercle et pastilles d'activité qui flottent */
+.ac-visuel{ position:relative; min-height:300px; }
+.ac-scene-rond{ position:absolute; width:min(270px,80%); aspect-ratio:1; border-radius:50%; background:color-mix(in srgb, var(--tur) 18%, #fff); border:1.5px solid var(--navy); box-shadow:8px 8px 0 color-mix(in srgb, var(--navy) 14%, transparent); }
+.ac-visuel .ill{ position:relative; width:min(250px,80%); }
+.ac-puce{ position:absolute; display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1.5px solid var(--navy); border-radius:999px; background:#fff; box-shadow:3px 3px 0 var(--navy); font:700 13px var(--police-titre); color:var(--navy); white-space:nowrap; }
+.ac-puce i{ width:9px; height:9px; border-radius:50%; }
+.ac-p1{ top:6%; left:-4%; }
+.ac-p2{ top:46%; right:-8%; }
+.ac-p3{ bottom:4%; left:4%; }
+/* Étapes et outils : cartes qui apparaissent au défilement */
+.ac-etapes li{ position:relative; padding:18px 18px 20px; border:1.5px solid var(--navy); border-radius:18px; background:#fff; box-shadow:4px 4px 0 color-mix(in srgb, var(--navy) 16%, transparent); transition:transform .2s, box-shadow .2s; }
+.ac-etapes li:hover{ transform:translate(-2px,-2px); box-shadow:7px 7px 0 color-mix(in srgb, var(--navy) 30%, transparent); }
+.ac-etapes li:not(:last-child)::after{ content:'→'; position:absolute; right:-15px; top:22px; z-index:1; width:22px; height:22px; display:grid; place-items:center; border:1.5px solid var(--navy); border-radius:50%; background:#fff; font-size:12px; }
+.ac-outil{ padding:14px; border-radius:16px; transition:background .2s; }
+.ac-outil:hover{ background:#fff; }
+@media (prefers-reduced-motion: no-preference){
+  .ac-puce{ animation:ac-flotte 6s ease-in-out infinite alternate; }
+  .ac-p2{ animation-delay:-2s; animation-duration:7s; }
+  .ac-p3{ animation-delay:-4s; animation-duration:5.5s; }
+  .ac-visuel .ill{ animation:ac-flotte 8s ease-in-out infinite alternate; }
+  .ac-revele{ opacity:0; transform:translateY(18px); transition:opacity .55s ease, transform .55s cubic-bezier(.2,.7,.2,1); }
+  .ac-revele.ac-vu{ opacity:1; transform:none; }
+}
+@keyframes ac-flotte{ from{ translate:0 0; } to{ translate:0 -10px; } }
+@media (max-width: 860px){ .ac-etapes li:not(:last-child)::after{ display:none; } }
 @media (max-width: 860px){
   .ac-hero{ grid-template-columns:1fr; padding-top:32px; }
   .ac-visuel{ display:none; }
@@ -94,18 +156,21 @@
   .ac-bandeau{ grid-template-columns:1fr; }
 }
 @media (max-width: 520px){
+  .ac-contact-form{ grid-template-columns:1fr; padding:22px; }
   .ac-etapes{ grid-template-columns:1fr; }
   .ac-entete-actions .btn-ghost{ display:none; }
   .ac-page{ gap:56px; }
   .ac-modalites{ grid-template-columns:1fr; }
 }
 </style>
-<script src="portail-ui.js?v=36" defer></script>
-<script src="cvdl-ui.js?v=13" defer></script>
-<script src="api.js?v=3" defer></script>
-<script src="pages/accueil.js?v=4" defer></script>
-<link rel="stylesheet" href="retours.css?v=2">
-<script src="retours.js?v=2" defer></script>
+<script src="portail-ui.js?v=45" defer></script>
+<script src="cvdl-ui.js?v=18" defer></script>
+<script src="api.js?v=5" defer></script>
+<script src="pages/accueil.js?v=11" defer></script>
+<link rel="stylesheet" href="retours.css?v=3">
+<script src="retours.js?v=5" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="accueil">
 <a href="#contenu-principal" class="lien-evitement">Aller au contenu</a>
@@ -113,7 +178,7 @@
 <header class="cvdl-entete">
   <a class="cvdl-marque" href="accueil.html" aria-label="Accueil CVDL"><img src="logo.png" alt="Emmaüs Connect" class="logo-portail"></a>
   <div class="ac-entete-actions">
-    <a class="btn btn-ghost lien-contact" href="mailto:contact@emmaus-connect.org">Nous contacter</a>
+    <button type="button" class="btn btn-ghost" data-contact>Nous contacter</button>
     <a class="btn btn-primary" href="portail-structure.html">Se connecter</a>
   </div>
 </header>
@@ -125,12 +190,17 @@
       <h1>Du matériel reconditionné pour les personnes que vous accompagnez</h1>
       <p>Commandez des ordinateurs, tablettes et smartphones reconditionnés par Emmaüs Connect, puis suivez chaque appareil jusqu'à la personne qui le reçoit.</p>
       <div class="ac-cta">
-        <a class="btn btn-primary" href="portail-structure.html">Se connecter à mon espace</a>
-        <button type="button" class="btn btn-secondary" data-essayer>Essayer la plateforme</button>
+        <button type="button" class="btn btn-primary ac-btn-demo" data-essayer>Essayer la démo <span aria-hidden="true">→</span></button>
       </div>
       <div class="ac-test">Phase de test, réservée à quelques structures en Centre-Val de Loire</div>
     </div>
-    <div class="ac-visuel ac-c-bleu" aria-hidden="true"><span data-ill="flotte" class="ill xl"></span></div>
+    <div class="ac-visuel ac-c-bleu" aria-hidden="true">
+      <span class="ac-scene-rond"></span>
+      <span data-ill="flotte" class="ill xl"></span>
+      <span class="ac-puce ac-p1"><i style="background:var(--tur)"></i>Commande validée</span>
+      <span class="ac-puce ac-p2"><i style="background:var(--mag)"></i>12 appareils livrés</span>
+      <span class="ac-puce ac-p3"><i style="background:var(--jaune)"></i>Remis à une personne</span>
+    </div>
   </section>
 
   <section class="ac-section" aria-labelledby="titre-etapes">
@@ -139,7 +209,7 @@
       <h2 id="titre-etapes">De la commande à la remise, au même endroit</h2>
     </header>
     <ol class="ac-etapes">
-      <li class="ac-c-mag"><span data-ill="cle" class="ill s" aria-hidden="true"></span><b>Vous commandez</b><span>Avec votre code structure : le matériel disponible, les quantités, et selon votre convention les personnes concernées.</span></li>
+      <li class="ac-c-mag"><span data-ill="cle" class="ill s" aria-hidden="true"></span><b>Vous commandez</b><span>Connecté avec votre e-mail : le matériel disponible, les quantités, et selon votre convention les personnes concernées.</span></li>
       <li class="ac-c-bleu"><span data-ill="stock" class="ill s" aria-hidden="true"></span><b>Nous préparons</b><span>L'équipe valide, prépare chaque appareil et l'enregistre par son numéro de série.</span></li>
       <li class="ac-c-tur"><span data-ill="distribution" class="ill s" aria-hidden="true"></span><b>Vous recevez</b><span>Livraison ou retrait, avec un suivi de la commande à chaque étape.</span></li>
       <li class="ac-c-jaune"><span data-ill="personne" class="ill s" aria-hidden="true"></span><b>Vous suivez</b><span>Chaque appareil arrive dans votre flotte : remise à une personne, attestation, dépannage.</span></li>
@@ -152,7 +222,7 @@
       <div class="ac-bandeau-sur">Des modalités souples</div>
       <h2 id="titre-modalites">Adapté à votre façon de travailler</h2>
       <p>Chaque structure est accompagnée différemment. Votre espace est réglé avec vous à l'ouverture : vous ne voyez que ce qui vous concerne.</p>
-      <a class="btn ac-btn-clair lien-contact" href="mailto:contact@emmaus-connect.org">En parler avec nous</a>
+      <button type="button" class="btn ac-btn-clair" data-contact>En parler avec nous</button>
     </div>
     <dl class="ac-modalites">
       <div><dt>Livraison ou retrait</dt><dd>Colissimo avec suivi, livraison par l'équipe Emmaüs Connect, ou retrait sur place.</dd></div>
@@ -185,8 +255,8 @@
       <h2 id="titre-faq">Avant de commencer</h2>
     </header>
     <div class="ac-faq">
-      <details><summary>Comment obtenir un accès ?</summary><p>L'accès est ouvert aux structures partenaires d'Emmaüs Connect. Écrivez-nous : nous créons votre espace et vous transmettons votre code structure.</p></details>
-      <details><summary>J'ai perdu mon code structure</summary><p>Contactez-nous depuis l'adresse e-mail connue de votre structure, nous vous le renvoyons.</p></details>
+      <details><summary>Comment obtenir un accès ?</summary><p>L'accès est ouvert aux structures partenaires d'Emmaüs Connect. Écrivez-nous : nous créons votre espace, et chaque personne de votre structure se connecte avec son adresse e-mail.</p></details>
+      <details><summary>Comment me connecter ?</summary><p>Avec votre adresse e-mail : vous recevez un code à 6 chiffres, puis vous restez connecté 90 jours sur votre appareil. Adresse non reconnue ? Le responsable de votre structure peut vous ajouter, ou écrivez-nous.</p></details>
       <details><summary>Combien coûte le matériel ?</summary><p>Cela dépend de votre convention : tarif Relais Numérique, prix solidaire, ou matériel mis à disposition pour les territoires Emmaüs Connect. Les prix s'affichent dans votre espace.</p></details>
       <details><summary>Que deviennent les données des personnes ?</summary><p>Seules les informations utiles à la remise de l'appareil sont demandées. Elles servent uniquement au suivi de l'appareil et ne sont visibles que par votre structure et l'équipe Emmaüs Connect.</p></details>
       <details><summary>Pourquoi « phase de test » ?</summary><p>La plateforme est ouverte à un petit nombre de structures en Centre-Val de Loire pour l'améliorer avec vous avant un usage plus large. Vos retours comptent : un bouton « Donner mon avis » est présent sur chaque page.</p></details>
@@ -200,30 +270,66 @@
       <p class="ac-adresse">Par e-mail : <span class="adresse-contact">contact@emmaus-connect.org</span></p>
     </div>
     <div class="ac-cta" style="margin-top:0">
-      <button type="button" class="btn btn-secondary" data-essayer>Essayer la plateforme</button>
-      <a class="btn btn-primary" href="portail-structure.html">Se connecter</a>
+      <button type="button" class="btn btn-secondary" data-contact>Nous écrire</button>
+      <button type="button" class="btn btn-primary" data-essayer>Essayer la démo</button>
     </div>
   </section>
 
   <footer class="ac-pied">
     <span>CVDL · une plateforme Emmaüs Connect</span>
-    <a href="projet.html">Avancement du projet</a>
   </footer>
 </main>
 
 <dialog class="ac-essai" id="essai" aria-labelledby="titre-essai">
-  <form id="form-essai" class="ac-essai-form">
-    <span data-ill="cle" class="ill xl" aria-hidden="true"></span>
-    <h2 id="titre-essai">Essayer la plateforme</h2>
-    <p>Saisissez le code d'essai reçu par e-mail : vous découvrirez CVDL tel que votre structure le verra, avec des données fictives.</p>
-    <label for="code-essai" class="ac-essai-lab">Code d'essai</label>
-    <input class="input" id="code-essai" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDE-FGH23" maxlength="20" required>
-    <p class="ac-essai-erreur" id="erreur-essai" role="alert" hidden></p>
-    <div class="ac-essai-actions">
-      <button type="button" class="btn btn-ghost" id="annuler-essai">Annuler</button>
-      <button type="submit" class="btn btn-primary" id="valider-essai">Ouvrir la démo</button>
+  <div class="ac-essai-form">
+    <h2 id="titre-essai">Essayer la démo</h2>
+    <p>Choisissez le type de votre structure : vous découvrirez CVDL tel qu'elle le verra, avec des données fictives.</p>
+    <div class="ac-choix" role="group" aria-label="Type de structure">
+      <button type="button" class="ac-choix-btn ac-choix-rn" data-demo-vue="rn">
+        <span data-ill="commander" class="ill" aria-hidden="true"></span>
+        <span class="ac-choix-txt"><b>Relais Numérique</b><span>Vous achetez le matériel pour votre public, au tarif de votre convention.</span></span>
+      </button>
+      <button type="button" class="ac-choix-btn ac-choix-vs" data-demo-vue="bo">
+        <span data-ill="personne" class="ill" aria-hidden="true"></span>
+        <span class="ac-choix-txt"><b>Vente solidaire</b><span>Vous vendez du matériel à prix solidaire, confié en dépôt-vente.</span></span>
+      </button>
     </div>
-    <p class="ac-essai-aide">Pas de code ? <a class="lien-contact" href="mailto:contact@emmaus-connect.org">Écrivez-nous</a>, nous vous en envoyons un.</p>
+    <p class="ac-essai-erreur" id="erreur-essai" role="alert" hidden></p>
+    <details class="ac-essai-code" id="bloc-code-essai">
+      <summary>J'ai reçu un code d'essai</summary>
+      <form id="form-essai" class="ac-essai-code-form">
+        <label for="code-essai" class="ac-essai-lab">Code d'essai</label>
+        <div class="ac-essai-ligne">
+          <input class="input" id="code-essai" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDE-FGH23" maxlength="20" required>
+          <button type="submit" class="btn btn-primary" id="valider-essai">Ouvrir</button>
+        </div>
+      </form>
+    </details>
+    <div class="ac-essai-actions">
+      <button type="button" class="btn btn-ghost" id="annuler-essai">Fermer</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="ac-essai ac-contact" id="contact" aria-labelledby="titre-contact">
+  <form class="ac-contact-form" id="form-contact" novalidate>
+    <button type="button" class="ac-contact-croix" aria-label="Fermer">✕</button>
+    <div class="ac-large">
+      <h2 id="titre-contact">Nous contacter</h2>
+      <p>Une question, un projet ? L'équipe Emmaüs Connect vous répond par e-mail.</p>
+    </div>
+    <div class="field ac-large"><label for="ct-structure">Nom de la structure <span class="ac-oblig">*</span></label><input class="input" id="ct-structure" name="structure" maxlength="150" autocomplete="organization" required></div>
+    <div class="field"><label for="ct-type-structure">Type de structure <span class="ac-oblig">*</span></label><select class="input" id="ct-type-structure" name="typeStructure" required><option value="">Choisir…</option></select></div>
+    <div class="field"><label for="ct-public">Public accompagné <span class="ac-oblig">*</span></label><select class="input" id="ct-public" name="typePublic" required><option value="">Choisir…</option></select></div>
+    <div class="field"><label for="ct-nom">Nom et prénom <span class="ac-oblig">*</span></label><input class="input" id="ct-nom" name="nom" maxlength="120" autocomplete="name" required></div>
+    <div class="field"><label for="ct-email">E-mail <span class="ac-oblig">*</span></label><input class="input" id="ct-email" name="email" type="email" maxlength="200" autocomplete="email" required></div>
+    <div class="field ac-large"><label for="ct-message">Message <span class="ac-oblig">*</span></label><textarea class="input" id="ct-message" name="message" maxlength="4000" required></textarea></div>
+    <div class="ac-piege" aria-hidden="true"><label for="ct-site">Ne pas remplir</label><input id="ct-site" name="site" tabindex="-1" autocomplete="off" data-sans-garde></div>
+    <p class="ac-essai-erreur ac-large" id="erreur-contact" role="alert" hidden></p>
+    <div class="ac-essai-actions ac-large">
+      <button type="button" class="btn btn-ghost" id="annuler-contact">Annuler</button>
+      <button type="submit" class="btn btn-primary" id="envoyer-contact">Envoyer</button>
+    </div>
   </form>
 </dialog>
 </body>

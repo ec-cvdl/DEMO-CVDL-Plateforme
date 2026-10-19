@@ -11,13 +11,10 @@
 
    const emb = CvdlEmbarquement.preparer(reponseCheck, code, { api, forcer });
    if(emb){ emb.afficher(pretPromesse); await emb.termine; }
+   Autre présentation (ex. Saisie Salesforce) : CvdlEmbarquement.presenter(etapes, options).
    ════════════════════════════════════════════════════════════════════════════════════ */
 (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const lireL = (k) => {
     try {
       return localStorage.getItem(k);
@@ -43,15 +40,10 @@
     } catch (e) {}
   };
   const reduit = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Pages servies sous /demo/ (voir api.js).
   const enDemo = () => {
     const dossier = location.pathname.split('/')[1] || '';
-    if (/demo/i.test(dossier) && !/\.html$/i.test(dossier)) return true;
-    try {
-      const d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null');
-      return !!(d && d.jusqua > Date.now());
-    } catch (e) {
-      return false;
-    }
+    return /demo/i.test(dossier) && !/\.html$/i.test(dossier);
   };
   const FLECHE =
     '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -326,7 +318,8 @@
     if (!r || !r.ok) return null;
     const conseiller = r.role === 'conseiller';
     const demo = enDemo();
-    const cleLocale = 'cvdl-embarquement-v1-' + (conseiller ? 'c-' + (r.nom || '') : code);
+    // Par nom de structure : ni le code ni un jeton ne servent de clé dans la mémoire du navigateur.
+    const cleLocale = 'cvdl-embarquement-v1-' + (conseiller ? 'c-' : 's-') + (r.nom || '');
     if (!opts.forcer) {
       if (demo) {
         if (lireS('cvdl-embarquement-session') === code) return null;
@@ -358,146 +351,153 @@
       }
       ecrireL(cleLocale, 'vu'); // filet si le serveur ne répond pas : pas de nouvel affichage sur cet appareil
       if (!conseiller && opts.api) {
-        fetch(opts.api, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'embarquement-vu', code }),
-        }).catch(() => {});
+        appelApi({ action: 'embarquement-vu', code }, { methode: 'POST', base: opts.api }).catch(() => {});
       }
     }
 
     function afficher(pret) {
-      pret = pret || Promise.resolve();
-      let i = 0,
-        occupe = false;
-      const racine = document.createElement('div');
-      racine.className = 'emb';
-      racine.setAttribute('role', 'dialog');
-      racine.setAttribute('aria-modal', 'true');
-      racine.setAttribute('aria-labelledby', 'emb-titre');
-      racine.innerHTML = `
-        <div class="emb-haut"><img src="logo.png" alt="Emmaüs Connect" class="emb-logo">
-          <span class="emb-pil">${esc(ctx.nom)}${ctx.nom ? ' · ' : ''}${esc(etapes[0].badge)}</span>
-          <button type="button" class="emb-passer" data-emb="passer">Passer la présentation</button></div>
-        <div class="emb-scene"><div class="emb-cote-ill"></div><div class="emb-cote-txt" aria-live="polite"></div></div>
-        <div class="emb-bas"><div class="emb-pts" aria-hidden="true">${etapes.map(() => '<i></i>').join('')}</div>
-          <div class="emb-actions"><button type="button" class="btn emb-btn" data-emb="retour">Retour</button>
-          <button type="button" class="btn btn-primary emb-btn" data-emb="suivant"></button></div></div>`;
-      document.body.appendChild(racine);
-      document.documentElement.classList.add('emb-ouvert');
-      const $ = (s) => racine.querySelector(s);
-
-      function montrer(n, sens) {
-        i = n;
-        const h = htmlEtape(etapes[i], i, etapes.length);
-        const ill = $('.emb-cote-ill'),
-          txt = $('.emb-cote-txt');
-        ill.innerHTML = h.ill;
-        txt.innerHTML = h.txt;
-        if (window.portailIllustrations) window.portailIllustrations(racine);
-        if (!reduit()) {
-          ill.firstElementChild.animate(
-            [
-              { opacity: 0, transform: 'scale(.9) rotate(-2deg)' },
-              { opacity: 1, transform: 'none' },
-            ],
-            { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1.2)' },
-          );
-          txt.firstElementChild.animate(
-            [
-              { opacity: 0, transform: `translateX(${sens < 0 ? -28 : 28}px)` },
-              { opacity: 1, transform: 'none' },
-            ],
-            { duration: 320, easing: 'ease-out' },
-          );
-        }
-        racine.querySelectorAll('.emb-pts i').forEach((p, k) => p.classList.toggle('on', k === i));
-        $('[data-emb="retour"]').style.visibility = i === 0 ? 'hidden' : '';
-        const dernier = i === etapes.length - 1;
-        $('[data-emb="suivant"]').innerHTML =
-          (dernier ? 'Découvrir mon espace ' : i === 0 ? 'C’est parti ' : 'Suivant ') + FLECHE;
-        $('[data-emb="passer"]').hidden = dernier;
-        const t = $('#emb-titre');
-        if (t) t.focus({ preventScroll: true });
-      }
-
-      async function terminer() {
-        if (occupe) return;
-        occupe = true;
-        memoriser();
-        const b = $('[data-emb="suivant"]');
-        b.setAttribute('aria-busy', 'true');
-        await pret.catch(() => {});
-        b.removeAttribute('aria-busy');
-        document.removeEventListener('keydown', clavier, true);
-        await transition(racine);
-        document.documentElement.classList.remove('emb-ouvert');
-        fini();
-        // Présentation suivie jusqu'au bout : avis rapide (retours.js).
-        if (i === etapes.length - 1 && window.CvdlRetours)
-          setTimeout(
-            () =>
-              CvdlRetours.proposerAvis({
-                parcours: 'embarquement',
-                question: 'Cette présentation était-elle claire ?',
-              }),
-            900,
-          );
-      }
-
-      function clavier(e) {
-        if (occupe) return;
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          terminer();
-        } else if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          if (i < etapes.length - 1) montrer(i + 1, 1);
-        } else if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          if (i > 0) montrer(i - 1, -1);
-        } else if (e.key === 'Tab') {
-          // focus gardé dans la présentation
-          const f = [...racine.querySelectorAll('button:not([hidden])')].filter((x) => x.style.visibility !== 'hidden');
-          const k = f.indexOf(document.activeElement);
-          if (e.shiftKey && k <= 0) {
-            e.preventDefault();
-            f[f.length - 1].focus();
-          } else if (!e.shiftKey && k === f.length - 1) {
-            e.preventDefault();
-            f[0].focus();
-          }
-        }
-      }
-      document.addEventListener('keydown', clavier, true);
-      racine.addEventListener('click', (e) => {
-        const b = e.target.closest('[data-emb]');
-        if (!b || occupe) return;
-        if (b.dataset.emb === 'passer') terminer();
-        else if (b.dataset.emb === 'retour' && i > 0) montrer(i - 1, -1);
-        else if (b.dataset.emb === 'suivant') i < etapes.length - 1 ? montrer(i + 1, 1) : terminer();
-      });
-      // Glisser du doigt (mobile)
-      let x0 = null;
-      racine.addEventListener(
-        'touchstart',
-        (e) => {
-          x0 = e.touches[0].clientX;
-        },
-        { passive: true },
-      );
-      racine.addEventListener('touchend', (e) => {
-        if (x0 == null || occupe) return;
-        const dx = e.changedTouches[0].clientX - x0;
-        x0 = null;
-        if (dx < -60 && i < etapes.length - 1) montrer(i + 1, 1);
-        else if (dx > 60 && i > 0) montrer(i - 1, -1);
-      });
-      montrer(0, 1);
-      if (!reduit()) racine.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250 });
+      presenter(etapes, {
+        pil: `${ctx.nom}${ctx.nom ? ' · ' : ''}${etapes[0].badge}`,
+        memoriser,
+        pret,
+        derniere: 'Découvrir mon espace ',
+        avis: { parcours: 'embarquement', question: 'Cette présentation était-elle claire ?' },
+      }).then(fini);
     }
 
     return { afficher, termine };
+  }
+
+  /** Présentation plein écran : `etapes` (voir htmlEtape) ; `o` = { pil (pastille du haut),
+   *  memoriser, pret (promesse attendue avant de fermer), derniere (texte du dernier bouton),
+   *  avis ({ parcours, question } : avis rapide en fin de présentation) }. Renvoie une promesse
+   *  résolue à la fermeture. */
+  function presenter(etapes, o) {
+    const pret = o.pret || Promise.resolve();
+    let fini;
+    const termine = new Promise((res) => {
+      fini = res;
+    });
+    let i = 0,
+      occupe = false;
+    const racine = document.createElement('div');
+    racine.className = 'emb';
+    racine.setAttribute('role', 'dialog');
+    racine.setAttribute('aria-modal', 'true');
+    racine.setAttribute('aria-labelledby', 'emb-titre');
+    racine.innerHTML = `
+      <div class="emb-haut"><img src="logo.png" alt="Emmaüs Connect" class="emb-logo">
+        <span class="emb-pil">${esc(o.pil)}</span>
+        <button type="button" class="emb-passer" data-emb="passer">Passer la présentation</button></div>
+      <div class="emb-scene"><div class="emb-cote-ill"></div><div class="emb-cote-txt" aria-live="polite"></div></div>
+      <div class="emb-bas"><div class="emb-pts" aria-hidden="true">${etapes.map(() => '<i></i>').join('')}</div>
+        <div class="emb-actions"><button type="button" class="btn emb-btn" data-emb="retour">Retour</button>
+        <button type="button" class="btn btn-primary emb-btn" data-emb="suivant"></button></div></div>`;
+    document.body.appendChild(racine);
+    document.documentElement.classList.add('emb-ouvert');
+    const $ = (s) => racine.querySelector(s);
+
+    function montrer(n, sens) {
+      i = n;
+      const h = htmlEtape(etapes[i], i, etapes.length);
+      const ill = $('.emb-cote-ill'),
+        txt = $('.emb-cote-txt');
+      ill.innerHTML = h.ill;
+      txt.innerHTML = h.txt;
+      if (window.portailIllustrations) window.portailIllustrations(racine);
+      if (!reduit()) {
+        ill.firstElementChild.animate(
+          [
+            { opacity: 0, transform: 'scale(.9) rotate(-2deg)' },
+            { opacity: 1, transform: 'none' },
+          ],
+          { duration: 380, easing: 'cubic-bezier(.2,.8,.2,1.2)' },
+        );
+        txt.firstElementChild.animate(
+          [
+            { opacity: 0, transform: `translateX(${sens < 0 ? -28 : 28}px)` },
+            { opacity: 1, transform: 'none' },
+          ],
+          { duration: 320, easing: 'ease-out' },
+        );
+      }
+      racine.querySelectorAll('.emb-pts i').forEach((p, k) => p.classList.toggle('on', k === i));
+      $('[data-emb="retour"]').style.visibility = i === 0 ? 'hidden' : '';
+      const dernier = i === etapes.length - 1;
+      $('[data-emb="suivant"]').innerHTML = (dernier ? o.derniere : i === 0 ? 'C’est parti ' : 'Suivant ') + FLECHE;
+      $('[data-emb="passer"]').hidden = dernier;
+      const t = $('#emb-titre');
+      if (t) t.focus({ preventScroll: true });
+    }
+
+    async function terminer() {
+      if (occupe) return;
+      occupe = true;
+      o.memoriser();
+      const b = $('[data-emb="suivant"]');
+      b.setAttribute('aria-busy', 'true');
+      await pret.catch(() => {});
+      b.removeAttribute('aria-busy');
+      document.removeEventListener('keydown', clavier, true);
+      await transition(racine);
+      document.documentElement.classList.remove('emb-ouvert');
+      fini();
+      // Présentation suivie jusqu'au bout : avis rapide (retours.js).
+      if (i === etapes.length - 1 && o.avis && window.CvdlRetours)
+        setTimeout(() => CvdlRetours.proposerAvis(o.avis), 900);
+    }
+
+    function clavier(e) {
+      if (occupe) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        terminer();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (i < etapes.length - 1) montrer(i + 1, 1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (i > 0) montrer(i - 1, -1);
+      } else if (e.key === 'Tab') {
+        // focus gardé dans la présentation
+        const f = [...racine.querySelectorAll('button:not([hidden])')].filter((x) => x.style.visibility !== 'hidden');
+        const k = f.indexOf(document.activeElement);
+        if (e.shiftKey && k <= 0) {
+          e.preventDefault();
+          f[f.length - 1].focus();
+        } else if (!e.shiftKey && k === f.length - 1) {
+          e.preventDefault();
+          f[0].focus();
+        }
+      }
+    }
+    document.addEventListener('keydown', clavier, true);
+    racine.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-emb]');
+      if (!b || occupe) return;
+      if (b.dataset.emb === 'passer') terminer();
+      else if (b.dataset.emb === 'retour' && i > 0) montrer(i - 1, -1);
+      else if (b.dataset.emb === 'suivant') i < etapes.length - 1 ? montrer(i + 1, 1) : terminer();
+    });
+    // Glisser du doigt (mobile)
+    let x0 = null;
+    racine.addEventListener(
+      'touchstart',
+      (e) => {
+        x0 = e.touches[0].clientX;
+      },
+      { passive: true },
+    );
+    racine.addEventListener('touchend', (e) => {
+      if (x0 == null || occupe) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      x0 = null;
+      if (dx < -60 && i < etapes.length - 1) montrer(i + 1, 1);
+      else if (dx > 60 && i > 0) montrer(i - 1, -1);
+    });
+    montrer(0, 1);
+    if (!reduit()) racine.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 250 });
+    return termine;
   }
 
   /* ── Transition vers la page structure ── */
@@ -585,5 +585,5 @@
     );
   }
 
-  window.CvdlEmbarquement = { preparer };
+  window.CvdlEmbarquement = { preparer, presenter };
 })();

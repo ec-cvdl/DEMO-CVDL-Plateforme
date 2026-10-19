@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<script src="api.js?v=3"></script>
-<script src="commun.js?v=1"></script>
+<script src="api.js?v=5"></script>
+<script src="commun.js?v=5"></script>
 <meta charset="utf-8">
 <script src="anti-cadre.js?v=1"></script>
-<script src="espace-beneficiaires.js?v=1"></script>
+<script src="base.js?v=1"></script>
+<script src="espace-beneficiaires.js?v=2"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net; frame-src 'self' https://ec-cvdl.github.io; object-src 'none'; base-uri 'none'; form-action 'self' https://europe-west1-cvdl-plateforme.cloudfunctions.net">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Signaler une panne — CVDL</title>
-<link rel="stylesheet" href="cvdl-ui.css?v=35">
-<link rel="stylesheet" href="depannage.css?v=1">
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="depannage.css?v=2">
 <style>
 /* Mise en page uniquement — tout le visuel vient de cvdl-ui.css */
 [hidden]{ display:none!important; }
@@ -51,11 +52,13 @@ main{ padding:var(--space-6) var(--space-4); }
 .tableau-materiel-sav-scroll tbody tr{ cursor:pointer; }
 .icone-symptome.ill-symptome{ width:60px !important; height:60px !important; padding:0 !important; display:flex; align-items:center; justify-content:center; }
 </style>
-<script src="portail-ui.js?v=36"></script>
-<script src="cvdl-ui.js?v=13"></script>
-<link rel="stylesheet" href="retours.css?v=2">
-<script src="retours.js?v=2" defer></script>
-<script src="depannage.js?v=1"></script>
+<script src="portail-ui.js?v=45"></script>
+<script src="cvdl-ui.js?v=18"></script>
+<link rel="stylesheet" href="retours.css?v=3">
+<script src="retours.js?v=5" defer></script>
+<script src="depannage.js?v=3"></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
 </head>
 <body data-famille="sav">
 <main id="contenu-principal">
@@ -88,10 +91,13 @@ main{ padding:var(--space-6) var(--space-4); }
       <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);gap:var(--space-4)">
         <span data-ill="cle" class="pk-titre-ill"></span>
         <h1 style="margin:0">Quel est le <em>numéro de série</em> de l'appareil ?</h1>
-        <p style="opacity:0.6;margin:0">Vous le trouverez généralement sous l'appareil (S/N ou Serial Number), dans les paramètres système ou juste votre attestation de paiement. Vous voulez plutôt suivre une demande déjà envoyée ? <a href="suivi-sav-beneficiaire.html">Cliquez ici</a>.</p>
+        <p style="opacity:0.6;margin:0">Vous le trouverez généralement sous l'appareil (S/N ou Serial Number), dans les paramètres système ou juste votre attestation de paiement.</p>
         <div class="field"><label for="id-numero-serie" class="sr-only">Numéro de série de l'appareil</label><input type="text" class="input" id="id-numero-serie" autocomplete="off" spellcheck="false" placeholder="Numéro de série de l'appareil"></div>
         <div id="retour-id-serie" aria-live="polite"></div>
-        <button type="button" class="btn btn-primary btn-block" id="btn-verifier-serie">Continuer</button>
+        <div style="display:flex;gap:var(--space-3)">
+          <button type="button" class="btn-retour" data-retour><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>Retour</button>
+          <button type="button" class="btn btn-primary" style="margin-left:auto" id="btn-verifier-serie">Continuer</button>
+        </div>
         <div class="card elev-sm" id="bloc-non-trouve" hidden style="padding:var(--space-4)">
           <p id="message-non-trouve" style="margin:0">Nous n'avons pas retrouvé ce numéro de série dans nos commandes — vérifie qu'il est bien saisi tel qu'inscrit sur l'appareil.</p>
           <p id="contact-sav-message" style="margin:6px 0 0"></p>
@@ -145,16 +151,16 @@ main{ padding:var(--space-6) var(--space-4); }
     </div>
   </section>
 
-  <!-- Étape : symptôme (numéro de série déjà connu depuis l'étape 1) -->
+  <!-- Étape 1 : symptôme (le numéro de série est demandé après le dépannage) -->
   <section class="etape" data-etape="symptome" hidden>
     <div class="etape-carte">
       <span data-ill="panne" class="pk-titre-ill xl"></span>
       <h1>Quel <em>symptôme</em> observez-vous ?</h1>
+      <p style="opacity:0.6;margin:0 0 var(--space-5);text-align:center">Vous voulez plutôt suivre une demande déjà envoyée ? <a href="suivi-sav-beneficiaire.html">Cliquez ici</a>.</p>
       <div class="card elev-lg" style="padding:var(--space-8) var(--space-6);margin-bottom:var(--space-4)">
         <div class="grille-symptomes" id="grille-symptomes"></div>
       </div>
       <div style="display:flex;gap:var(--space-3)">
-        <button type="button" class="btn-retour" data-retour><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>Retour</button>
         <button type="button" class="btn btn-primary" style="margin-left:auto" id="btn-symptome-continuer" disabled>Continuer</button>
       </div>
     </div>
@@ -237,6 +243,6 @@ main{ padding:var(--space-6) var(--space-4); }
   <p style="text-align:center;opacity:0.5;margin-top:var(--space-8)">CVDL — Service après-vente</p>
 </main>
 
-<script src="pages/sav-beneficiaire.js?v=3"></script>
+<script src="pages/sav-beneficiaire.js?v=6"></script>
 </body>
 </html>

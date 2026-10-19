@@ -5,16 +5,12 @@
    l'action serveur « commande-etat » (regles/prerequis.js) :
      · FicheCommande.frise(etat)     → étapes du circuit (fait / en cours / à venir) ;
      · FicheCommande.checklist(etat) → « Pour passer à « X » » + ce qui manque ;
-     · FicheCommande.charger(params) → appel commande-etat (admin : password, partenaire :
-                                        codeCreateur), via la fonction jsonp de la page.
+     · FicheCommande.charger(params) → appel commande-etat (admin : en-tête équipe,
+                                        partenaire : codeCreateur), via la lecture d'API de la page.
    Les deux écrans affichent donc exactement la même chose pour une même commande.
    ════════════════════════════════════════════════════════════════════════════════════ */
 (function () {
-  const esc = (v) =>
-    String(v == null ? '' : v).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const COURTS = { 'En cours de livraison': 'En livraison' };
 
   /** Étapes du circuit, horizontales : rond turquoise = faite, carré magenta = en cours,
@@ -42,9 +38,9 @@
     </div>`;
   }
 
-  /** Charge l'état d'une commande. `jsonp` = fonction d'appel API de la page. */
-  async function charger(jsonp, params) {
-    const r = await jsonp(Object.assign({ action: 'commande-etat' }, params));
+  /** Charge l'état d'une commande. `lire` = fonction de lecture de l'API de la page. */
+  async function charger(lire, params) {
+    const r = await lire(Object.assign({ action: 'commande-etat' }, params));
     return r && r.ok ? r.etat : null;
   }
 

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<script src="anti-cadre.js?v=1"></script>
+<script src="base.js?v=1"></script>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Rétroplanning autonome : fonctionne sans compte, les données restent dans ce navigateur.">
+<title>Rétroplanning — CVDL</title>
+<link rel="stylesheet" href="cvdl-ui.css?v=39">
+<link rel="stylesheet" href="projet.css?v=3">
+<link rel="stylesheet" href="autonome.css?v=1">
+<script src="cvdl-ui.js?v=18" defer></script>
+<link rel="stylesheet" href="affichage.css?v=2">
+<script src="affichage.js?v=3"></script>
+</head>
+<body data-famille="accueil">
+<main id="contenu-principal" class="pj-page">
+  <img src="logo.png" alt="Emmaüs Connect" class="logo-portail">
+
+  <div class="pj-tete">
+    <div>
+      <span class="cvdl-surtitre">Version autonome</span>
+      <h1>Rétro<em>planning</em></h1>
+      <p class="pj-sous">Couloirs, tâches, jalons et liens entre tâches.</p>
+    </div>
+    <div class="pj-tete-actions">
+      <div id="pj-tete-actions"></div>
+      <button type="button" class="pj-pil" id="auto-exporter">Exporter</button>
+      <button type="button" class="pj-pil" id="auto-importer">Importer</button>
+    </div>
+  </div>
+  <p class="auto-note">Sans compte ni serveur : le planning est enregistré dans ce navigateur. Exportez-le régulièrement pour le garder ou le reprendre sur un autre poste.</p>
+
+  <div class="pj-kpis" id="pj-kpis" aria-live="polite"></div>
+
+  <div class="pj-barre">
+    <div class="pj-onglets" role="tablist">
+      <button type="button" role="tab" class="pj-pil" data-vue="planning">Rétroplanning</button>
+    </div>
+    <div class="pj-barre-droite" id="pj-barre-droite"></div>
+  </div>
+
+  <section id="pj-vue-planning" hidden></section>
+  <section id="pj-vue-journal" hidden></section>
+  <p class="pj-chargement" id="pj-chargement">Chargement…</p>
+</main>
+
+<div class="pj-voile" id="pj-voile" hidden></div>
+<aside class="pj-panneau" id="pj-panneau" hidden role="dialog" aria-modal="true" aria-labelledby="pj-panneau-titre"></aside>
+<div class="pj-toast" id="pj-toast" hidden role="status"></div>
+
+<script src="autonome.js?v=1"></script>
+<script src="projet-local.js?v=1"></script>
+<script src="pages/projet.js?v=12"></script>
+</body>
+</html>

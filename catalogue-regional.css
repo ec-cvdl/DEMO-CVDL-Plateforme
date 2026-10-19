@@ -1,0 +1,139 @@
+/* Catalogue régional (admin/42-catalogue-regional.js), onglet Stock. Préfixe cr-.
+   Système visuel de cvdl-ui.css : trait + aplat décalé, teintes à plat. */
+.cr-regions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 var(--space-5, 20px);
+}
+.cr-regions button {
+  padding: 7px 14px;
+  border: var(--trait-doux, 1px solid var(--color-divider));
+  border-radius: 999px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cr-regions button.on {
+  border: var(--trait, 1.5px solid var(--navy));
+  background: color-mix(in srgb, var(--tur, #00acb0) 14%, #fff);
+  box-shadow: 3px 3px 0 var(--aplat, var(--navy));
+}
+.cr-tectech {
+  display: grid;
+  gap: 8px;
+  margin-bottom: var(--space-5, 20px);
+  padding: 14px 16px;
+  border-radius: var(--r-m, 14px);
+  background: color-mix(in srgb, var(--navy, #002743) 5%, #fff);
+}
+.cr-tectech label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+.cr-tectech small,
+.cr-aide {
+  font-size: 12.5px;
+  opacity: 0.65;
+}
+.cr-aide {
+  margin: 4px 0 0;
+}
+.cr-tectech-ligne {
+  display: flex;
+  gap: 8px;
+}
+.cr-tectech-ligne .input {
+  flex: 1;
+  min-width: 0;
+}
+.cr-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-5, 20px);
+}
+.cr-carte {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: var(--space-5, 20px);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cr-carte.cr-inactif {
+  opacity: 0.6;
+  background: color-mix(in srgb, var(--navy, #002743) 4%, #fff);
+}
+.cr-carte-tete,
+.cr-pied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cr-ill {
+  display: flex;
+  width: 48px;
+  height: 48px;
+}
+.cr-nom {
+  font-size: 15.5px;
+}
+.cr-puces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 4px;
+}
+.cr-puces span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--vert, #1f9d55) 14%, #fff);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+.cr-pied {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-divider);
+  font-size: 13px;
+}
+.cr-pied b {
+  font-family: var(--font-heading);
+  font-size: 20px;
+}
+.cr-vide {
+  opacity: 0.6;
+  font-size: 13px;
+}
+@media (max-width: 600px) {
+  .cr-tectech-ligne {
+    flex-direction: column;
+  }
+}
+.cr-autre {
+  width: auto;
+  min-height: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13.5px;
+}
+.cr-tectech.cr-afaire {
+  border: 1.5px solid #002743;
+  background: color-mix(in srgb, #f5a623 16%, #fff);
+}
+.cr-pastille {
+  margin-left: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #002743;
+  color: #fff;
+  font-size: 11.5px;
+}

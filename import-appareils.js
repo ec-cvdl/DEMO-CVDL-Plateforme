@@ -2,14 +2,12 @@
    structure de l'admin (admin/26-impact-structure360.js) et l'espace Logistique (support.js).
    Saisie à la main ou CSV → aperçu (chaque numéro cherché dans toutes les flottes et commandes)
    → ajout des seuls numéros inconnus. Serveur : flotte-importer-existants (regles/importAppareils).
-   ImportAppareils.ouvrir({ poster(action, donnees) → Promise, structureId?, nomStructure? }) :
-   sans structure, une liste déroulante est proposée (flotte-structures-import). */
+   ImportAppareils.ouvrir({ poster(action, donnees) → Promise, structureId?, nomStructure?, csv?,
+   fichier?, apresImport?(réponse) }) : sans structure, une liste déroulante est proposée
+   (flotte-structures-import) ; `csv` préremplit l'onglet CSV et lance la vérification (transfert
+   de stock envoyé par la structure, admin/41) ; `apresImport` est appelé une fois l'ajout fait. */
 window.ImportAppareils = (function () {
-  const esc = (s) =>
-    String(s == null ? '' : s).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const STATUTS = ['En stock', 'Remis', 'Vendu', 'SAV', 'D3E'];
   const COLONNES = 'numéro de série;produit;marque;modèle;statut;date d’arrivée;prénom;nom';
   const LIBELLES = { ajoute: 'p1', deja: 'p2', ailleurs: 'p3', doublon: 'p2', vide: 'p2' };
@@ -23,10 +21,11 @@ window.ImportAppareils = (function () {
       structureId: options.structureId || '',
       nomStructure: options.nomStructure || '',
       structures: null,
-      onglet: 'main',
+      onglet: options.csv ? 'csv' : 'main',
       lignes: [ligneVide(), ligneVide(), ligneVide()],
-      csv: '',
-      fichier: '',
+      csv: options.csv || '',
+      fichier: options.fichier || '',
+      apresImport: options.apresImport || null,
       apercu: null,
       fait: false,
       occupe: false,
@@ -53,6 +52,7 @@ window.ImportAppareils = (function () {
       });
     rendre();
     voile.querySelector('.ia')?.focus();
+    if (E.csv && E.structureId) envoyer(false);
   }
   function fermer() {
     document.getElementById('ia-voile').classList.remove('visible');
@@ -80,6 +80,7 @@ window.ImportAppareils = (function () {
       E.apercu = r;
       E.fait = !!confirmer;
       E.nomStructure = E.nomStructure || r.structure;
+      if (E.fait && E.apresImport) E.apresImport(r);
     } else E.erreur = r.erreur || 'Import impossible.';
     rendre();
   }

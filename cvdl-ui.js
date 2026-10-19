@@ -4,42 +4,6 @@
    Ne touche à aucune logique : déplace seulement des éléments existants (mêmes références,
    mêmes écouteurs) et pose des attributs lus par cvdl-ui.css. */
 (function () {
-  /* ── Préférences d'affichage (panneau « Affichage ») : appliquées dès le chargement ── */
-  const CLE_AFFICHAGE = 'cvdl-affichage';
-  const PREF_DEFAUT = {
-    contraste: false,
-    taille: 'normale',
-    espacement: false,
-    police: false,
-    animations: true,
-    liens: false,
-  };
-  function lirePrefs() {
-    try {
-      return Object.assign({}, PREF_DEFAUT, JSON.parse(localStorage.getItem(CLE_AFFICHAGE) || '{}'));
-    } catch (e) {
-      return Object.assign({}, PREF_DEFAUT);
-    }
-  }
-  function appliquerPrefs(p) {
-    const h = document.documentElement;
-    h.classList.toggle('cvdl-contraste', !!p.contraste);
-    h.classList.toggle('cvdl-espacement', !!p.espacement);
-    h.classList.toggle('cvdl-police', !!p.police);
-    h.classList.toggle('cvdl-sans-anim', !p.animations);
-    h.classList.toggle('cvdl-liens', !!p.liens);
-    h.dataset.cvdlTaille = p.taille || 'normale';
-    // Police très lisible : chargée seulement si elle est choisie
-    if (p.police && !document.getElementById('cvdl-police-lisible')) {
-      const l = document.createElement('link');
-      l.id = 'cvdl-police-lisible';
-      l.rel = 'stylesheet';
-      l.href =
-        'https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap';
-      document.head.appendChild(l);
-    }
-  }
-  appliquerPrefs(lirePrefs());
   // Accès « conseiller numérique » (connexion Google, jeton j3 à la place du code structure) :
   // les éléments marqués data-role="responsable" sont masqués (le serveur refuse de toute façon).
   try {
@@ -76,6 +40,9 @@
     'structures-partenaires': 'Espace partenaire',
     'commandes-partenaires': 'Espace partenaire',
     'tarifs-partenaires': 'Espace partenaire',
+    orientation: 'Vente solidaire',
+    'ventes-preparer': 'Ventes solidaires',
+    'saisie-salesforce': 'Saisie des ventes',
   };
   const FORMES = {
     Reçue: 'losange',
@@ -135,12 +102,12 @@
     marque.className = 'cvdl-marque';
     marque.href = /beneficiaire/.test(page)
       ? 'portail-beneficiaire.html'
-      : page === 'projet'
-        ? 'projet.html'
-        : page === 'portail'
-          ? 'portail.html'
-          : page === 'accueil'
-            ? 'accueil.html'
+      : page === 'portail'
+        ? 'portail.html'
+        : page === 'accueil'
+          ? 'accueil.html'
+          : page === 'orientation'
+            ? 'orientation.html' // structure qui oriente : pas d'espace structure
             : 'portail-structure.html';
     marque.setAttribute('aria-label', 'Retour à l’accueil');
     const logo = document.querySelector('.logo-portail');
@@ -336,99 +303,6 @@
     (racine || document).querySelectorAll('.voile-modale-qr').forEach(preparerModale);
   }
 
-  /* ── Panneau « Affichage » (bouton dans l'en-tête) ── */
-  function panneauAffichage() {
-    const actions = document.querySelector('.cvdl-entete-actions');
-    if (!actions || document.getElementById('cvdl-affichage-btn')) return;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'cvdl-affichage-btn';
-    btn.className = 'cvdl-affichage-btn';
-    btn.setAttribute('aria-haspopup', 'dialog');
-    btn.setAttribute('aria-expanded', 'false');
-    btn.setAttribute('aria-controls', 'cvdl-affichage');
-    btn.innerHTML =
-      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18" fill="currentColor"/></svg><span>Affichage</span>';
-    actions.prepend(btn);
-    const pan = document.createElement('div');
-    pan.id = 'cvdl-affichage';
-    pan.className = 'cvdl-affichage';
-    pan.hidden = true;
-    pan.setAttribute('role', 'dialog');
-    pan.setAttribute('aria-modal', 'false');
-    pan.setAttribute('aria-labelledby', 'cvdl-affichage-titre');
-    const inter = (id, titre, aide) =>
-      `<label class="cvdl-aff-opt"><span><b>${titre}</b><small>${aide}</small></span><span class="cvdl-aff-inter"><input type="checkbox" data-pref="${id}"><i aria-hidden="true"></i></span></label>`;
-    pan.innerHTML = `
-      <div class="cvdl-aff-tete"><h2 id="cvdl-affichage-titre">Affichage</h2><button type="button" class="cvdl-aff-fermer" aria-label="Fermer le panneau Affichage">✕</button></div>
-      <fieldset class="cvdl-aff-taille"><legend>Taille du texte</legend>
-        ${[
-          ['normale', 'Normale'],
-          ['grande', 'Grande'],
-          ['tres-grande', 'Très grande'],
-        ]
-          .map(([v, l]) => `<label><input type="radio" name="cvdl-taille" value="${v}"><span>${l}</span></label>`)
-          .join('')}
-      </fieldset>
-      ${inter('contraste', 'Contraste renforcé', 'Bleu nuit sur blanc, sans teintes ni gris clairs.')}
-      ${inter('espacement', 'Texte espacé', 'Plus d’espace entre les lignes, les mots et les lettres.')}
-      ${inter('police', 'Police très lisible', 'Atkinson Hyperlegible, conçue pour les personnes malvoyantes.')}
-      ${inter('liens', 'Liens soulignés', 'Tous les liens sont soulignés.')}
-      ${inter('animations', 'Animations', 'Décochez pour supprimer les mouvements.')}
-      <button type="button" class="cvdl-aff-reset">Rétablir l’affichage par défaut</button>`;
-    actions.appendChild(pan);
-    const synchro = () => {
-      const p = lirePrefs();
-      pan.querySelectorAll('[data-pref]').forEach((i) => {
-        i.checked = !!p[i.dataset.pref];
-      });
-      pan.querySelectorAll('input[name="cvdl-taille"]').forEach((i) => {
-        i.checked = i.value === (p.taille || 'normale');
-      });
-    };
-    const enregistrer = (p) => {
-      try {
-        localStorage.setItem(CLE_AFFICHAGE, JSON.stringify(p));
-      } catch (e) {}
-      appliquerPrefs(p);
-    };
-    pan.addEventListener('change', (e) => {
-      const p = lirePrefs();
-      if (e.target.dataset.pref) p[e.target.dataset.pref] = e.target.checked;
-      if (e.target.name === 'cvdl-taille') p.taille = e.target.value;
-      enregistrer(p);
-    });
-    const ouvrir = () => {
-      synchro();
-      pan.hidden = false;
-      btn.setAttribute('aria-expanded', 'true');
-      (pan.querySelector('input:checked') || pan.querySelector('input')).focus();
-    };
-    const fermer = (rendreFocus = true) => {
-      pan.hidden = true;
-      btn.setAttribute('aria-expanded', 'false');
-      if (rendreFocus) btn.focus();
-    };
-    btn.addEventListener('click', () => (pan.hidden ? ouvrir() : fermer()));
-    pan.querySelector('.cvdl-aff-fermer').addEventListener('click', () => fermer());
-    pan.querySelector('.cvdl-aff-reset').addEventListener('click', () => {
-      enregistrer(Object.assign({}, PREF_DEFAUT));
-      synchro();
-    });
-    document.addEventListener(
-      'keydown',
-      (e) => {
-        if (e.key === 'Escape' && !pan.hidden) {
-          e.stopPropagation();
-          fermer();
-        }
-      },
-      true,
-    );
-    document.addEventListener('click', (e) => {
-      if (!pan.hidden && !pan.contains(e.target) && !btn.contains(e.target)) fermer(false);
-    });
-  }
   function tout(racine) {
     titres(racine);
     formes(racine);
@@ -439,7 +313,6 @@
     if (!document.body || !document.body.dataset.famille) return;
     document.documentElement.classList.add('cvdl');
     entete();
-    panneauAffichage();
     gestes();
     lienEvitement();
     tout(document);
@@ -466,4 +339,131 @@
   window.cvdlFormeStatut = formeDe;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
   else demarrer();
+})();
+
+/* ── Modales de saisie : avertissement avant de perdre ce qui a été saisi ──
+   Dès qu'un champ d'une modale (.voile-modale-qr, panneau du Projet, « Donner mon avis »,
+   <dialog>) a été rempli, la fermer (croix, Annuler, clic à côté, Échap) demande confirmation.
+   Un clic à côté d'une modale .voile-modale-qr ou d'un <dialog> la ferme. Champ exclu :
+   type="search" ou [data-sans-garde]. */
+(function () {
+  const RACINES = '.voile-modale-qr, .pj-voile, .rt-fond, dialog';
+  const FERMETURES =
+    '.modale-fermer-rond-qr, [data-fermer], [data-fermer-modale], [data-rt="fermer"], [id$="-fermer"], [id^="fermer"], button[aria-label="Fermer"]';
+  const saisies = new WeakSet();
+  let rejeu = false;
+  let appuiSur = null;
+
+  const ouverte = (r) =>
+    r.isConnected &&
+    !r.hidden &&
+    (r.tagName === 'DIALOG' ? r.open : !r.classList.contains('voile-modale-qr') || r.classList.contains('visible'));
+  const auPremierPlan = () => {
+    const actif = document.activeElement && document.activeElement.closest && document.activeElement.closest(RACINES);
+    if (actif && ouverte(actif)) return actif;
+    return [...document.querySelectorAll(RACINES)].filter(ouverte).pop() || null;
+  };
+  const estFermeture = (bouton) =>
+    bouton.matches(FERMETURES) ||
+    (bouton.tagName === 'BUTTON' && /^(annuler|fermer)$/i.test((bouton.textContent || '').trim()));
+  const confirmer = () =>
+    window.confirmerCvdl
+      ? window.confirmerCvdl('Fermer sans enregistrer ?\nCe que vous avez saisi sera perdu.', { ok: 'Fermer' })
+      : Promise.resolve(window.confirm('Fermer sans enregistrer ? Ce que vous avez saisi sera perdu.'));
+  /** Rejoue la fermeture demandée, sans repasser par la garde. */
+  function rejouer(action) {
+    rejeu = true;
+    try {
+      action();
+    } finally {
+      rejeu = false;
+    }
+  }
+  /** Clic à côté : fermeture par le bouton de la modale (même effet que « Annuler »). */
+  function fermerParLeFond(r) {
+    if (r.tagName === 'DIALOG') return r.close();
+    if (!r.classList.contains('voile-modale-qr')) return r.click();
+    const m = r.querySelector('.modale-qr') || r;
+    const b = [...m.querySelectorAll('button')].find(estFermeture);
+    if (b) b.click();
+    else r.classList.remove('visible');
+  }
+  function garder(r, e, fermeture) {
+    if (!saisies.has(r)) return false;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    confirmer().then((ok) => {
+      if (!ok || !ouverte(r)) return;
+      saisies.delete(r);
+      rejouer(fermeture);
+    });
+    return true;
+  }
+
+  function noter(e) {
+    const t = e.target;
+    if (!e.isTrusted || !t.matches || !t.matches('input, textarea, select')) return;
+    if (t.type === 'search' || t.closest('[data-sans-garde]')) return;
+    const r = t.closest(RACINES);
+    if (r) saisies.add(r);
+  }
+  document.addEventListener('input', noter, true);
+  document.addEventListener('change', noter, true);
+  // Une modale refermée (enregistrée, annulée) repart de zéro à sa prochaine ouverture.
+  new MutationObserver((muts) =>
+    muts.forEach((m) => {
+      if (saisies.has(m.target) && !ouverte(m.target)) saisies.delete(m.target);
+    }),
+  ).observe(document.documentElement, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'hidden', 'open'],
+  });
+
+  // Un glisser commencé dans la modale (sélection de texte) et relâché à côté n'est pas un clic à côté.
+  window.addEventListener('pointerdown', (e) => (appuiSur = e.target), true);
+  window.addEventListener(
+    'click',
+    (e) => {
+      if (rejeu || !e.target.closest || document.querySelector('.cvdl-conf-voile')) return;
+      const r = e.target.closest(RACINES);
+      if (!r || !ouverte(r)) return;
+      const fond =
+        r.tagName === 'DIALOG'
+          ? e.target === r &&
+            appuiSur === r &&
+            (() => {
+              const b = r.getBoundingClientRect();
+              return e.clientX < b.left || e.clientX > b.right || e.clientY < b.top || e.clientY > b.bottom;
+            })()
+          : e.target === r && appuiSur === r;
+      if (fond) {
+        if (garder(r, e, () => fermerParLeFond(r))) return;
+        if (r.tagName === 'DIALOG' || r.classList.contains('voile-modale-qr')) {
+          // Fermée ici une seule fois (la page ne la referme pas une seconde fois).
+          e.stopImmediatePropagation();
+          rejouer(() => fermerParLeFond(r));
+        }
+        return;
+      }
+      const bouton = e.target.closest('button, a, [role="button"]');
+      if (bouton && r.contains(bouton) && estFermeture(bouton)) garder(r, e, () => bouton.click());
+    },
+    true,
+  );
+  window.addEventListener(
+    'keydown',
+    (e) => {
+      if (rejeu || e.key !== 'Escape' || document.querySelector('.cvdl-conf-voile')) return;
+      const r = auPremierPlan();
+      if (!r) return;
+      const cible = e.target;
+      garder(r, e, () =>
+        r.tagName === 'DIALOG'
+          ? r.close()
+          : cible.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })),
+      );
+    },
+    true,
+  );
 })();

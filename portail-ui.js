@@ -22,6 +22,33 @@ window.ouvrirDocumentGenere = function (url, fenetre) {
   if (fenetre && !fenetre.closed) fenetre.location.href = cible;
   else window.open(cible, '_blank', m ? '' : 'noopener');
 };
+/** Garantie d'un appareil (2 ans) à partir de sa date d'achat ou de livraison (jj/mm/aaaa) :
+ *  { statut: 'en_cours' (moins d'un an) | 'bientot' (entre 1 et 2 ans) | 'expiree' | null,
+ *  fin: date de fin jj/mm/aaaa }. Même règle que le serveur (src/regles/garantie.js). */
+window.statutGarantieCvdl = function (dateAchat) {
+  const [j, m, a] = String(dateAchat || '')
+    .split('/')
+    .map((n) => parseInt(n, 10));
+  if (!j || !m || !a) return { statut: null, fin: '' };
+  const mi = new Date(a + 1, m - 1, j);
+  const fin = new Date(a + 2, m - 1, j);
+  const maintenant = new Date();
+  return {
+    statut: maintenant >= fin ? 'expiree' : maintenant >= mi ? 'bientot' : 'en_cours',
+    fin: fin.toLocaleDateString('fr-FR'),
+  };
+};
+/** Pastille de garantie des pages publiques ; `avecDate` ajoute la date de fin. */
+window.badgeGarantieCvdl = function (dateAchat, avecDate) {
+  const { statut, fin } = window.statutGarantieCvdl(dateAchat);
+  const cfg = {
+    en_cours: ['#1F9D55', 'Garantie en cours', ` (jusqu'au ${fin})`],
+    bientot: ['#7A5A00', 'Garantie bientôt expirée', ` (jusqu'au ${fin})`],
+    expiree: ['#E5484D', 'Hors garantie', ` (${fin})`],
+  }[statut];
+  if (!cfg) return '';
+  return `<span style="display:inline-flex;align-items:center;gap:6px;background:${cfg[0]};color:#fff;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;flex:none;white-space:nowrap">${echapper(cfg[1] + (avecDate ? cfg[2] : ''))}</span>`;
+};
 /* portail-ui.js — illustrations communes de l'espace public.
    Tout élément <span data-ill="nom" class="ill …"></span> reçoit son dessin (trait fin bleu nuit +
    aplat de couleur décalé). Styles dans portail.css. Aucune dépendance. */
@@ -32,11 +59,11 @@ window.ouvrirDocumentGenere = function (url, fenetre) {
       '<rect x="8" y="12" width="26" height="18" rx="3"/><rect x="30" y="18" width="12" height="20" rx="3"/>',
       '<rect x="6" y="10" width="26" height="18" rx="3"/><path d="M3 32h32"/><rect x="31" y="16" width="12" height="22" rx="2.5" fill="var(--ill-fond)"/><path d="M35.5 34h3"/>',
     ],
-    // Gestion de flotte : un tableur (violet, pour trancher avec le turquoise et le magenta).
+    // Gestion de flotte : un tableur simple (violet, pour trancher avec le turquoise et le magenta).
     gestionFlotte: [
       'v',
-      '<rect x="9" y="10" width="32" height="30" rx="3"/>',
-      '<rect x="7" y="8" width="32" height="30" rx="3"/><path d="M7 16h32M7 23.5h32M7 31h32M16.5 8v30"/><path d="m9.5 20 1.8 1.8 3-3.3M9.5 27.5l1.8 1.8 3-3.3" stroke-width="1.7"/><path d="M20.5 19.8h13M20.5 27.3h9M20.5 34.8h11" stroke-width="1.7"/>',
+      '<rect x="9" y="10" width="32" height="30" rx="4"/>',
+      '<rect x="7" y="8" width="32" height="30" rx="4"/><path d="M7 17h32M7 27.5h32M18 17v21"/>',
     ],
     partenairesCmd: [
       'm',
@@ -89,11 +116,11 @@ window.ouvrirDocumentGenere = function (url, fenetre) {
       '<rect x="7" y="13" width="24" height="16" rx="3"/><path transform="translate(19 11) scale(1.25)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
       '<rect x="5" y="11" width="24" height="16" rx="3"/><path d="M2 31h22"/><path vector-effect="non-scaling-stroke" transform="translate(17 9) scale(1.25)" fill="var(--ill-fond)" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
     ],
-    // Carton en attente + sablier : en stock depuis longtemps (aplat violet, classe v).
+    // Carton et horloge : en stock depuis longtemps (aplat violet, classe v).
     stockAncien: [
       'v',
-      '<rect x="6" y="22" width="24" height="19" rx="2"/><path d="M34.5 15h9c0 6.5-3.6 8.5-4.5 14 .9 5.5 4.5 7.5 4.5 14h-9c0-6.5 3.6-8.5 4.5-14-.9-5.5-4.5-7.5-4.5-14z"/>',
-      '<rect x="4" y="20" width="24" height="19" rx="2"/><path d="M4 20l4-6h16l4 6M16 14v6M9 26h7"/><path fill="var(--ill-fond)" d="M32.5 13h9c0 6.5-3.6 8.5-4.5 14 .9 5.5 4.5 7.5 4.5 14h-9c0-6.5 3.6-8.5 4.5-14-.9-5.5-4.5-7.5-4.5-14z"/><path d="M31 13h12M31 41h12M34.5 39h5L37 35.5zM35 18h4"/>',
+      '<path d="M10 17 24 10l14 7v16l-14 7-14-7z"/>',
+      '<path d="M8 15 22 8l14 7v16l-14 7-14-7z"/><path d="M8 15l14 7 14-7M22 22v16M15 11.5l14 7v5"/><circle cx="35" cy="34" r="9" fill="var(--ill-fond)"/><path d="M35 29v5.5l3.5 2"/>',
     ],
     suiviSav: [
       't',
@@ -443,16 +470,91 @@ window.ouvrirDocumentGenere = function (url, fenetre) {
   else demarrer();
 })();
 
+/* ── Dates tapées à la main (jj/mm/aaaa) — admin et pages publiques ──
+   Tout champ dont le texte d'aide contient « jj/mm/aaaa » (ou marqué data-date-fr) : les « / »
+   se placent tout seuls pendant la frappe, un jour ou un mois d'un seul chiffre suivi de « / »
+   est complété (1/2 → 01/02), une date collée au format 2026-10-09 est convertie.
+   Dates de naissance (data-naissance, ou type="date" marqué data-naissance) : jamais avant
+   1920 ni dans le futur — même règle que le serveur (src/regles/dates.js). */
+(function () {
+  const ANNEE_MIN = 1920;
+  const SEL = 'input[placeholder*="jj/mm/aaaa"], input[data-date-fr]';
+  function masquer(v) {
+    const iso = v.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+    const parts = v.split('/');
+    let chiffres = '';
+    parts.forEach((p, i) => {
+      let d = p.replace(/\D/g, '');
+      if (i < parts.length - 1 && i < 2 && d.length === 1) d = '0' + d;
+      chiffres += d;
+    });
+    chiffres = chiffres.slice(0, 8);
+    let r = chiffres.slice(0, 2);
+    if (chiffres.length > 2) r += '/' + chiffres.slice(2, 4);
+    if (chiffres.length > 4) r += '/' + chiffres.slice(4);
+    return r;
+  }
+  /** Message d'erreur pour une date de naissance (jj/mm/aaaa ou aaaa-mm-jj), '' si valable ou vide. */
+  window.erreurNaissanceCvdl = function (v) {
+    const t = String(v || '').trim();
+    if (!t) return '';
+    const m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/) || t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return 'Date de naissance : jj/mm/aaaa.';
+    const [j, mo, a] = m[1].length === 4 ? [+m[3], +m[2], +m[1]] : [+m[1], +m[2], +m[3]];
+    const d = new Date(a, mo - 1, j);
+    if (d.getDate() !== j || d.getMonth() !== mo - 1) return 'Cette date de naissance n’existe pas.';
+    if (a < ANNEE_MIN) return `Date de naissance : ${ANNEE_MIN} au plus tôt.`;
+    if (d > new Date()) return 'La date de naissance ne peut pas être dans le futur.';
+    return '';
+  };
+  function verifierNaissance(ch) {
+    const e = window.erreurNaissanceCvdl(ch.value);
+    ch.setCustomValidity(e);
+    if (e) {
+      ch.setAttribute('aria-invalid', 'true');
+      ch.title = e;
+    } else {
+      ch.removeAttribute('aria-invalid');
+      ch.removeAttribute('title');
+    }
+  }
+  const aujourdhuiIso = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  document.addEventListener('focusin', (e) => {
+    const ch = e.target;
+    if (ch.matches && ch.matches('input[type="date"][data-naissance]')) {
+      ch.min = `${ANNEE_MIN}-01-01`;
+      ch.max = aujourdhuiIso();
+    }
+    if (ch.matches && ch.matches(SEL)) {
+      ch.setAttribute('inputmode', 'numeric');
+      ch.setAttribute('maxlength', '10');
+    }
+  });
+  document.addEventListener('input', (e) => {
+    const ch = e.target;
+    if (!ch.matches || !ch.matches(SEL)) return;
+    // Seulement en frappe ou collage à la fin du champ : une correction au milieu reste libre.
+    const finDuChamp = ch.selectionStart === ch.value.length;
+    if (!finDuChamp && e.inputType !== 'insertFromPaste') return;
+    const efface = /^delete/.test(e.inputType || '');
+    let v = masquer(ch.value);
+    if (!efface && /^\d{2}(\/\d{2})?$/.test(v)) v += '/';
+    if (v !== ch.value) ch.value = v;
+    if (ch.matches('[data-naissance]') && v.length === 10) verifierNaissance(ch);
+  });
+  document.addEventListener('change', (e) => {
+    const ch = e.target;
+    if (ch.matches && ch.matches('[data-naissance]')) verifierNaissance(ch);
+  });
+})();
+
 /* ── Confirmation stylisée (remplace les popups du navigateur) — admin et pages publiques ──
    confirmerCvdl('Supprimer X ?\n\nDétail…') → Promise<boolean>. Le titre est la première phrase,
    le reste devient le texte ; le bouton reprend le verbe (Supprimer, Annuler, Retirer…). */
 (function () {
   if (window.confirmerCvdl) return;
-  const esc = (v) =>
-    String(v == null ? '' : v).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const CSS = `
 .cvdl-conf-voile{ position:fixed; inset:0; z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; background:color-mix(in srgb, #002743 45%, transparent); animation:cvdlcf-v .15s ease both; }
 .cvdl-conf{ width:min(480px, 100%); background:#fff; color:#002743; border:1.5px solid #002743; border-radius:22px; box-shadow:8px 8px 0 color-mix(in srgb, #002743 38%, transparent); padding:22px 24px; font-family:Inter, system-ui, sans-serif; animation:cvdlcf-pop .24s cubic-bezier(.3,.7,.3,1) both; }
@@ -506,6 +608,14 @@ window.ouvrirDocumentGenere = function (url, fenetre) {
     else if (/^Annuler/i.test(t)) cle = 'annuler';
     else cle = o.danger ? 'attention' : 'question';
     return `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONES_CONF[cle]}</svg>`;
+  }
+  /** Au-dessus d'un <dialog> modal ouvert, seul son contenu est cliquable : la fenêtre s'y place. */
+  function hote() {
+    try {
+      const d = [...document.querySelectorAll('dialog[open]')].filter((x) => x.matches(':modal')).pop();
+      if (d) return d;
+    } catch (e) {}
+    return document.body;
   }
   function injecterStyle() {
     if (document.getElementById('cvdl-conf-style')) return;
@@ -596,7 +706,7 @@ window.ouvrirDocumentGenere = function (url, fenetre) {
       if (r) r.addEventListener('click', annuler);
       v.querySelector('.ok').addEventListener('click', valider);
       document.addEventListener('keydown', clavier, true);
-      document.body.appendChild(v);
+      hote().appendChild(v);
       (champ || v.querySelector('.ok')).focus();
     });
   }
@@ -667,7 +777,7 @@ window.ouvrirDocumentGenere = function (url, fenetre) {
       v.querySelector('.retour').addEventListener('click', () => fermer(false));
       v.querySelector('.ok').addEventListener('click', () => fermer(true));
       document.addEventListener('keydown', clavier, true);
-      document.body.appendChild(v);
+      hote().appendChild(v);
       v.querySelector('.ok').focus();
     });
   };
@@ -705,11 +815,7 @@ window.cleSymptomeCvdl = function (texte) {
    Les styles sont injectés ici : un seul endroit à modifier pour tout le site. */
 (function () {
   if (window.piluleSerieCvdl) return;
-  const esc = (v) =>
-    String(v == null ? '' : v).replace(
-      /[&<>"']/g,
-      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
-    );
+  const esc = echapper;
   const SVG = {
     qr: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="15" y="15" width="4" height="4" rx=".8"/></svg>',
     ticket:
@@ -773,7 +879,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   };
   /** Plusieurs numéros (texte multiligne ou tableau) → pilules côte à côte. */
   window.pilulesSeriesCvdl = function (liste, opts) {
-    const t = Array.isArray(liste) ? liste : String(liste || '').split('\n');
+    const t = Array.isArray(liste) ? liste : [liste];
     const h = t
       .map((x) => String(x).trim())
       .filter(Boolean)
@@ -915,27 +1021,20 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
 })();
 
 /* ── Barre « Mode démo » ──
-   Active quand demo.html a posé le repère cvdl-mode-demo (8 h), ou sur un site de démo dédié
-   (dossier « …demo… ») : toutes les pages parlent alors à la fonction de démonstration.
+   Active sur les pages servies sous /demo/ (voir api.js) : elles parlent à la fonction de
+   démonstration.
    · Barre pleine largeur en bas de l'écran, qui fait partie de la page : la place est réservée
      (marge en bas de page) et toute fenêtre fixe (fiche, voile, menu latéral, boutons
      flottants) est remontée d'autant — rien ne passe dessous. Masquée tant qu'une fenêtre
      modale est ouverte (SEL_MODALES), sur toutes les pages : elle ne passe jamais par-dessus.
    · Contenu : rappel « données fictives », interrupteur « Explications » (explications.js, chargé
-     seulement en démo), « Tutoriels », « Changer de profil », « Quitter », et « Replier » (barre
+     seulement en démo), « Tutoriels », « Changer de profil », « Quitter la démo » (retour au
+     vrai site), et « Replier » (barre
      fine ; l'état est mémorisé). */
 (function () {
-  let actif = false;
-  // Site de démo dédié (publié dans un dossier « …demo… », ex. ec-cvdl.github.io/cvdl-demo/) : toujours en démo.
   const dossier = location.pathname.split('/')[1] || '';
   const siteDemo = /demo/i.test(dossier) && !/\.html$/i.test(dossier);
-  try {
-    const d = JSON.parse(localStorage.getItem('cvdl-mode-demo') || 'null');
-    actif = siteDemo || !!(d && d.jusqua > Date.now());
-  } catch (e) {
-    actif = siteDemo;
-  }
-  if (!actif || /demo\.html$/.test(location.pathname)) return;
+  if (!siteDemo || /demo\.html$/.test(location.pathname)) return;
   const html = document.documentElement;
   html.classList.add('cvdl-demo');
   const lireLocal = (k) => {
@@ -978,14 +1077,13 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
     #cvdl-demo-sans-risque{ position:relative; display:flex; gap:18px; align-items:flex-start; margin:16px auto; max-width:1200px; width:calc(100% - 32px); box-sizing:border-box; padding:20px 22px; border-radius:18px;
       background:repeating-linear-gradient(-45deg, #FFF3C4 0 14px, #FFEDB0 14px 28px); border:2px solid #002743; box-shadow:4px 4px 0 #002743; color:#002743; font-family:var(--police, system-ui, sans-serif); }
     #cvdl-demo-sans-risque .asb-ico{ flex:none; width:58px; height:58px; border-radius:16px; background:#FECC38; border:2px solid #002743; display:inline-flex; align-items:center; justify-content:center; }
-    #cvdl-demo-sans-risque .asb-txt{ flex:1; min-width:0; padding-right:24px; }
+    #cvdl-demo-sans-risque .asb-txt{ flex:1; min-width:0; padding-right:40px; }
     #cvdl-demo-sans-risque .asb-sur{ font-size:11.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#8A5A00; }
     #cvdl-demo-sans-risque h2{ margin:2px 0 4px; font-family:var(--police-titre, system-ui, sans-serif); font-size:22px; line-height:1.2; color:#002743; }
     #cvdl-demo-sans-risque p{ margin:0; font-size:14.5px; }
     #cvdl-demo-sans-risque ul{ margin:10px 0 0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:8px; }
     #cvdl-demo-sans-risque li{ padding:6px 12px; border-radius:999px; background:#fff; border:1.5px solid #002743; font-size:14px; }
-    #cvdl-demo-sans-risque .asb-fermer{ position:absolute; top:10px; right:12px; border:0; background:none; color:#002743; font:600 20px/1 system-ui, sans-serif; cursor:pointer; padding:4px 6px; opacity:.7; }
-    #cvdl-demo-sans-risque .asb-fermer:hover, #cvdl-demo-sans-risque .asb-fermer:focus-visible{ opacity:1; }
+    #cvdl-demo-sans-risque .asb-fermer{ position:absolute; top:14px; right:14px; width:34px; height:34px; color:#002743; }
     @media (max-width:640px){ #cvdl-demo-sans-risque{ flex-direction:column; gap:10px; padding:16px; } #cvdl-demo-sans-risque .asb-ico{ width:46px; height:46px; } }
     #cvdl-bandeau-demo.replie .bd-actions{ display:none; }
     #cvdl-bandeau-demo.replie .bd-replier{ padding:2px 10px; }
@@ -1007,7 +1105,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
   css.href = 'explications.css?v=2';
   document.head.appendChild(css);
   const js = document.createElement('script');
-  js.src = 'explications.js?v=7';
+  js.src = 'explications.js?v=10';
   js.defer = true;
   js.onload = () => majBandeau();
   document.head.appendChild(js);
@@ -1082,7 +1180,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       '<div class="asb-txt"><div class="asb-sur">Démonstration</div><h2>Ici, rien n’est réel : essayez sans crainte</h2>' +
       '<p>Toutes les données sont fictives. Ce que vous saisissez (commandes, pannes, personnes…) n’a aucun effet sur la vraie plateforme.</p>' +
       '<ul><li>Aucun impact sur les données réelles</li><li>Aucun e-mail envoyé</li><li>Remise à zéro après 15 min sans activité</li></ul></div>' +
-      '<button type="button" class="asb-fermer" aria-label="Masquer ce message">×</button>';
+      '<button type="button" class="modale-fermer-rond-qr asb-fermer" aria-label="Masquer ce message" title="Masquer ce message"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
     e.querySelector('.asb-fermer').addEventListener('click', () => {
       e.remove();
       try {
@@ -1110,7 +1208,7 @@ html.cvdl-sans-anim .cvdl-sn, html.cvdl-sans-anim .cvdl-pp, html.cvdl-sans-anim 
       '<button type="button" class="xp-tutos">Tutoriels</button>' +
       // Démo ouverte par le lien d'une structure : pas de changement de profil ni de sortie.
       (vueVerrouillee ? '' : '<a class="bd-profil" href="demo.html">Changer de profil</a>') +
-      (siteDemo || vueVerrouillee ? '' : '<a class="bd-quitter" href="demo.html?quitter=1">Quitter</a>') +
+      '<a class="bd-quitter" href="demo.html?quitter=1">Quitter la démo</a>' +
       '</span>' +
       '<button type="button" class="bd-replier" aria-expanded="true">Replier ▾</button>';
     const replier = (oui) => {
