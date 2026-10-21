@@ -40,10 +40,13 @@
     location.replace('demo/demo.html' + location.search + location.hash);
     return;
   }
+  // Accueil : sous /demo/ (nginx.conf), celui du vrai site, un dossier plus haut ; sur un site de
+  // démo dédié (dépôt GitHub « …demo… »), celui du même dossier.
+  const accueil = dossier.toLowerCase() === 'demo' ? '../accueil.html' : 'accueil.html';
   // Quitter : les sessions de la démo sont oubliées dans cet onglet, retour au vrai site.
   if (new URLSearchParams(location.search).get('quitter')) {
     viderSession();
-    location.replace('../accueil.html');
+    location.replace(accueil);
     return;
   }
   /* Démo présentée aux structures (lien ?pour=structures, mémorisé pour « Changer de profil ») :
@@ -64,7 +67,7 @@
     accesChoix = accesChoix || !!localStorage.getItem('cvdl-demo-pour');
   } catch (e) {}
   if (!accesChoix && !vueVerrouillee) {
-    location.replace('../accueil.html#essayer');
+    location.replace(accueil + '#essayer');
     return;
   }
   // Entrée directe dans l'espace de la structure (sa présentation de bienvenue s'ouvre alors),
